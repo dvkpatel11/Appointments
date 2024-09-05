@@ -7,44 +7,64 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from dateutil import parser
 from playwright.sync_api import TimeoutError, sync_playwright
-from flask.creds import *
+
+# from creds import *
 import logging
 from logging.handlers import RotatingFileHandler
+
 
 # Configure the logger
 def setup_logger(name, log_file, level=logging.INFO):
     """Function to set up a logger with file rotation"""
-    
+
     # Create a formatter
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+
     # Create a handler that writes log messages to a file, with a maximum file size of 5MB,
     # keeping 3 backup copies of the log files
-    file_handler = RotatingFileHandler(log_file, maxBytes=5*1024*1024, backupCount=3)
+    file_handler = RotatingFileHandler(
+        log_file, maxBytes=5 * 1024 * 1024, backupCount=3
+    )
     file_handler.setFormatter(formatter)
-    
+
     # Create a handler that writes log messages to the console
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(formatter)
-    
+
     # Create a logger object
     logger = logging.getLogger(name)
     logger.setLevel(level)
-    
+
     # Add both handlers to the logger
     logger.addHandler(file_handler)
     logger.addHandler(console_handler)
-    
+
     return logger
+
 
 MAX_POLLS = 30
 MIN_SLEEP_BEFORE_RETRY = 30  # seconds
 MAX_SLEEP_BEFORE_RETRY = 60  # seconds
 
-logger = setup_logger('my_app', 'app.log')
+logger = setup_logger("my_app", "app.log")
+
 
 class VisaAutomation:
-    def __init__(self):
+    def __init__(
+        self,
+        username,
+        password,
+        appointment_id,
+        appointment_url,
+        token,
+        chat_id,
+        browsers=1,
+        check=1,
+        reschedule=False,
+        send_telegram_notification=False,
+    ):
         self.playwright = sync_playwright().start()
         self.browser = self.playwright.chromium.launch(headless=True)
         self.screenshots_folder = str(int(time.time()))
@@ -55,6 +75,19 @@ class VisaAutomation:
         self.page = None
         self.current_date = None
         self.new_date = None
+        self.is_running = False
+        self.last_checked_location = None
+
+        self.username = username
+        self.password = password
+        self.appointment_id = appointment_id
+        self.appointment_url = appointment_url
+        self.token = token
+        self.chat_id = chat_id
+        self.browsers = browsers
+        self.check = check
+        self.reschedule = reschedule
+        self.send_telegram_notification = send_telegram_notification
 
         self.login_url = "https://ais.usvisa-info.com/en-ca/niv/users/sign_in"
         self.username_input_id = "Email"
@@ -185,15 +218,18 @@ class VisaAutomation:
         except Exception as e:
             time.sleep(60)
             self.login(
-                username=user, password=password, continue_login=False, press_ok=True
+                username=username,
+                password=password,
+                continue_login=False,
+                press_ok=True,
             )
 
     def navigate_to_appointments(self, appointment_id):
         try:
             self.page.goto(self.appointment_link.format(appointment_id))
             self.page.wait_for_load_state("networkidle")
-            if is_multiple_users:
-                self.handle_confirm_page_befor_navigate_to_appointment()
+            # if is_multiple_users:
+            #     self.handle_confirm_page_befor_navigate_to_appointment()
         except Exception as e:
             time.sleep(120)
             self.navigate_to_appointments(appointment_id)
@@ -300,10 +336,13 @@ class VisaAutomation:
                             f"Date available at {location} on {formatted_found_date}"
                         )
                         logger.info(message)
-                        if send_telegram_notification and self.new_date < self.current_date:
+                        if (
+                            self.send_telegram_notification
+                            and self.new_date < self.current_date
+                        ):
                             self.send_telegram_notification(message)
 
-                        if reschedule:
+                        if self.reschedule:
                             if self.new_date < self.current_date:
                                 self.reschedule_appointment(location)
 
@@ -322,15 +361,20 @@ class VisaAutomation:
         return any(availability_list)
 
     def run(self):
-        for session_number in range(browsers):
+        self.is_running = True
+        for session_number in range(self.browsers):
             try:
                 self.create_new_context()
-                self.login(username=user, password=password, continue_login=False)
+                self.login(
+                    username=self.username, password=self.password, continue_login=False
+                )
                 self.current_date = self.get_appointment_date()
 
-                for check_number in range(check):
+                for check_number in range(self.check):
+                    if not self.is_running:
+                        return
                     logger.info(f"Session {check_number}")
-                    self.navigate_to_appointments(appointment_id)
+                    self.navigate_to_appointments(self.appointment_id)
                     availability_flag = self.run_check()
 
                     if availability_flag:
@@ -348,15 +392,16 @@ class VisaAutomation:
             finally:
                 self.close_context()
 
-                if session_number == browsers - 1:
+                if session_number == self.browsers - 1:
                     logger.info("All browser sessions completed.")
                     self.close_browser()
+        self.is_running = False
 
     def send_telegram_notification(self, message):
         logger.info("Trying to send telegram noti...")
         # url = f"https://api.telegram.org/bot{TOKEN}/sendMessage?chat_id={chat_id}&text={message}"
         url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
-        params = {"chat_id": chat_id, "text": message}
+        params = {"chat_id": self.chat_id, "text": message}
         try:
             # Send the message using an HTTP POST request
             response = requests.post(url, data=params)
@@ -411,13 +456,16 @@ class VisaAutomation:
 
     def handle_confirm_page_befor_navigate_to_appointment(self):
         try:
-        # Click the "Continue" button
-            self.page.locator('input[type="submit"][name="commit"][value="Continue"]').click()
+            # Click the "Continue" button
+            self.page.locator(
+                'input[type="submit"][name="commit"][value="Continue"]'
+            ).click()
             # logger.info("Successfully clicked the Continue button.")
 
         except Exception as e:
             # logger.error("Failed to click on the Continue button", exc_info=True)
             self.navigate_to_appointments()
+
 
 if __name__ == "__main__":
 

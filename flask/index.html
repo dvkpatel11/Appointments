@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Automation Control Panel</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap");
+
+      :root {
+        --bg-color: #1a1a2e;
+        --text-color: #e0e0e0;
+        --primary-color: #16213e;
+        --secondary-color: #0f3460;
+        --accent-color: #00ff9d;
+        --error-color: #ff0055;
+      }
+
+      body {
+        font-family: "Roboto", sans-serif;
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        margin: 0;
+        padding: 20px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+      }
+
+      .container {
+        background-color: var(--primary-color);
+        border-radius: 10px;
+        padding: 30px;
+        box-shadow: 0 0 20px rgba(0, 255, 157, 0.2);
+        max-width: 800px;
+        width: 100%;
+      }
+
+      h1 {
+        text-align: center;
+        color: var(--accent-color);
+        margin-bottom: 30px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 300;
+      }
+
+      input[type="text"],
+      input[type="password"],
+      input[type="number"] {
+        width: 100%;
+        padding: 10px;
+        border: none;
+        background-color: var(--secondary-color);
+        color: var(--text-color);
+        border-radius: 5px;
+        transition: all 0.3s ease;
+      }
+
+      input[type="text"]:focus,
+      input[type="password"]:focus,
+      input[type="number"]:focus {
+        outline: none;
+        box-shadow: 0 0 0 2px var(--accent-color);
+      }
+
+      .checkbox-group {
+        display: flex;
+        align-items: center;
+      }
+
+      .checkbox-group label {
+        margin-left: 10px;
+        margin-bottom: 0;
+      }
+
+      button {
+        background-color: var(--accent-color);
+        color: var(--bg-color);
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      button:hover {
+        background-color: #00cc7d;
+        transform: translateY(-2px);
+      }
+
+      #status {
+        margin-top: 30px;
+        padding: 20px;
+        background-color: var(--secondary-color);
+        border-radius: 5px;
+        animation: fadeIn 0.5s ease;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+
+      .status-item {
+        margin-bottom: 10px;
+      }
+
+      .status-label {
+        font-weight: 700;
+        color: var(--accent-color);
+      }
+
+      .button-group {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 20px;
+      }
+
+      #stopButton {
+        background-color: var(--error-color);
+      }
+
+      #stopButton:hover {
+        background-color: #cc0044;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Travel Automation Control Panel</h1>
+      <form id="automationForm">
+        <div class="form-group">
+          <label for="username">Username</label>
+          <input type="text" id="username" name="username" required />
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" required />
+        </div>
+        <div class="form-group">
+          <label for="appointment_id">Appointment ID</label>
+          <input type="text" id="appointment_id" name="appointment_id" required />
+        </div>
+        <div class="form-group">
+          <label for="appointment_url">Appointment URL</label>
+          <input type="text" id="appointment_url" name="appointment_url" required />
+        </div>
+        <div class="form-group">
+          <label for="token">Telegram Token</label>
+          <input type="text" id="token" name="token" />
+        </div>
+        <div class="form-group">
+          <label for="chat_id">Telegram Chat ID</label>
+          <input type="text" id="chat_id" name="chat_id" />
+        </div>
+        <div class="form-group">
+          <label for="browsers">Number of Browsers</label>
+          <input type="number" id="browsers" name="browsers" value="1" min="1" />
+        </div>
+        <div class="form-group">
+          <label for="check">Number of Checks</label>
+          <input type="number" id="check" name="check" value="1" min="1" />
+        </div>
+        <div class="form-group checkbox-group">
+          <input type="checkbox" id="reschedule" name="reschedule" />
+          <label for="reschedule">Reschedule</label>
+        </div>
+        <div class="form-group checkbox-group">
+          <input type="checkbox" id="send_telegram_notification" name="send_telegram_notification" />
+          <label for="send_telegram_notification">Send Telegram Notification</label>
+        </div>
+      </form>
+      <div class="button-group">
+        <button id="startButton">Start Automation</button>
+        <button id="stopButton">Stop Automation</button>
+      </div>
+      <div id="status"></div>
+    </div>
+    <script>
+      function updateStatus() {
+        $.get("/get_status", function (data) {
+          $("#status").html(`
+                    <div class="status-item"><span class="status-label">Running:</span> ${data.is_running}</div>
+                    <div class="status-item"><span class="status-label">Current Appointment:</span> ${
+                      data.current_appointment
+                    }</div>
+                    <div class="status-item"><span class="status-label">New Appointment:</span> ${
+                      data.new_appointment || "None"
+                    }</div>
+                    <div class="status-item"><span class="status-label">Last Checked Location:</span> ${
+                      data.last_checked_location || "None"
+                    }</div>
+                `);
+        });
+      }
+
+      $("#startButton").click(function () {
+        var formData = $("#automationForm").serialize();
+        formData += "&reschedule=" + $("#reschedule").is(":checked");
+        formData += "&send_telegram_notification=" + $("#send_telegram_notification").is(":checked");
+
+        $.post("/start_automation", formData, function (data) {
+          alert(data.status);
+          updateStatus();
+        });
+      });
+
+      $("#stopButton").click(function () {
+        $.post("/stop_automation", function (data) {
+          alert(data.status);
+          updateStatus();
+        });
+      });
+
+      setInterval(updateStatus, 5000);
+    </script>
+  </body>
+</html>
