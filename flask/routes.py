@@ -42,8 +42,9 @@ def start_automation():
             reschedule=reschedule,
             send_telegram_notification=send_telegram_notification,
         )
-        thread = threading.Thread(target=visa_automation.run)
-        thread.start()
+        visa_automation.run()
+        # thread = threading.Thread(target=visa_automation.run)
+        # thread.start()
         return jsonify({"status": "Automation started"})
     else:
         return jsonify({"status": "Automation already running"})

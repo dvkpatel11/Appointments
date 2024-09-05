@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Multi-User Automation Control Panel</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap");
+
+      :root {
+        --bg-color: #1a1a2e;
+        --text-color: #e0e0e0;
+        --primary-color: #16213e;
+        --secondary-color: #0f3460;
+        --accent-color: #00ff9d;
+        --error-color: #ff0055;
+      }
+
+      body {
+        font-family: "Roboto", sans-serif;
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        margin: 0;
+        padding: 20px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+      }
+
+      .container {
+        background-color: var(--primary-color);
+        border-radius: 10px;
+        padding: 30px;
+        box-shadow: 0 0 20px rgba(0, 255, 157, 0.2);
+        max-width: 1000px;
+        width: 100%;
+      }
+
+      h1 {
+        text-align: center;
+        color: var(--accent-color);
+        margin-bottom: 30px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+      }
+
+      .user-form {
+        margin-bottom: 20px;
+        padding: 20px;
+        background-color: var(--secondary-color);
+        border-radius: 5px;
+      }
+
+      .form-group {
+        margin-bottom: 15px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 300;
+      }
+
+      input[type="text"],
+      input[type="password"],
+      input[type="number"] {
+        width: 100%;
+        padding: 10px;
+        border: none;
+        background-color: var(--primary-color);
+        color: var(--text-color);
+        border-radius: 5px;
+        transition: all 0.3s ease;
+      }
+
+      input[type="text"]:focus,
+      input[type="password"]:focus,
+      input[type="number"]:focus {
+        outline: none;
+        box-shadow: 0 0 0 2px var(--accent-color);
+      }
+
+      .checkbox-group {
+        display: flex;
+        align-items: center;
+      }
+
+      .checkbox-group label {
+        margin-left: 10px;
+        margin-bottom: 0;
+      }
+
+      button {
+        background-color: var(--accent-color);
+        color: var(--bg-color);
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      button:hover {
+        background-color: #00cc7d;
+        transform: translateY(-2px);
+      }
+
+      #status {
+        margin-top: 30px;
+        padding: 20px;
+        background-color: var(--secondary-color);
+        border-radius: 5px;
+        animation: fadeIn 0.5s ease;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+
+      .status-item {
+        margin-bottom: 10px;
+      }
+
+      .status-label {
+        font-weight: 700;
+        color: var(--accent-color);
+      }
+
+      .button-group {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 20px;
+      }
+
+      #stopAllButton {
+        background-color: var(--error-color);
+      }
+
+      #stopAllButton:hover {
+        background-color: #cc0044;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Multi-User Travel Automation Control Panel</h1>
+      <div id="userForms">
+        <!-- User forms will be dynamically added here -->
+      </div>
+      <button id="addUserButton">Add User</button>
+      <div class="button-group">
+        <button id="startAllButton">Start All Automation</button>
+        <button id="stopAllButton">Stop All Automation</button>
+      </div>
+      <div id="status"></div>
+    </div>
+    <script>
+      let userCount = 0;
+
+      function addUserForm() {
+        userCount++;
+        const userForm = `
+                <div class="user-form" id="user-${userCount}">
+                    <h2>User ${userCount}</h2>
+                    <div class="form-group">
+                        <label for="username-${userCount}">Username</label>
+                        <input type="text" id="username-${userCount}" name="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password-${userCount}">Password</label>
+                        <input type="password" id="password-${userCount}" name="password" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="appointment_id-${userCount}">Appointment ID</label>
+                        <input type="text" id="appointment_id-${userCount}" name="appointment_id" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="appointment_url-${userCount}">Appointment URL</label>
+                        <input type="text" id="appointment_url-${userCount}" name="appointment_url" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="token-${userCount}">Telegram Token</label>
+                        <input type="text" id="token-${userCount}" name="token">
+                    </div>
+                    <div class="form-group">
+                        <label for="chat_id-${userCount}">Telegram Chat ID</label>
+                        <input type="text" id="chat_id-${userCount}" name="chat_id">
+                    </div>
+                    <div class="form-group">
+                        <label for="browsers-${userCount}">Number of Browsers</label>
+                        <input type="number" id="browsers-${userCount}" name="browsers" value="1" min="1">
+                    </div>
+                    <div class="form-group">
+                        <label for="check-${userCount}">Number of Checks</label>
+                        <input type="number" id="check-${userCount}" name="check" value="1" min="1">
+                    </div>
+                    <div class="form-group checkbox-group">
+                        <input type="checkbox" id="reschedule-${userCount}" name="reschedule">
+                        <label for="reschedule-${userCount}">Reschedule</label>
+                    </div>
+                    <div class="form-group checkbox-group">
+                        <input type="checkbox" id="send_telegram_notification-${userCount}" name="send_telegram_notification">
+                        <label for="send_telegram_notification-${userCount}">Send Telegram Notification</label>
+                    </div>
+                </div>
+            `;
+        $("#userForms").append(userForm);
+      }
+
+      function collectUserData() {
+        const usersData = {};
+        $(".user-form").each(function () {
+          const userId = $(this).attr("id");
+          usersData[userId] = {
+            username: $(`#${userId} [name="username"]`).val(),
+            password: $(`#${userId} [name="password"]`).val(),
+            appointment_id: $(`#${userId} [name="appointment_id"]`).val(),
+            appointment_url: $(`#${userId} [name="appointment_url"]`).val(),
+            token: $(`#${userId} [name="token"]`).val(),
+            chat_id: $(`#${userId} [name="chat_id"]`).val(),
+            browsers: parseInt($(`#${userId} [name="browsers"]`).val()),
+            check: parseInt($(`#${userId} [name="check"]`).val()),
+            reschedule: $(`#${userId} [name="reschedule"]`).is(":checked"),
+            send_telegram_notification: $(`#${userId} [name="send_telegram_notification"]`).is(":checked"),
+          };
+        });
+        return usersData;
+      }
+
+      function updateStatus() {
+        $.get("/get_all_status", function (data) {
+          let statusHtml = "";
+          for (const [userId, status] of Object.entries(data)) {
+            statusHtml += `
+                        <div class="status-item">
+                            <h3>${userId}</h3>
+                            <div><span class="status-label">Running:</span> ${status.is_running}</div>
+                            <div><span class="status-label">Current Appointment:</span> ${
+                              status.current_appointment
+                            }</div>
+                            <div><span class="status-label">New Appointment:</span> ${
+                              status.new_appointment || "None"
+                            }</div>
+                            <div><span class="status-label">Last Checked Location:</span> ${
+                              status.last_checked_location || "None"
+                            }</div>
+                        </div>
+                    `;
+          }
+          $("#status").html(statusHtml);
+        });
+      }
+
+      $("#addUserButton").click(addUserForm);
+
+      $("#startAllButton").click(function () {
+        const usersData = collectUserData();
+        $.post("/start_all_automation", { users: usersData }, function (response) {
+          alert("Automation started for all users");
+          updateStatus();
+        }).fail(function () {
+          alert("Failed to start automation");
+        });
+      });
+
+      $("#stopAllButton").click(function () {
+        $.post("/stop_all_automation", function (response) {
+          alert("Automation stopped for all users");
+          updateStatus();
+        }).fail(function () {
+          alert("Failed to stop automation");
+        });
+      });
+
+      setInterval(updateStatus, 5000);
+    </script>
+  </body>
+</html>
