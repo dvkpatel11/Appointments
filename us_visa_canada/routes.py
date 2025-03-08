@@ -1,6 +1,5 @@
 from flask import Flask, render_template, request, jsonify
 from main import VisaAutomation
-import threading
 
 app = Flask(__name__)
 
@@ -40,7 +39,7 @@ def start_automation():
             browsers=browsers,
             check=check,
             reschedule=reschedule,
-            send_telegram_notification=send_telegram_notification,
+            telegram_noti_enabled=send_telegram_notification,
         )
         visa_automation.run()
         # thread = threading.Thread(target=visa_automation.run)

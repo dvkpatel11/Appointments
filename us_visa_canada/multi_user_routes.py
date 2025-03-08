@@ -49,7 +49,7 @@ def start_automation():
             browsers=browsers,
             check=check,
             reschedule=reschedule,
-            send_telegram_notification=send_telegram_notification,
+            telegram_noti_enabled=send_telegram_notification,
         )
         thread = threading.Thread(target=automation_instances[user_id].run)
         thread.start()

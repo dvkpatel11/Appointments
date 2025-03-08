@@ -63,7 +63,7 @@ class VisaAutomation:
         browsers=1,
         check=1,
         reschedule=False,
-        send_telegram_notification=False,
+        telegram_noti_enabled=False,
     ):
         self.playwright = sync_playwright().start()
         self.browser = self.playwright.chromium.launch(headless=True)
@@ -87,7 +87,7 @@ class VisaAutomation:
         self.browsers = browsers
         self.check = check
         self.reschedule = reschedule
-        self.send_telegram_notification = send_telegram_notification
+        self.telegram_noti_enabled = telegram_noti_enabled
 
         self.login_url = "https://ais.usvisa-info.com/en-ca/niv/users/sign_in"
         self.username_input_id = "Email"
@@ -152,6 +152,13 @@ class VisaAutomation:
         self.json_response_base_link = appointment_url.format(appointment_id)
         self.poll_count = 0
         self.debug_screenshot_counter = 0
+        self.user_agents = [
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.1 Safari/605.1.15",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.114 Safari/537.36",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36 Edg/91.0.864.59",
+        ]
 
     def capture_debug_screenshot(self, name: str):
         self.debug_screenshot_counter += 1
@@ -187,12 +194,35 @@ class VisaAutomation:
         logger.info("Response Body: %s", body)
 
     def create_new_context(self):
-        self.context = self.browser.new_context()
+        user_agent = random.choice(self.user_agents)
+        logger.debug(f"Using User-Agent: {user_agent}")
+        self.context = self.browser.new_context(user_agent=user_agent)
         self.page = self.context.new_page()
 
     def close_context(self):
         if self.context:
             self.context.close()
+
+    # def create_new_context(self):
+    #     with self.context_lock:
+    #         if self.context is None:
+    #             logger.debug("Creating new browser context")
+    #             self.context = self.browser.new_context()
+    #             self.page = self.context.new_page()
+    #             logger.debug("New context and page created")
+    #         else:
+    #             logger.debug("Context already exists, skipping creation")
+
+    # def close_context(self):
+    #     with self.context_lock:
+    #         if self.context:
+    #             logger.debug("Closing browser context")
+    #             self.context.close()
+    #             self.context = None
+    #             self.page = None
+    #             logger.debug("Context closed and references cleared")
+    #         else:
+    #             logger.debug("No context to close")
 
     def close_browser(self):
         self.browser.close()
@@ -203,7 +233,7 @@ class VisaAutomation:
     def capture_screenshot(self, name: str = "image"):
         self.page.screenshot(path=f"./screenshots/{self.screenshots_folder}/{name}.png")
 
-    def login(self, username, password, continue_login=True, press_ok=True):
+    def login(self, username, password, continue_login=True, press_ok=False):
         try:
             logger.debug("Attempting to log in")
             self.go_to_page(self.login_url)
@@ -349,7 +379,7 @@ class VisaAutomation:
     def run_check(self):
         availability_list = []
 
-        for location in self.travel_locations:
+        for location in self.visa_locations:
             self.page.route(re.compile(self.network_request_regex), self.handle_request)
             logger.info(f"Checking availability at {location}")
             self.select_location(location)
@@ -375,7 +405,7 @@ class VisaAutomation:
                         self.capture_debug_screenshot(f"date_found_{location}")
 
                         if (
-                            self.send_telegram_notification
+                            self.telegram_noti_enabled
                             and self.new_date < self.current_date
                         ):
                             self.send_telegram_notification(message)
@@ -483,7 +513,7 @@ class VisaAutomation:
             self.current_date = self.get_appointment_date()
             logger.info(f"New appointment date: {self.current_date}")
 
-            location_address = self.travel_locations.get(location, "Unknown Location")
+            location_address = self.visa_locations.get(location, "Unknown Location")
             message = f"Rescheduled to a new earlier appointment date at {location}: \nDate: {self.current_date}\nLocation: {location_address}"
             logger.info(message)
             self.send_telegram_notification(message)
@@ -524,28 +554,29 @@ class VisaAutomation:
             self.navigate_to_appointments()
 
 
-# if __name__ == "__main__":
+if __name__ == "__main__":
 
-#     logger.info("Script started")
-#     current_time = datetime.now()
-#     target_time = current_time.replace(
-#         hour=1, minute=15, second=0, microsecond=0
-#     ) + timedelta(days=1)
-#     time_until_target = (target_time - current_time).total_seconds()
-#     logger.info(f"Sleeping until {target_time}...")
-#     # time.sleep(time_until_target
-#     # )  ### Wait in seconds for after how long you want the script to kick off
+    logger.info("Script started")
+    current_time = datetime.now()
+    target_time = current_time.replace(
+        hour=1, minute=15, second=0, microsecond=0
+    ) + timedelta(days=1)
+    time_until_target = (target_time - current_time).total_seconds()
+    # logger.info(f"Sleeping until {target_time}...")
+    # time.sleep(time_until_target
+    # )  ### Wait in seconds for after how long you want the script to kick off
 
-#     visa_automation = VisaAutomation(
-#         username=user,
-#         password=password,
-#         appointment_id=appointment_id,
-#         appointment_url=appointment_url,
-#         token=TOKEN,
-#         chat_id=chat_id,
-#         browsers=browsers,
-#         check=check,
-#         reschedule=reschedule,
-#         send_telegram_notification=send_telegram_notification,
-#     )
-#     visa_automation.run()
+    visa_automation = VisaAutomation(
+        username=user,
+        password=password,
+        appointment_id=appointment_id,
+        appointment_url=appointment_url,
+        token=TOKEN,
+        chat_id=chat_id,
+        browsers=browsers,
+        check=check,
+        reschedule=reschedule,
+        telegram_noti_enabled=telegram_noti_enabled,
+    )
+    visa_automation.send_telegram_notification("Thy script has began execution...😤")
+    visa_automation.run()
