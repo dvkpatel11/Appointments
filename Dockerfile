@@ -2,49 +2,52 @@
 # VISA_CTRL — Dockerfile
 # Runs the Flask multi-user admin panel + Playwright Chromium automation
 # on Google Cloud Run.
+#
+# Base image: mcr.microsoft.com/playwright/python
+#   Microsoft's official image ships with Python, Chromium, and every OS
+#   dependency pre-installed and tested. This eliminates the brittle
+#   apt-get package lists that differ between Ubuntu and Debian releases
+#   (e.g. ttf-unifont vs fonts-unifont, ttf-ubuntu-font-family missing on
+#   Debian Bookworm) that cause `playwright install --with-deps` to fail.
+#
+# Tag format: v{playwright_version}-{ubuntu_codename}
+#   jammy  = Ubuntu 22.04 LTS (Python 3.10) — stable, well-tested
+#   noble  = Ubuntu 24.04 LTS (Python 3.12) — if you need 3.12 specifically
+#
+# Keep the tag pinned to the same playwright version as requirements.txt.
 # ─────────────────────────────────────────────────────────────────────────────
 
-FROM python:3.12-slim
-
-# ── Minimal OS prerequisites needed before playwright --with-deps ─────────────
-# (curl/wget for the browser download, ca-certs for TLS)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+FROM mcr.microsoft.com/playwright/python:v1.49.1-noble
 
 # ── Python dependencies ───────────────────────────────────────────────────────
+# The base image already has: Python 3.12, pip, playwright CLI, Chromium +
+# all OS deps. We only need to install our own packages on top.
 WORKDIR /app
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
 
-# ── Playwright browser + ALL OS deps in one step ─────────────────────────────
-# --with-deps is the officially supported Docker method — it runs apt-get
-# internally as root (which we are here) to install every Chromium dependency.
-# Never split this into "install" + "install-deps": the second command tries
-# to sudo and will always fail in a non-interactive container.
-RUN playwright install --with-deps chromium
+# playwright is already installed in the base image; pip will skip reinstalling
+# it but will still pin it. Use --no-cache-dir to keep the layer small.
+RUN pip install --no-cache-dir -r requirements.txt
 
 # ── Application code ──────────────────────────────────────────────────────────
 COPY . .
 
-# The Flask app lives in /app/canada — all imports (main.py, templates/) are
-# relative to this directory.
+# The Flask app + main.py + templates/ all live under /app/canada.
 WORKDIR /app/canada
 
-# Ensure screenshot directory exists (ephemeral on Cloud Run — logs go to stdout)
+# Screenshot dir (ephemeral on Cloud Run; files live only for the request lifetime).
 RUN mkdir -p screenshots
 
 # ── Runtime config ────────────────────────────────────────────────────────────
 ENV PYTHONUNBUFFERED=1
 ENV FLASK_DEBUG=false
-# Cloud Run injects PORT automatically (default 8080)
+# Cloud Run injects PORT automatically (default 8080).
 ENV PORT=8080
 
 EXPOSE 8080
 
-# waitress is a production WSGI server that works on all platforms.
+# waitress is a cross-platform production WSGI server (no gunicorn needed).
 # Secrets (ADMIN_PASSWORD, SMTP_*, SECRET_KEY) are injected at runtime
-# via Cloud Run --set-secrets or environment variables.
+# via Cloud Run --set-secrets or plain --set-env-vars.
 CMD ["sh", "-c", "waitress-serve --port=${PORT} --host=0.0.0.0 app:app"]
