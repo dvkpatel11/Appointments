@@ -5,6 +5,7 @@ import smtplib
 import time
 
 from datetime import datetime, timedelta
+from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
@@ -67,6 +68,7 @@ class VisaAutomation:
         self.new_date = None
         self.is_running = False
         self.last_checked_location = None
+        self.appointments_page_screenshot = None  # path to latest post-login page capture
         self.screenshots_folder = str(int(time.time()))
         Path(f"./screenshots/{self.screenshots_folder}").mkdir(
             parents=True, exist_ok=True
@@ -299,6 +301,15 @@ class VisaAutomation:
             # the automation can continue to the actual appointment form.
             self.handle_scheduling_limit_warning()
 
+            # Capture the appointment details page — attached to every email alert
+            # so recipients can see the current booking state at a glance.
+            appt_screenshot_path = (
+                f"./screenshots/{self.screenshots_folder}/appointment_details.png"
+            )
+            self.page.screenshot(path=appt_screenshot_path)
+            self.appointments_page_screenshot = appt_screenshot_path
+            logger.debug(f"Appointment page screenshot saved: {appt_screenshot_path}")
+
             logger.info("Successfully navigated to appointments page")
         except Exception as e:
             logger.error(f"Failed to navigate to appointments: {str(e)}", exc_info=True)
@@ -421,7 +432,7 @@ class VisaAutomation:
                         self.capture_debug_screenshot(f"date_found_{location}")
 
                         if self.notification_email and self.new_date and self.current_date and self.new_date < self.current_date:
-                            self.send_email_notification(message)
+                            self.send_email_notification(message, self.appointments_page_screenshot)
 
                         if self.reschedule:
                             if self.new_date < self.current_date:
@@ -504,9 +515,10 @@ class VisaAutomation:
                 pass
             self.is_running = False
 
-    def send_email_notification(self, message):
-        if not self.notification_email:
-            logger.warning("No notification_email set — skipping notification")
+    def send_email_notification(self, message, screenshot_path=None):
+        recipient = self.notification_email
+        if not recipient:
+            logger.warning("[EMAIL] No notification_email set — skipping")
             return
 
         smtp_host = os.environ.get("SMTP_HOST", "smtp.gmail.com")
@@ -515,25 +527,88 @@ class VisaAutomation:
         smtp_password = os.environ.get("SMTP_PASSWORD", "")
 
         if not smtp_user or not smtp_password:
-            logger.warning("SMTP_USER / SMTP_PASSWORD not set — skipping email")
+            logger.warning("[EMAIL] SMTP_USER / SMTP_PASSWORD not configured — skipping")
             return
 
+        has_screenshot = screenshot_path and os.path.exists(screenshot_path)
+        logger.info(f"[EMAIL] Attempting → {recipient} (screenshot={'yes' if has_screenshot else 'no'})")
+        logger.info(f"[EMAIL] Via {smtp_host}:{smtp_port} as {smtp_user}")
+
         try:
-            msg = MIMEMultipart()
-            msg["From"] = f"Visa Monitor <{smtp_user}>"
-            msg["To"] = self.notification_email
-            msg["Subject"] = "[VISA MONITOR] Appointment Update"
-            msg.attach(MIMEText(message, "plain"))
+            # ── Build message structure ───────────────────────────────────────
+            # multipart/related allows an HTML body to reference an inline image
+            # by Content-ID without the image appearing as a separate attachment.
+            outer = MIMEMultipart("related")
+            outer["From"] = f"Visa Monitor <{smtp_user}>"
+            outer["To"] = recipient
+            outer["Subject"] = "[VISA MONITOR] Appointment Update"
 
+            # Plain-text fallback + HTML body live inside multipart/alternative
+            alt = MIMEMultipart("alternative")
+            outer.attach(alt)
+
+            plain_text = message
+            alt.attach(MIMEText(plain_text, "plain"))
+
+            # HTML body — embeds the screenshot inline when available
+            html_message = message.replace("\n", "<br>")
+            if has_screenshot:
+                html_body = f"""
+                <html><body style="font-family:monospace;background:#000;color:#00ff41;padding:20px;">
+                  <p style="white-space:pre-wrap;">{html_message}</p>
+                  <hr style="border-color:#1a1a1a;margin:20px 0;">
+                  <p style="color:#777;font-size:0.85em;">APPOINTMENT PAGE — captured at time of alert</p>
+                  <img src="cid:appt_screenshot"
+                       style="max-width:100%;border:1px solid #333;display:block;margin-top:8px;"
+                       alt="Appointment page screenshot">
+                </body></html>"""
+            else:
+                html_body = f"""
+                <html><body style="font-family:monospace;background:#000;color:#00ff41;padding:20px;">
+                  <p style="white-space:pre-wrap;">{html_message}</p>
+                </body></html>"""
+
+            alt.attach(MIMEText(html_body, "html"))
+
+            # Attach screenshot as inline image referenced by Content-ID
+            if has_screenshot:
+                with open(screenshot_path, "rb") as f:
+                    img = MIMEImage(f.read(), _subtype="png")
+                img.add_header("Content-ID", "<appt_screenshot>")
+                img.add_header("Content-Disposition", "inline", filename="appointment_page.png")
+                outer.attach(img)
+                logger.debug(f"[EMAIL] Screenshot attached: {screenshot_path}")
+
+            # ── Send ─────────────────────────────────────────────────────────
             with smtplib.SMTP(smtp_host, smtp_port) as server:
-                server.ehlo()
-                server.starttls()
-                server.login(smtp_user, smtp_password)
-                server.send_message(msg)
+                logger.debug(f"[EMAIL] Connected to {smtp_host}:{smtp_port}")
 
-            logger.info(f"Email notification sent to {self.notification_email}")
-        except Exception as e:
-            logger.error(f"Email notification failed: {e}", exc_info=True)
+                ehlo_code, _ = server.ehlo()
+                logger.debug(f"[EMAIL] EHLO: {ehlo_code}")
+
+                server.starttls()
+                logger.debug("[EMAIL] STARTTLS OK — connection encrypted")
+
+                server.login(smtp_user, smtp_password)
+                logger.debug(f"[EMAIL] Authenticated as {smtp_user}")
+
+                rejected = server.send_message(outer)
+                if rejected:
+                    logger.warning(f"[EMAIL] Rejected recipients: {rejected}")
+                else:
+                    logger.info(f"[EMAIL] ✓ Delivered to {recipient}")
+
+        except smtplib.SMTPAuthenticationError as e:
+            logger.error(
+                f"[EMAIL] Auth failed for {smtp_user} — "
+                f"Gmail requires an App Password, not your account password: {e}"
+            )
+        except smtplib.SMTPConnectError as e:
+            logger.error(f"[EMAIL] Cannot connect to {smtp_host}:{smtp_port}: {e}")
+        except smtplib.SMTPException as e:
+            logger.error(f"[EMAIL] SMTP error sending to {recipient}: {e}", exc_info=True)
+        except OSError as e:
+            logger.error(f"[EMAIL] Network/firewall error: {e}", exc_info=True)
 
     def reschedule_appointment(self, location):
         try:
@@ -572,7 +647,7 @@ class VisaAutomation:
                 f"New Date: {self.current_date}"
             )
             logger.info(message)
-            self.send_email_notification(message)
+            self.send_email_notification(message, self.appointments_page_screenshot)
             self.capture_debug_screenshot("reschedule_complete")
 
         except Exception as e:
