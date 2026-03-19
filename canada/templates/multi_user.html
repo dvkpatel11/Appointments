@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VISA_CTRL // NEXUS</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+      :root {
+        --green:   #00ff41;
+        --magenta: #ff00ff;
+        --cyan:    #00ffff;
+        --red:     #ff0044;
+        --yellow:  #ffe600;
+        --bg:      #000;
+        --surface: #050505;
+        --panel:   #080808;
+        --border:  #1c1c1c;
+        --text:    #777;
+        --dimtext: #333;
+      }
+
+      body {
+        background: var(--bg);
+        color: var(--green);
+        font-family: 'Share Tech Mono', monospace;
+        min-height: 100vh;
+        overflow-x: hidden;
+      }
+
+      /* Scanlines overlay */
+      body::after {
+        content: '';
+        position: fixed;
+        inset: 0;
+        background: repeating-linear-gradient(
+          0deg, transparent, transparent 2px,
+          rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.15) 4px
+        );
+        pointer-events: none;
+        z-index: 9999;
+      }
+
+      /* ── HEADER ─────────────────────────────────────────────────────── */
+      header {
+        border-bottom: 1px solid var(--border);
+        padding: 16px 28px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 12px;
+        background: var(--surface);
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        box-shadow: 0 1px 0 #000, 0 2px 20px rgba(0,255,65,0.04);
+      }
+
+      .brand {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .brand-title {
+        font-size: 1.4rem;
+        letter-spacing: 6px;
+        color: var(--green);
+        text-shadow: 0 0 8px rgba(0,255,65,0.5),
+                     0.04em 0 0 var(--magenta),
+                    -0.04em 0 0 var(--cyan);
+        animation: glitch 5s infinite;
+      }
+
+      @keyframes glitch {
+        0%,74%,76%,78%,100% {
+          text-shadow: 0 0 8px rgba(0,255,65,0.5),
+                       0.04em 0 0 var(--magenta), -0.04em 0 0 var(--cyan);
+        }
+        75% { text-shadow: -0.04em 0 0 var(--magenta), 0.04em 0 0 var(--cyan); transform: translate(-1px); }
+        77% { text-shadow:  0.04em 0 0 var(--magenta), -0.04em 0 0 var(--cyan); transform: translate(1px); }
+      }
+
+      .brand-sub {
+        font-size: 0.6rem;
+        color: var(--text);
+        letter-spacing: 3px;
+        margin-top: 2px;
+      }
+
+      .header-nav {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+
+      /* ── BUTTONS ─────────────────────────────────────────────────────── */
+      .btn {
+        background: transparent;
+        border: 1px solid currentColor;
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 0.72rem;
+        letter-spacing: 2px;
+        padding: 7px 14px;
+        cursor: pointer;
+        text-transform: uppercase;
+        text-decoration: none;
+        display: inline-block;
+        transition: all 0.15s;
+      }
+      .btn-green  { color: var(--green);   }
+      .btn-cyan   { color: var(--cyan);    }
+      .btn-red    { color: var(--red);     }
+      .btn-yellow { color: var(--yellow);  }
+
+      .btn:hover { background: currentColor; color: #000; box-shadow: 0 0 16px currentColor; }
+
+      /* ── LAYOUT ──────────────────────────────────────────────────────── */
+      .main {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 24px 20px 60px;
+      }
+
+      .section-header {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin: 32px 0 16px;
+      }
+
+      .section-title {
+        font-size: 0.75rem;
+        letter-spacing: 4px;
+        color: var(--text);
+      }
+
+      .section-line {
+        flex: 1;
+        height: 1px;
+        background: var(--border);
+      }
+
+      /* ── CLIENT LINK BANNER ──────────────────────────────────────────── */
+      #linkBanner {
+        display: none;
+        border: 1px solid var(--cyan);
+        background: rgba(0,255,255,0.04);
+        box-shadow: 0 0 16px rgba(0,255,255,0.1);
+        padding: 14px 20px;
+        margin-bottom: 8px;
+        align-items: center;
+        gap: 14px;
+        flex-wrap: wrap;
+      }
+      #linkBanner.visible { display: flex; }
+      #linkBanner .label { color: var(--text); font-size: 0.75rem; letter-spacing: 2px; flex-shrink: 0; }
+      #clientLinkText {
+        color: var(--cyan);
+        flex: 1;
+        font-size: 0.85rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      /* ── AGENT CARDS ─────────────────────────────────────────────────── */
+      #agentGrid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 14px;
+      }
+
+      .agent-card {
+        border: 1px solid var(--border);
+        background: var(--panel);
+        padding: 18px 20px;
+        position: relative;
+        transition: border-color 0.2s;
+      }
+      .agent-card.running { border-color: rgba(0,255,65,0.4); }
+      .agent-card.running::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, var(--green), transparent);
+        animation: scanline 2s linear infinite;
+      }
+      @keyframes scanline {
+        0%   { opacity: 0; transform: scaleX(0.2) translateX(-250%); }
+        50%  { opacity: 1; }
+        100% { opacity: 0; transform: scaleX(0.2) translateX(250%); }
+      }
+
+      .agent-id {
+        font-size: 0.7rem;
+        letter-spacing: 3px;
+        color: var(--text);
+        margin-bottom: 10px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .status-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--border);
+        flex-shrink: 0;
+      }
+      .status-dot.on {
+        background: var(--green);
+        box-shadow: 0 0 6px var(--green), 0 0 12px var(--green);
+        animation: pulse 2s ease-in-out infinite;
+      }
+      @keyframes pulse {
+        0%,100% { box-shadow: 0 0 4px var(--green), 0 0 8px var(--green); }
+        50%      { box-shadow: 0 0 10px var(--green), 0 0 24px var(--green); }
+      }
+
+      .status-text {
+        font-size: 0.75rem;
+        letter-spacing: 2px;
+        color: var(--green);
+      }
+      .status-text.off { color: var(--text); }
+
+      .data-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.7rem;
+        margin-bottom: 5px;
+        gap: 8px;
+      }
+      .data-key  { color: var(--dimtext); flex-shrink: 0; }
+      .data-val  { color: var(--text); text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .data-val.found { color: var(--cyan); text-shadow: 0 0 8px var(--cyan); }
+
+      .card-footer {
+        margin-top: 14px;
+        display: flex;
+        justify-content: flex-end;
+      }
+
+      .no-agents {
+        color: var(--dimtext);
+        font-size: 0.75rem;
+        letter-spacing: 2px;
+        padding: 20px 0;
+      }
+
+      /* ── DEPLOY FORM ─────────────────────────────────────────────────── */
+      .deploy-controls {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+      }
+
+      #userForms { display: flex; flex-direction: column; gap: 12px; }
+
+      .user-form {
+        border: 1px solid var(--border);
+        background: var(--panel);
+        padding: 20px;
+        position: relative;
+      }
+
+      .form-agent-title {
+        font-size: 0.7rem;
+        letter-spacing: 3px;
+        color: var(--cyan);
+        margin-bottom: 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 12px;
+      }
+
+      .form-group { display: flex; flex-direction: column; gap: 5px; }
+      .form-group.full { grid-column: 1 / -1; }
+
+      label {
+        font-size: 0.65rem;
+        color: var(--text);
+        letter-spacing: 2px;
+        text-transform: uppercase;
+      }
+
+      input[type="text"],
+      input[type="password"],
+      input[type="email"],
+      input[type="number"] {
+        background: #000;
+        border: 1px solid var(--border);
+        border-bottom-color: #333;
+        color: var(--green);
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 0.85rem;
+        padding: 7px 10px;
+        outline: none;
+        width: 100%;
+        transition: border-color 0.15s, box-shadow 0.15s;
+      }
+      input:focus {
+        border-color: var(--green);
+        box-shadow: 0 0 8px rgba(0,255,65,0.2);
+      }
+
+      .checkbox-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 4px;
+      }
+      .checkbox-row input[type="checkbox"] { accent-color: var(--green); width: 14px; height: 14px; }
+      .checkbox-row label { margin: 0; }
+      .warn { color: var(--red); font-size: 0.6rem; letter-spacing: 1px; }
+
+      /* ── NOTIFICATION TOAST ──────────────────────────────────────────── */
+      #toast {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        background: var(--surface);
+        border: 1px solid var(--green);
+        color: var(--green);
+        font-size: 0.75rem;
+        letter-spacing: 2px;
+        padding: 12px 20px;
+        z-index: 10000;
+        box-shadow: 0 0 20px rgba(0,255,65,0.2);
+        opacity: 0;
+        transform: translateY(10px);
+        transition: all 0.2s;
+        pointer-events: none;
+        max-width: 360px;
+      }
+      #toast.show { opacity: 1; transform: translateY(0); }
+      #toast.error { border-color: var(--red); color: var(--red); }
+    </style>
+  </head>
+  <body>
+    <!-- ── HEADER ─────────────────────────────────────────────────────── -->
+    <header>
+      <div class="brand">
+        <div class="brand-title">VISA_CTRL</div>
+        <div class="brand-sub">// MULTI-AGENT APPOINTMENT MONITOR //</div>
+      </div>
+      <nav class="header-nav">
+        <button class="btn btn-cyan" id="genLinkBtn">⬡ CLIENT LINK</button>
+        <button class="btn btn-red"  id="killAllBtn">✕ KILL ALL</button>
+        <a class="btn btn-green" href="/logout">⏻ LOGOUT</a>
+      </nav>
+    </header>
+
+    <div class="main">
+
+      <!-- Client link banner -->
+      <div id="linkBanner">
+        <span class="label">CLIENT LINK:</span>
+        <span id="clientLinkText"></span>
+        <button class="btn btn-cyan" id="copyLinkBtn">COPY</button>
+      </div>
+
+      <!-- ── ACTIVE AGENTS ─────────────────────────────────────────────── -->
+      <div class="section-header">
+        <span class="section-title">ACTIVE_AGENTS</span>
+        <div class="section-line"></div>
+        <span class="section-title" id="agentCount">0 ONLINE</span>
+      </div>
+
+      <div id="agentGrid">
+        <p class="no-agents">&gt; NO AGENTS DEPLOYED</p>
+      </div>
+
+      <!-- ── DEPLOY AGENTS ─────────────────────────────────────────────── -->
+      <div class="section-header" style="margin-top:40px;">
+        <span class="section-title">DEPLOY_AGENTS</span>
+        <div class="section-line"></div>
+      </div>
+
+      <div class="deploy-controls">
+        <button class="btn btn-green" id="addAgentBtn">+ ADD AGENT</button>
+      </div>
+
+      <div id="userForms"></div>
+
+      <div style="margin-top:16px; display:flex; justify-content:flex-end;">
+        <button class="btn btn-green" id="executeAllBtn">▶ EXECUTE ALL</button>
+      </div>
+
+    </div>
+
+    <!-- Toast -->
+    <div id="toast"></div>
+
+    <script>
+      let agentCount = 0;
+
+      // ── Toast ──────────────────────────────────────────────────────────
+      function toast(msg, isError = false) {
+        const el = document.getElementById('toast');
+        el.textContent = msg;
+        el.className = 'show' + (isError ? ' error' : '');
+        clearTimeout(el._t);
+        el._t = setTimeout(() => { el.className = ''; }, 3000);
+      }
+
+      // ── Status polling ─────────────────────────────────────────────────
+      function renderAgents(data) {
+        const grid = document.getElementById('agentGrid');
+        const keys = Object.keys(data);
+        document.getElementById('agentCount').textContent =
+          keys.filter(k => data[k].is_running).length + ' ONLINE';
+
+        if (keys.length === 0) {
+          grid.innerHTML = '<p class="no-agents">&gt; NO AGENTS DEPLOYED</p>';
+          return;
+        }
+
+        grid.innerHTML = keys.map(uid => {
+          const s = data[uid];
+          const running = s.is_running;
+          return `
+            <div class="agent-card ${running ? 'running' : ''}">
+              <div class="agent-id">&gt; ${uid}</div>
+              <div class="status-row">
+                <div class="status-dot ${running ? 'on' : ''}"></div>
+                <div class="status-text ${running ? '' : 'off'}">${running ? 'RUNNING' : 'IDLE'}</div>
+              </div>
+              <div class="data-row">
+                <span class="data-key">CURRENT</span>
+                <span class="data-val">${s.current_appointment || '—'}</span>
+              </div>
+              <div class="data-row">
+                <span class="data-key">FOUND</span>
+                <span class="data-val ${s.new_appointment ? 'found' : ''}">${s.new_appointment || '—'}</span>
+              </div>
+              <div class="data-row">
+                <span class="data-key">LOCATION</span>
+                <span class="data-val">${s.last_checked_location || '—'}</span>
+              </div>
+              <div class="card-footer">
+                <button class="btn btn-red" onclick="stopAgent('${uid}')" style="font-size:0.65rem;padding:5px 12px;">
+                  ✕ STOP
+                </button>
+              </div>
+            </div>`;
+        }).join('');
+      }
+
+      function pollStatus() {
+        fetch('/get_all_status')
+          .then(r => r.json())
+          .then(renderAgents)
+          .catch(() => {});
+      }
+
+      pollStatus();
+      setInterval(pollStatus, 5000);
+
+      // ── Stop individual agent ──────────────────────────────────────────
+      function stopAgent(userId) {
+        const fd = new FormData();
+        fd.append('user_id', userId);
+        fetch('/stop_automation', { method: 'POST', body: fd })
+          .then(r => r.json())
+          .then(d => { toast(d.status); pollStatus(); });
+      }
+
+      // ── Kill all ───────────────────────────────────────────────────────
+      document.getElementById('killAllBtn').addEventListener('click', () => {
+        fetch('/stop_all_automation', { method: 'POST' })
+          .then(r => r.json())
+          .then(d => { toast(d.status, true); pollStatus(); });
+      });
+
+      // ── Generate client link ───────────────────────────────────────────
+      document.getElementById('genLinkBtn').addEventListener('click', () => {
+        fetch('/generate_client_link')
+          .then(r => r.json())
+          .then(d => {
+            const banner = document.getElementById('linkBanner');
+            document.getElementById('clientLinkText').textContent = d.link;
+            banner.classList.add('visible');
+          });
+      });
+
+      document.getElementById('copyLinkBtn').addEventListener('click', () => {
+        const text = document.getElementById('clientLinkText').textContent;
+        navigator.clipboard.writeText(text).then(() => toast('LINK_COPIED // CLIPBOARD'));
+      });
+
+      // ── Add agent form ─────────────────────────────────────────────────
+      document.getElementById('addAgentBtn').addEventListener('click', addAgentForm);
+
+      function addAgentForm() {
+        agentCount++;
+        const uid = `agent_${agentCount}`;
+        const div = document.createElement('div');
+        div.className = 'user-form';
+        div.dataset.uid = uid;
+        div.innerHTML = `
+          <div class="form-agent-title">
+            <span>&gt; AGENT_${String(agentCount).padStart(3,'0')}</span>
+            <button class="btn btn-red" style="font-size:0.6rem;padding:4px 10px;"
+              onclick="this.closest('.user-form').remove()">✕ REMOVE</button>
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Agent ID</label>
+              <input type="text" name="user_id" value="${uid}" />
+            </div>
+            <div class="form-group">
+              <label>Visa Portal Username</label>
+              <input type="text" name="username" placeholder="email@example.com" />
+            </div>
+            <div class="form-group">
+              <label>Visa Portal Password</label>
+              <input type="password" name="password" />
+            </div>
+            <div class="form-group">
+              <label>Appointment ID</label>
+              <input type="text" name="appointment_id" placeholder="12345678" />
+            </div>
+            <div class="form-group full">
+              <label>Appointment URL</label>
+              <input type="text" name="appointment_url"
+                placeholder="https://ais.usvisa-info.com/en-ca/niv/schedule/{}/appointment" />
+            </div>
+            <div class="form-group full">
+              <label>Notification Email</label>
+              <input type="email" name="notification_email" placeholder="client@example.com" />
+            </div>
+            <div class="form-group">
+              <label>Browser Sessions</label>
+              <input type="number" name="browsers" value="1" min="1" max="20" />
+            </div>
+            <div class="form-group">
+              <label>Check Cycles</label>
+              <input type="number" name="check" value="12" min="1" />
+            </div>
+            <div class="form-group full">
+              <div class="checkbox-row">
+                <input type="checkbox" name="reschedule" id="reschedule_${agentCount}" />
+                <label for="reschedule_${agentCount}">AUTO-RESCHEDULE</label>
+                <span class="warn">⚠ RISKY — WILL BOOK WITHOUT CONFIRMATION</span>
+              </div>
+            </div>
+          </div>`;
+        document.getElementById('userForms').appendChild(div);
+      }
+
+      // ── Execute all agents ─────────────────────────────────────────────
+      document.getElementById('executeAllBtn').addEventListener('click', () => {
+        const forms = document.querySelectorAll('.user-form');
+        if (forms.length === 0) { toast('NO AGENTS CONFIGURED', true); return; }
+
+        const usersData = {};
+        forms.forEach(form => {
+          const uid = form.querySelector('[name="user_id"]').value.trim() || form.dataset.uid;
+          usersData[uid] = {
+            username:           form.querySelector('[name="username"]').value.trim(),
+            password:           form.querySelector('[name="password"]').value,
+            appointment_id:     form.querySelector('[name="appointment_id"]').value.trim(),
+            appointment_url:    form.querySelector('[name="appointment_url"]').value.trim(),
+            notification_email: form.querySelector('[name="notification_email"]').value.trim(),
+            browsers:           parseInt(form.querySelector('[name="browsers"]').value) || 1,
+            check:              parseInt(form.querySelector('[name="check"]').value) || 12,
+            reschedule:         form.querySelector('[name="reschedule"]').checked,
+          };
+        });
+
+        const fd = new FormData();
+        fd.append('users_data', JSON.stringify(usersData));
+
+        fetch('/start_multi_automation', { method: 'POST', body: fd })
+          .then(r => r.json())
+          .then(d => { toast(d.status); setTimeout(pollStatus, 1000); })
+          .catch(() => toast('CONNECTION ERROR', true));
+      });
+    </script>
+  </body>
+</html>

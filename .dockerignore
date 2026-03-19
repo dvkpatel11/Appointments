@@ -1,0 +1,38 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# ── Virtual environments ──────────────────────────────────────────────────────
+env/
+venv/
+.venv/
+
+# ── Secrets — NEVER in image ──────────────────────────────────────────────────
+.env
+canada/creds.py
+uk/creds.py
+creds.py
+
+# ── Git ───────────────────────────────────────────────────────────────────────
+.git/
+.gitignore
+
+# ── Logs & screenshots (ephemeral — use Cloud Logging instead) ────────────────
+*.log
+canada/screenshots/
+uk/screenshots/
+
+# ── UK app (separate deployment if needed) ────────────────────────────────────
+uk/
+
+# ── Dev/CI ────────────────────────────────────────────────────────────────────
+.github/
+*.md
+cloudbuild.yaml
+.dockerignore

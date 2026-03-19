@@ -1,46 +1,34 @@
 import re
+import os
 import random
+import smtplib
 import time
-import requests
 
 from datetime import datetime, timedelta
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from pathlib import Path
 from dateutil import parser
 from playwright.sync_api import TimeoutError, sync_playwright
 
-from creds import *
 import logging
 from logging.handlers import RotatingFileHandler
 
 
-# Configure the logger
 def setup_logger(name, log_file, level=logging.INFO):
-    """Function to set up a logger with file rotation"""
-
-    # Create a formatter
     formatter = logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
-
-    # Create a handler that writes log messages to a file, with a maximum file size of 5MB,
-    # keeping 3 backup copies of the log files
     file_handler = RotatingFileHandler(
         log_file, maxBytes=5 * 1024 * 1024, backupCount=3
     )
     file_handler.setFormatter(formatter)
-
-    # Create a handler that writes log messages to the console
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(formatter)
-
-    # Create a logger object
     logger = logging.getLogger(name)
     logger.setLevel(level)
-
-    # Add both handlers to the logger
     logger.addHandler(file_handler)
     logger.addHandler(console_handler)
-
     return logger
 
 
@@ -58,36 +46,40 @@ class VisaAutomation:
         password,
         appointment_id,
         appointment_url,
-        token,
-        chat_id,
+        notification_email=None,
+        token=None,       # kept for backward compat, unused
+        chat_id=None,     # kept for backward compat, unused
         browsers=1,
         check=1,
         reschedule=False,
-        telegram_noti_enabled=False,
+        telegram_noti_enabled=False,  # kept for backward compat, unused
     ):
-        self.playwright = sync_playwright().start()
-        self.browser = self.playwright.chromium.launch(headless=True)
-        self.screenshots_folder = str(int(time.time()))
-        Path(f"./screenshots/{self.screenshots_folder}").mkdir(
-            parents=True, exist_ok=True
-        )
+        # Playwright is intentionally NOT started here.
+        # sync_playwright must be started inside the same thread that uses it
+        # (the daemon thread spawned by app.py). Initialising it in __init__
+        # (Flask's main thread) causes greenlet "cannot switch to a different
+        # thread" errors at runtime.
+        self.playwright = None
+        self.browser = None
         self.context = None
         self.page = None
         self.current_date = None
         self.new_date = None
         self.is_running = False
         self.last_checked_location = None
+        self.screenshots_folder = str(int(time.time()))
+        Path(f"./screenshots/{self.screenshots_folder}").mkdir(
+            parents=True, exist_ok=True
+        )
 
         self.username = username
         self.password = password
         self.appointment_id = appointment_id
         self.appointment_url = appointment_url
-        self.token = token
-        self.chat_id = chat_id
+        self.notification_email = notification_email
         self.browsers = browsers
         self.check = check
         self.reschedule = reschedule
-        self.telegram_noti_enabled = telegram_noti_enabled
 
         self.login_url = "https://ais.usvisa-info.com/en-ca/niv/users/sign_in"
         self.username_input_id = "Email"
@@ -104,36 +96,13 @@ class VisaAutomation:
         self.continue_button_label = "Continue"
         self.not_available_selector = "#consulate_date_time_not_available"
         self.visa_locations = {
-            "Calgary": "Consular Address \
-                            615 Macleod Trail, SE \
-                            Suite 1000 \
-                            Calgary, AB, T2G 4T8 \
-                            Canada",
-            "Halifax": "Consular Address \
-                            Suite 904, Purdy's Wharf Tower II \
-                            1969 Upper Water Street \
-                            Halifax, NS, Nova Scotia, B3J 3R7 \
-                            Canada",
-            "Montreal": "Consular Address \
-                            1134 Saint-Catherine St. West \
-                            Montréal, QC, Québec, H3B 1H4 \
-                            Canada",
-            "Ottawa": "Consular Address \
-                            490 Sussex Drive \
-                            Ottawa, ON, Ontario, K1N 1G8 \
-                            Canada",
-            "Quebec City": "Consular Address \
-                            2, rue de la Terrasse Dufferin \
-                            Québec, QC, G1R 4N5 \
-                            Canada",
-            "Toronto": "Consular Address \
-                            225 Simcoe Street \
-                            Toronto, ON, Ontario, M5G 1S4 \
-                            Canada",
-            "Vancouver": "Consular Address \
-                            1075 West Pender Street \
-                            Vancouver, BC, V6E 2M6 \
-                            Canada",
+            "Calgary": "615 Macleod Trail SE, Suite 1000, Calgary AB T2G 4T8",
+            "Halifax": "Suite 904, Purdy's Wharf Tower II, 1969 Upper Water St, Halifax NS B3J 3R7",
+            "Montreal": "1134 Saint-Catherine St. West, Montréal QC H3B 1H4",
+            "Ottawa": "490 Sussex Drive, Ottawa ON K1N 1G8",
+            "Quebec City": "2 rue de la Terrasse Dufferin, Québec QC G1R 4N5",
+            "Toronto": "225 Simcoe Street, Toronto ON M5G 1S4",
+            "Vancouver": "1075 West Pender Street, Vancouver BC V6E 2M6",
         }
         self.location_id = "#appointments_consulate_appointment_facility_id"
         self.calender_dropdown_date_selector = (
@@ -145,7 +114,6 @@ class VisaAutomation:
         self.appointment_date_regex = r".*Appointment:(.*)(?:Vancouver|Toronto|Calgary|Ottawa|Halifax|Montreal|Quebec City) local time.*$"
         self.calender_month_selector = ".ui-datepicker-month"
         self.calender_year_selector = ".ui-datepicker-year"
-        # self.datepicker_calendar_id = "#ui-datepicker-calendar"
         self.time_appointment_selector = "#appointments_consulate_appointment_time"
         self.network_request_regex = r"^[0-9]{2}\.json\?appointments\[expedite\]=false$"
         self.match_id = ".ui-datepicker-group-first  td.undefined > a.ui-state-default"
@@ -160,6 +128,9 @@ class VisaAutomation:
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36 Edg/91.0.864.59",
         ]
 
+    def stop(self):
+        self.is_running = False
+
     def capture_debug_screenshot(self, name: str):
         self.debug_screenshot_counter += 1
         screenshot_name = f"{self.debug_screenshot_counter:03d}_{name}"
@@ -168,18 +139,9 @@ class VisaAutomation:
 
     def month_to_number(self, month):
         return {
-            "jan": 1,
-            "feb": 2,
-            "mar": 3,
-            "apr": 4,
-            "may": 5,
-            "jun": 6,
-            "jul": 7,
-            "aug": 8,
-            "sep": 9,
-            "oct": 10,
-            "nov": 11,
-            "dec": 12,
+            "jan": 1, "feb": 2, "mar": 3, "apr": 4,
+            "may": 5, "jun": 6, "jul": 7, "aug": 8,
+            "sep": 9, "oct": 10, "nov": 11, "dec": 12,
         }[month]
 
     def handle_request(self, route, request):
@@ -188,7 +150,6 @@ class VisaAutomation:
         status = response.status
         headers = response.headers
         body = response.body()
-
         logger.info("Response Status: %s", status)
         logger.info("Response Headers: %s", headers)
         logger.info("Response Body: %s", body)
@@ -202,27 +163,6 @@ class VisaAutomation:
     def close_context(self):
         if self.context:
             self.context.close()
-
-    # def create_new_context(self):
-    #     with self.context_lock:
-    #         if self.context is None:
-    #             logger.debug("Creating new browser context")
-    #             self.context = self.browser.new_context()
-    #             self.page = self.context.new_page()
-    #             logger.debug("New context and page created")
-    #         else:
-    #             logger.debug("Context already exists, skipping creation")
-
-    # def close_context(self):
-    #     with self.context_lock:
-    #         if self.context:
-    #             logger.debug("Closing browser context")
-    #             self.context.close()
-    #             self.context = None
-    #             self.page = None
-    #             logger.debug("Context closed and references cleared")
-    #         else:
-    #             logger.debug("No context to close")
 
     def close_browser(self):
         self.browser.close()
@@ -276,12 +216,89 @@ class VisaAutomation:
                 press_ok=True,
             )
 
+    def handle_scheduling_limit_warning(self):
+        """
+        The site shows a 'Scheduling Limit Warning' page before the appointment
+        form whenever you navigate there. It must be dismissed (tick 'I understand'
+        + click Continue) or no automation is possible.
+
+        Also extracts the remaining reschedule attempt count and:
+          - Sends an email alert if attempts are running low (≤ 1).
+          - Stops auto-reschedule entirely (but keeps monitoring) if 0 remain,
+            so the appointment cannot be accidentally locked.
+
+        Returns True if the warning was found and handled, False if not present.
+        """
+        try:
+            # Short timeout — normal appointment page won't have this heading
+            self.page.wait_for_selector(
+                "text=Scheduling Limit Warning", timeout=3000
+            )
+        except TimeoutError:
+            return False  # no warning page — nothing to do
+
+        self.capture_debug_screenshot("scheduling_limit_warning")
+        logger.warning("Scheduling Limit Warning detected — reading remaining attempts")
+
+        # Extract remaining attempt count from the warning body
+        remaining = None
+        try:
+            body_text = self.page.locator("body").text_content() or ""
+            match = re.search(
+                r"You have (\d+) remaining attempt", body_text, re.IGNORECASE
+            )
+            if match:
+                remaining = int(match.group(1))
+                logger.warning(f"Remaining reschedule attempts: {remaining}")
+        except Exception:
+            logger.warning("Could not parse remaining attempt count from warning page")
+
+        # If auto-reschedule is enabled and 0 attempts left, disable it to
+        # prevent the appointment being permanently locked.
+        if remaining == 0 and self.reschedule:
+            msg = (
+                "CRITICAL: 0 reschedule attempts remaining.\n"
+                "Auto-reschedule has been DISABLED to protect your appointment "
+                "from being permanently locked. Monitoring will continue."
+            )
+            logger.error(msg)
+            self.send_email_notification(msg)
+            self.reschedule = False  # demote to monitor-only for this session
+
+        # Low-attempt warning (still has attempts, but getting close)
+        elif remaining is not None and remaining <= 1 and self.reschedule:
+            msg = (
+                f"WARNING: Only {remaining} reschedule attempt(s) remaining.\n"
+                "Your appointment will be permanently locked if the limit is reached."
+            )
+            logger.warning(msg)
+            self.send_email_notification(msg)
+
+        # Dismiss: tick 'I understand', then click Continue
+        try:
+            self.page.locator("label", has_text="I understand").click()
+            self.capture_debug_screenshot("scheduling_limit_acknowledged")
+            self.page.get_by_role("button", name="Continue").click()
+            self.page.wait_for_load_state("networkidle")
+            self.capture_debug_screenshot("scheduling_limit_dismissed")
+            logger.info("Scheduling Limit Warning dismissed — proceeding to appointment page")
+        except Exception as e:
+            logger.error(f"Failed to dismiss scheduling limit warning: {e}", exc_info=True)
+
+        return True
+
     def navigate_to_appointments(self, appointment_id):
         try:
             logger.debug(f"Navigating to appointments page for ID: {appointment_id}")
             self.page.goto(self.appointment_link.format(appointment_id))
             self.page.wait_for_load_state("networkidle")
             self.capture_debug_screenshot("appointments_page")
+
+            # The site intercepts navigation with a Scheduling Limit Warning page
+            # when reschedule attempts are running low. Detect and dismiss it so
+            # the automation can continue to the actual appointment form.
+            self.handle_scheduling_limit_warning()
+
             logger.info("Successfully navigated to appointments page")
         except Exception as e:
             logger.error(f"Failed to navigate to appointments: {str(e)}", exc_info=True)
@@ -331,7 +348,7 @@ class VisaAutomation:
 
     def get_appointment_date(self):
         try:
-            logger.info(f"Getting current appointment details...")
+            logger.info("Getting current appointment details...")
             date_text = self.page.locator(self.appointment_date_selector).text_content()
         except Exception as e:
             e_strings = str(e).split("get_by_text")
@@ -363,9 +380,8 @@ class VisaAutomation:
                 location_selector = self.page.locator(self.location_id)
                 location_selector.select_option(location)
                 self.page.wait_for_load_state("networkidle")
-                # location_selector.click()
+                self.last_checked_location = location
                 time.sleep(2)
-
             except TimeoutError:
                 logger.error(f"Timeout occurred while selecting {location} location")
 
@@ -391,7 +407,7 @@ class VisaAutomation:
 
                 continue_check = True
                 self.page.locator(self.calender_dropdown_date_selector).click()
-                self.capture_debug_screenshot(f"calendar_dropdown_{location}")
+                # self.capture_debug_screenshot(f"calendar_dropdown_{location}")
 
                 while continue_check:
                     result, continue_check = self.check_availability()
@@ -404,11 +420,8 @@ class VisaAutomation:
                         logger.info(message)
                         self.capture_debug_screenshot(f"date_found_{location}")
 
-                        if (
-                            self.telegram_noti_enabled
-                            and self.new_date < self.current_date
-                        ):
-                            self.send_telegram_notification(message)
+                        if self.notification_email and self.new_date and self.current_date and self.new_date < self.current_date:
+                            self.send_email_notification(message)
 
                         if self.reschedule:
                             if self.new_date < self.current_date:
@@ -419,7 +432,7 @@ class VisaAutomation:
                     else:
                         self.page.get_by_text(self.next_button_label).click()
                         logger.debug("Clicked next button")
-                        self.capture_debug_screenshot(f"next_month_{location}")
+                        # self.capture_debug_screenshot(f"next_month_{location}")
                         time.sleep(0.2)
 
                 self.page.keyboard.press("Escape")
@@ -428,61 +441,99 @@ class VisaAutomation:
             else:
                 availability_list.append(False)
                 logger.info(f"No dates available at {location}")
-                self.capture_debug_screenshot(f"no_dates_{location}")
+                # self.capture_debug_screenshot(f"no_dates_{location}")
 
         return any(availability_list)
 
     def run(self):
+        """
+        Entry point for the daemon thread.
+        All Playwright objects are created here so they share the same
+        greenlet/thread context — calling sync_playwright() anywhere else
+        (e.g. __init__, which runs on Flask's main thread) causes the
+        'cannot switch to a different thread' greenlet error.
+        """
         self.is_running = True
-        for session_number in range(self.browsers):
-            try:
-                self.create_new_context()
-                self.login(
-                    username=self.username, password=self.password, continue_login=False
-                )
-                self.current_date = self.get_appointment_date()
-
-                for check_number in range(self.check):
-                    if not self.is_running:
-                        return
-                    logger.info(f"Session {check_number}")
-                    self.navigate_to_appointments(self.appointment_id)
-                    availability_flag = self.run_check()
-
-                    if availability_flag:
-                        self.poll_count = 0
-                    else:
-                        self.poll_count += 1
-                        if self.poll_count >= MAX_POLLS:
-                            self.handle_soft_ban()
-
-                    self.sleep_before_retry(check_number)
-
-            except Exception as error:
-                self.handle_error(error)
-
-            finally:
-                self.close_context()
-
-                if session_number == self.browsers - 1:
-                    logger.info("All browser sessions completed.")
-                    self.close_browser()
-        self.is_running = False
-
-    def send_telegram_notification(self, message):
-        logger.info("Trying to send telegram noti...")
-        # url = f"https://api.telegram.org/bot{TOKEN}/sendMessage?chat_id={chat_id}&text={message}"
-        url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
-        params = {"chat_id": self.chat_id, "text": message}
+        # Start playwright inside this thread
+        self.playwright = sync_playwright().start()
         try:
-            # Send the message using an HTTP POST request
-            response = requests.post(url, data=params)
-            if response.status_code == 200:
-                print("Message sent successfully!")
-            else:
-                print(f"{response.status_code}: Failed to send message.")
+            self.browser = self.playwright.chromium.launch(headless=True)
+
+            for session_number in range(self.browsers):
+                try:
+                    self.create_new_context()
+                    self.login(
+                        username=self.username, password=self.password, continue_login=False
+                    )
+                    self.current_date = self.get_appointment_date()
+
+                    for check_number in range(self.check):
+                        if not self.is_running:
+                            return
+                        logger.info(f"Session {check_number}")
+                        self.navigate_to_appointments(self.appointment_id)
+                        availability_flag = self.run_check()
+
+                        if availability_flag:
+                            self.poll_count = 0
+                        else:
+                            self.poll_count += 1
+                            if self.poll_count >= MAX_POLLS:
+                                self.handle_soft_ban()
+
+                        self.sleep_before_retry(check_number)
+
+                except Exception as error:
+                    self.handle_error(error)
+
+                finally:
+                    self.close_context()
+
+            logger.info("All browser sessions completed.")
+
+        finally:
+            # Always clean up browser + playwright regardless of errors
+            try:
+                if self.browser:
+                    self.browser.close()
+            except Exception:
+                pass
+            try:
+                self.playwright.stop()
+            except Exception:
+                pass
+            self.is_running = False
+
+    def send_email_notification(self, message):
+        if not self.notification_email:
+            logger.warning("No notification_email set — skipping notification")
+            return
+
+        smtp_host = os.environ.get("SMTP_HOST", "smtp.gmail.com")
+        smtp_port = int(os.environ.get("SMTP_PORT", "587"))
+        smtp_user = os.environ.get("SMTP_USER", "")
+        smtp_password = os.environ.get("SMTP_PASSWORD", "")
+
+        if not smtp_user or not smtp_password:
+            logger.warning("SMTP_USER / SMTP_PASSWORD not set — skipping email")
+            return
+
+        try:
+            msg = MIMEMultipart()
+            msg["From"] = f"Visa Monitor <{smtp_user}>"
+            msg["To"] = self.notification_email
+            msg["Subject"] = "[VISA MONITOR] Appointment Update"
+            msg.attach(MIMEText(message, "plain"))
+
+            with smtplib.SMTP(smtp_host, smtp_port) as server:
+                server.ehlo()
+                server.starttls()
+                server.login(smtp_user, smtp_password)
+                server.send_message(msg)
+
+            logger.info(f"Email notification sent to {self.notification_email}")
         except Exception as e:
-            print(f"Error sending message: {e}")
+            logger.error(f"Email notification failed: {e}", exc_info=True)
 
     def reschedule_appointment(self, location):
         try:
@@ -514,9 +565,14 @@ class VisaAutomation:
             logger.info(f"New appointment date: {self.current_date}")
 
             location_address = self.visa_locations.get(location, "Unknown Location")
-            message = f"Rescheduled to a new earlier appointment date at {location}: \nDate: {self.current_date}\nLocation: {location_address}"
+            message = (
+                f"Rescheduled to an earlier appointment!\n\n"
+                f"Location: {location}\n"
+                f"Address: {location_address}\n"
+                f"New Date: {self.current_date}"
+            )
             logger.info(message)
-            self.send_telegram_notification(message)
+            self.send_email_notification(message)
             self.capture_debug_screenshot("reschedule_complete")
 
         except Exception as e:
@@ -543,40 +599,32 @@ class VisaAutomation:
 
     def handle_confirm_page_befor_navigate_to_appointment(self):
         try:
-            # Click the "Continue" button
             self.page.locator(
                 'input[type="submit"][name="commit"][value="Continue"]'
             ).click()
-            # logger.info("Successfully clicked the Continue button.")
-
-        except Exception as e:
-            # logger.error("Failed to click on the Continue button", exc_info=True)
-            self.navigate_to_appointments()
+        except Exception:
+            self.navigate_to_appointments(self.appointment_id)
 
 
 if __name__ == "__main__":
+    try:
+        from creds import (
+            user, password, appointment_id, appointment_url,
+            TOKEN, chat_id, browsers, check, reschedule,
+            telegram_noti_enabled,
+        )
+    except ImportError:
+        raise SystemExit("creds.py not found. Copy creds.py.example and fill in your values.")
 
     logger.info("Script started")
-    current_time = datetime.now()
-    target_time = current_time.replace(
-        hour=1, minute=15, second=0, microsecond=0
-    ) + timedelta(days=1)
-    time_until_target = (target_time - current_time).total_seconds()
-    # logger.info(f"Sleeping until {target_time}...")
-    # time.sleep(time_until_target
-    # )  ### Wait in seconds for after how long you want the script to kick off
 
     visa_automation = VisaAutomation(
         username=user,
         password=password,
         appointment_id=appointment_id,
         appointment_url=appointment_url,
-        token=TOKEN,
-        chat_id=chat_id,
         browsers=browsers,
         check=check,
         reschedule=reschedule,
-        telegram_noti_enabled=telegram_noti_enabled,
     )
-    visa_automation.send_telegram_notification("Thy script has began execution...😤")
     visa_automation.run()

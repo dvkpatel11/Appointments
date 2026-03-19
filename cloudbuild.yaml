@@ -1,0 +1,86 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# VISA_CTRL — Google Cloud Build Pipeline
+#
+# Triggers on push → builds image → pushes to GCR → deploys to Cloud Run.
+#
+# ONE-TIME SETUP (run these in Cloud Shell or gcloud CLI):
+# ─────────────────────────────────────────────────────────
+# 1. Enable APIs:
+#      gcloud services enable \
+#        cloudbuild.googleapis.com \
+#        run.googleapis.com \
+#        secretmanager.googleapis.com \
+#        containerregistry.googleapis.com
+#
+# 2. Create secrets in Secret Manager:
+#      echo -n "your-secret-key"     | gcloud secrets create visa-ctrl-secret-key     --data-file=-
+#      echo -n "your-admin-password" | gcloud secrets create visa-ctrl-admin-password  --data-file=-
+#      echo -n "you@gmail.com"       | gcloud secrets create visa-ctrl-smtp-user       --data-file=-
+#      echo -n "your-app-password"   | gcloud secrets create visa-ctrl-smtp-password   --data-file=-
+#
+# 3. Grant Cloud Build access to Secret Manager:
+#      PROJECT_NUMBER=$(gcloud projects describe $PROJECT_ID --format='value(projectNumber)')
+#      gcloud projects add-iam-policy-binding $PROJECT_ID \
+#        --member="serviceAccount:${PROJECT_NUMBER}@cloudbuild.gserviceaccount.com" \
+#        --role="roles/secretmanager.secretAccessor"
+#
+# 4. Connect this repo in Cloud Build → Triggers → Create Trigger.
+#    Set branch to main (or your preferred branch).
+# ─────────────────────────────────────────────────────────────────────────────
+
+steps:
+  # ── Step 1: Build Docker image ──────────────────────────────────────────────
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build'
+    args:
+      - 'build'
+      - '--tag=gcr.io/$PROJECT_ID/visa-ctrl:$COMMIT_SHA'
+      - '--tag=gcr.io/$PROJECT_ID/visa-ctrl:latest'
+      - '--cache-from=gcr.io/$PROJECT_ID/visa-ctrl:latest'
+      - '.'
+
+  # ── Step 2: Push both tags ──────────────────────────────────────────────────
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'push'
+    waitFor: ['build']
+    args:
+      - 'push'
+      - '--all-tags'
+      - 'gcr.io/$PROJECT_ID/visa-ctrl'
+
+  # ── Step 3: Deploy to Cloud Run ─────────────────────────────────────────────
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy'
+    waitFor: ['push']
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'visa-ctrl'
+      - '--image=gcr.io/$PROJECT_ID/visa-ctrl:$COMMIT_SHA'
+      - '--region=northamerica-northeast1'   # Montreal — closest to CA consulates
+      - '--platform=managed'
+      - '--allow-unauthenticated'            # Login gate is in the Flask app itself
+      - '--memory=2Gi'                       # Chromium needs ~1.5 GB
+      - '--cpu=2'
+      - '--min-instances=0'                  # Scale to zero when idle
+      - '--max-instances=10'
+      - '--timeout=3600'                     # 1 hr — long-running automation sessions
+      - '--concurrency=5'
+      # ── Inject secrets from Secret Manager ──
+      - >-
+        --set-secrets=SECRET_KEY=visa-ctrl-secret-key:latest,ADMIN_PASSWORD=visa-ctrl-admin-password:latest,SMTP_USER=visa-ctrl-smtp-user:latest,SMTP_PASSWORD=visa-ctrl-smtp-password:latest
+      # ── Static env vars ──
+      - '--set-env-vars=SMTP_HOST=smtp.gmail.com,SMTP_PORT=587,FLASK_DEBUG=false'
+
+# Images to store in the registry after the build
+images:
+  - 'gcr.io/$PROJECT_ID/visa-ctrl:$COMMIT_SHA'
+  - 'gcr.io/$PROJECT_ID/visa-ctrl:latest'
+
+# Build options
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: 'E2_HIGHCPU_8'   # Faster builds — Playwright install is heavy
+
+timeout: '1200s'                 # 20 min build timeout (Playwright download can be slow)

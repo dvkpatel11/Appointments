@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MISSION BRIEFING // VISA MONITOR</title>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --green: #00ff41;
+        --magenta: #ff00ff;
+        --cyan: #00ffff;
+        --red: #ff0044;
+        --yellow: #ffe600;
+        --bg: #000;
+        --surface: #050505;
+        --panel: #080808;
+        --border: #1c1c1c;
+        --text: #777;
+        --dimtext: #333;
+      }
+
+      body {
+        background: var(--bg);
+        color: var(--green);
+        font-family: "Share Tech Mono", monospace;
+        min-height: 100vh;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        padding: 40px 16px 80px;
+        overflow-x: hidden;
+      }
+
+      /* Scanlines */
+      body::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background: repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 2px,
+          rgba(0, 0, 0, 0.18) 2px,
+          rgba(0, 0, 0, 0.18) 4px
+        );
+        pointer-events: none;
+        z-index: 9999;
+      }
+
+      /* Vignette */
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background: radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.75) 100%);
+        pointer-events: none;
+        z-index: 9998;
+      }
+
+      .wrapper {
+        width: min(680px, 100%);
+      }
+
+      /* ── HEADER ─────────────────────────────────────────────────── */
+      .page-header {
+        margin-bottom: 32px;
+      }
+
+      .sys-badge {
+        font-size: 0.62rem;
+        letter-spacing: 4px;
+        color: var(--text);
+        margin-bottom: 12px;
+      }
+
+      .page-title {
+        font-size: clamp(1.6rem, 6vw, 2.4rem);
+        letter-spacing: 5px;
+        line-height: 1.1;
+        color: var(--green);
+        text-shadow:
+          0 0 10px rgba(0, 255, 65, 0.5),
+          0.04em 0 0 var(--magenta),
+          -0.04em 0 0 var(--cyan);
+        animation: glitch 6s infinite;
+      }
+
+      @keyframes glitch {
+        0%,
+        72%,
+        76%,
+        78%,
+        100% {
+          text-shadow:
+            0 0 10px rgba(0, 255, 65, 0.5),
+            0.04em 0 0 var(--magenta),
+            -0.04em 0 0 var(--cyan);
+        }
+        73% {
+          text-shadow:
+            -0.04em 0 0 var(--magenta),
+            0.04em 0 0 var(--cyan);
+          transform: translate(-2px);
+        }
+        75% {
+          text-shadow:
+            0.06em 0 0 var(--magenta),
+            -0.04em 0 0 var(--cyan);
+          transform: translate(2px, 1px);
+        }
+        77% {
+          text-shadow:
+            0.04em 0 0 var(--magenta),
+            -0.04em 0 0 var(--cyan);
+          transform: translate(0);
+        }
+      }
+
+      .page-desc {
+        margin-top: 16px;
+        color: var(--text);
+        font-size: 0.78rem;
+        letter-spacing: 1px;
+        line-height: 1.7;
+        border-left: 2px solid var(--border);
+        padding-left: 14px;
+      }
+
+      .page-desc span {
+        color: var(--cyan);
+      }
+
+      /* ── HOW IT WORKS ───────────────────────────────────────────── */
+      .steps {
+        display: flex;
+        gap: 0;
+        margin: 28px 0;
+        flex-wrap: wrap;
+      }
+
+      .step {
+        flex: 1;
+        min-width: 140px;
+        padding: 14px;
+        border: 1px solid var(--border);
+        border-right: none;
+        background: var(--panel);
+      }
+      .step:last-child {
+        border-right: 1px solid var(--border);
+      }
+
+      .step-num {
+        font-size: 1.4rem;
+        color: var(--dimtext);
+        margin-bottom: 6px;
+      }
+      .step-label {
+        font-size: 0.65rem;
+        letter-spacing: 2px;
+        color: var(--text);
+        line-height: 1.5;
+      }
+      .step-label strong {
+        color: var(--green);
+        display: block;
+        margin-bottom: 2px;
+      }
+
+      /* ── FORM ───────────────────────────────────────────────────── */
+      .form-panel {
+        border: 1px solid var(--border);
+        background: var(--panel);
+        padding: 28px;
+        position: relative;
+      }
+
+      /* Corner accents */
+      .form-panel::before,
+      .form-panel::after {
+        content: "";
+        position: absolute;
+        width: 14px;
+        height: 14px;
+        border-color: var(--cyan);
+        border-style: solid;
+      }
+      .form-panel::before {
+        top: -1px;
+        left: -1px;
+        border-width: 2px 0 0 2px;
+      }
+      .form-panel::after {
+        bottom: -1px;
+        right: -1px;
+        border-width: 0 2px 2px 0;
+      }
+
+      .form-section-label {
+        font-size: 0.65rem;
+        letter-spacing: 3px;
+        color: var(--cyan);
+        margin: 24px 0 12px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid var(--border);
+      }
+      .form-section-label:first-of-type {
+        margin-top: 0;
+      }
+
+      .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: 14px;
+      }
+
+      .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+      .form-group.full {
+        grid-column: 1 / -1;
+      }
+
+      label {
+        font-size: 0.65rem;
+        color: var(--text);
+        letter-spacing: 2px;
+        text-transform: uppercase;
+      }
+
+      input[type="text"],
+      input[type="password"],
+      input[type="email"] {
+        background: #000;
+        border: 1px solid var(--border);
+        border-bottom-color: #2a2a2a;
+        color: var(--green);
+        font-family: "Share Tech Mono", monospace;
+        font-size: 0.85rem;
+        padding: 9px 12px;
+        outline: none;
+        width: 100%;
+        transition:
+          border-color 0.15s,
+          box-shadow 0.15s;
+      }
+      input:focus {
+        border-color: var(--green);
+        box-shadow: 0 0 8px rgba(0, 255, 65, 0.2);
+      }
+
+      .hint {
+        font-size: 0.6rem;
+        color: var(--dimtext);
+        letter-spacing: 1px;
+        margin-top: 2px;
+      }
+
+      .reschedule-box {
+        border: 1px solid rgba(255, 0, 68, 0.3);
+        background: rgba(255, 0, 68, 0.04);
+        padding: 14px;
+        margin-top: 20px;
+      }
+
+      .reschedule-header {
+        font-size: 0.65rem;
+        letter-spacing: 2px;
+        color: var(--red);
+        margin-bottom: 10px;
+      }
+
+      .checkbox-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+      }
+      .checkbox-row input[type="checkbox"] {
+        accent-color: var(--red);
+        width: 14px;
+        height: 14px;
+        flex-shrink: 0;
+        margin-top: 2px;
+      }
+      .checkbox-desc {
+        font-size: 0.7rem;
+        color: var(--text);
+        line-height: 1.6;
+      }
+      .checkbox-desc strong {
+        color: var(--red);
+      }
+
+      .submit-row {
+        margin-top: 28px;
+        display: flex;
+        justify-content: flex-end;
+      }
+
+      .btn-submit {
+        background: transparent;
+        border: 1px solid var(--green);
+        color: var(--green);
+        font-family: "Share Tech Mono", monospace;
+        font-size: 0.8rem;
+        letter-spacing: 3px;
+        padding: 12px 32px;
+        cursor: pointer;
+        text-transform: uppercase;
+        transition: all 0.15s;
+        position: relative;
+        overflow: hidden;
+      }
+      .btn-submit::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: var(--green);
+        transform: scaleX(0);
+        transform-origin: left;
+        transition: transform 0.15s;
+        z-index: -1;
+      }
+      .btn-submit:hover {
+        color: #000;
+        box-shadow: 0 0 24px rgba(0, 255, 65, 0.4);
+      }
+      .btn-submit:hover::before {
+        transform: scaleX(1);
+      }
+      .btn-submit:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      /* ── RESULT ─────────────────────────────────────────────────── */
+      #result {
+        display: none;
+        margin-top: 20px;
+        padding: 18px 20px;
+        border: 1px solid var(--green);
+        background: rgba(0, 255, 65, 0.04);
+        box-shadow: 0 0 20px rgba(0, 255, 65, 0.1);
+      }
+      #result.error {
+        border-color: var(--red);
+        background: rgba(255, 0, 68, 0.04);
+        box-shadow: 0 0 20px rgba(255, 0, 68, 0.1);
+        color: var(--red);
+      }
+      #result.warning {
+        border-color: var(--yellow);
+        background: rgba(255, 230, 0, 0.04);
+        color: var(--yellow);
+      }
+
+      .result-title {
+        font-size: 0.7rem;
+        letter-spacing: 3px;
+        margin-bottom: 8px;
+      }
+      .result-msg {
+        font-size: 0.8rem;
+        color: var(--text);
+        line-height: 1.6;
+      }
+
+      .blink {
+        animation: blink 1s step-end infinite;
+      }
+      @keyframes blink {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrapper">
+      <!-- Header -->
+      <div class="page-header">
+        <p class="sys-badge">&gt; VISA_CTRL</p>
+        <h1 class="page-title">APPOINTMENT<br />RESCHEDULER</h1>
+        <p class="page-desc">
+          Submit your credentials below to initialize automated monitoring of your US visa appointment slot.<br /><br />
+          We'll scan all Canadian consulate locations and notify you
+          <span>via email</span> the moment an earlier date becomes available.
+        </p>
+      </div>
+
+      <!-- Steps -->
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">01</div>
+          <div class="step-label"><strong>SUBMIT</strong>Your visa portal credentials &amp; appointment URL</div>
+        </div>
+        <div class="step">
+          <div class="step-num">02</div>
+          <div class="step-label"><strong>SCAN</strong>System monitors all locations continuously</div>
+        </div>
+        <div class="step">
+          <div class="step-num">03</div>
+          <div class="step-label"><strong>NOTIFY</strong>Email alert the instant an earlier slot appears</div>
+        </div>
+        <div class="step">
+          <div class="step-num">04</div>
+          <div class="step-label"><strong>BOOK</strong>You reschedule manually (or enable auto)</div>
+        </div>
+      </div>
+
+      <!-- Form -->
+      <div class="form-panel">
+        <form id="missionForm" autocomplete="off" novalidate>
+          <p class="form-section-label">&gt; PERSONAL DETAILS</p>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Your Name</label>
+              <input type="text" name="name" placeholder="Jane Smith" required />
+            </div>
+            <div class="form-group">
+              <label>Notification Email</label>
+              <input type="email" name="email" placeholder="jane@example.com" required />
+              <p class="hint">// Alerts will be sent here</p>
+            </div>
+          </div>
+
+          <p class="form-section-label">&gt; VISA PORTAL CREDENTIALS</p>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Portal Login (Email)</label>
+              <input type="text" name="username" placeholder="your@login.com" required />
+              <p class="hint">// ais.usvisa-info.com login</p>
+            </div>
+            <div class="form-group">
+              <label>Portal Password</label>
+              <input type="password" name="password" required />
+            </div>
+          </div>
+
+          <p class="form-section-label">&gt; APPOINTMENT DETAILS</p>
+          <div class="form-grid">
+            <div class="form-group full">
+              <label>Appointment URL</label>
+              <input
+                type="text"
+                name="appointment_url"
+                required
+                placeholder="https://ais.usvisa-info.com/en-ca/niv/schedule/12345678/appointment"
+              />
+              <p class="hint">// Copy from your appointment confirmation page URL</p>
+            </div>
+          </div>
+
+          <!-- Reschedule -->
+          <div class="reschedule-box">
+            <p class="reschedule-header">⚠ DANGER ZONE // AUTO-RESCHEDULE</p>
+            <div class="checkbox-row">
+              <input type="checkbox" name="reschedule" id="reschedule" />
+              <label class="checkbox-desc" for="reschedule">
+                Enable <strong>automatic rescheduling</strong> — if an earlier date is found, the system will book it
+                immediately without further confirmation. Only enable this if you are comfortable with any available
+                location.
+              </label>
+            </div>
+          </div>
+
+          <div class="submit-row">
+            <button type="submit" class="btn-submit" id="submitBtn">▶ INITIATE</button>
+          </div>
+        </form>
+
+        <!-- Result -->
+        <div id="result">
+          <p class="result-title" id="resultTitle"></p>
+          <p class="result-msg" id="resultMsg"></p>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      document.getElementById("missionForm").addEventListener("submit", function (e) {
+        e.preventDefault();
+
+        const form = e.target;
+        const btn = document.getElementById("submitBtn");
+
+        // Basic validation
+        const required = ["name", "email", "username", "password", "appointment_url"];
+        for (const field of required) {
+          if (!form[field].value.trim()) {
+            showResult("error", "VALIDATION_ERROR", `Field "${field.toUpperCase()}" is required.`);
+            return;
+          }
+        }
+
+        btn.disabled = true;
+        btn.textContent = "⟳ TRANSMITTING...";
+
+        const fd = new FormData(form);
+        fd.set("reschedule", form.reschedule.checked ? "true" : "false");
+
+        fetch("/client_submit", { method: "POST", body: fd })
+          .then((r) => r.json())
+          .then((data) => {
+            if (data.status === "success") {
+              showResult("success", "RUN_ACTIVE", data.message);
+              form.reset();
+              btn.textContent = "✓ MISSION LIVE";
+            } else if (data.status === "already_running") {
+              showResult("warning", "ALREADY_ACTIVE", data.message);
+              btn.disabled = false;
+              btn.textContent = "▶ INITIATE MISSION";
+            } else {
+              showResult("error", "TRANSMISSION_FAILED", data.message || "Unknown error.");
+              btn.disabled = false;
+              btn.textContent = "▶ INITIATE MISSION";
+            }
+          })
+          .catch(() => {
+            showResult("error", "CONNECTION_ERROR", "Could not reach the server. Please try again.");
+            btn.disabled = false;
+            btn.textContent = "▶ INITIATE MISSION";
+          });
+      });
+
+      function showResult(type, title, msg) {
+        const box = document.getElementById("result");
+        box.className = type === "success" ? "" : type;
+        box.style.display = "block";
+        document.getElementById("resultTitle").textContent = "> " + title;
+        document.getElementById("resultMsg").textContent = msg;
+        box.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+    </script>
+  </body>
+</html>

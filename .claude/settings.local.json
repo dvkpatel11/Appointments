@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(move us_visa_canadamulti_user_routes.py us_visa_canadaapp.py)",
+      "Read(//mnt/c/Users/deepv/Desktop/**)",
+      "Read(//c/Users/deepv/Desktop/Projects/**)",
+      "Bash(find /mnt -name UsVisaAppointment -maxdepth 8)",
+      "Bash(find ~/Desktop/Projects/UsVisaAppointment -name *.png -o -name *.jpg -o -name *.jpeg -o -name *.webp)",
+      "Bash(find ~/Desktop/Projects/UsVisaAppointment/screenshots -name *.png)"
+    ]
+  }
+}
