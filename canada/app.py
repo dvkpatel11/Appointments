@@ -217,15 +217,37 @@ def client_submit():
 
         return jsonify({
             "status": "success",
-            "message": (
-                f"Run active, {name}. "
-                f"Email updates will be sent to {email}."
-            ),
+            "user_id": user_id,
+            "name": name,
+            "email": email,
         })
 
     except Exception as e:
         app.logger.error(f"client_submit error: {e}", exc_info=True)
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ---------------------------------------------------------------------------
+# Public screenshot endpoint — polled by the client form after submission
+# ---------------------------------------------------------------------------
+
+@app.route("/client_screenshot/<user_id>")
+def client_screenshot(user_id):
+    """
+    Returns the appointment-page screenshot for a given user_id as base64 JSON.
+    The client form polls this after submit to display confirmation to the client.
+    No auth required — user_id is an unguessable string (client_{schedule_id}).
+    """
+    import base64
+    inst = automation_instances.get(user_id)
+    if inst is None:
+        return jsonify({"status": "not_found"}), 404
+    path = inst.appointments_page_screenshot
+    if not path or not os.path.exists(path):
+        return jsonify({"status": "pending"})
+    with open(path, "rb") as f:
+        data = base64.b64encode(f.read()).decode()
+    return jsonify({"status": "ready", "image": data})
 
 
 # ---------------------------------------------------------------------------

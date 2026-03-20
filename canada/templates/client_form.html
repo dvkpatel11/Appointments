@@ -260,6 +260,29 @@
         box-shadow: 0 0 8px rgba(0, 255, 65, 0.2);
       }
 
+      /* URL validation states */
+      input.url-valid {
+        border-color: var(--green);
+        box-shadow: 0 0 8px rgba(0, 255, 65, 0.3);
+      }
+      input.url-invalid {
+        border-color: var(--red);
+        box-shadow: 0 0 8px rgba(255, 0, 68, 0.2);
+      }
+      .url-error {
+        font-size: 0.65rem;
+        color: var(--red);
+        letter-spacing: 1px;
+        margin-top: 4px;
+        min-height: 1em;
+      }
+      .url-ok {
+        font-size: 0.65rem;
+        color: var(--green);
+        letter-spacing: 1px;
+        margin-top: 4px;
+      }
+
       .hint {
         font-size: 0.6rem;
         color: var(--dimtext);
@@ -459,10 +482,14 @@
               <input
                 type="text"
                 name="appointment_url"
+                id="appointmentUrl"
                 required
+                autocomplete="off"
+                spellcheck="false"
                 placeholder="https://ais.usvisa-info.com/en-ca/niv/schedule/12345678/appointment"
               />
-              <p class="hint">// Copy from your appointment confirmation page URL</p>
+              <p class="hint">// Paste the full URL from your appointment confirmation page</p>
+              <p id="urlFeedback"></p>
             </div>
           </div>
 
@@ -484,32 +511,129 @@
           </div>
         </form>
 
-        <!-- Result -->
-        <div id="result">
-          <p class="result-title" id="resultTitle"></p>
-          <p class="result-msg" id="resultMsg"></p>
+        <!-- Inline error for invalid URL -->
+        <div id="urlValidationError" style="display:none;margin-top:12px;padding:12px 16px;border:1px solid var(--red);background:rgba(255,0,68,0.05);color:var(--red);font-size:0.72rem;letter-spacing:1px;"></div>
+      </div>
+
+      <!-- ── SUCCESS PANEL (replaces form after submit) ─────────────── -->
+      <div id="successPanel" style="display:none;">
+        <div style="border:1px solid var(--green);background:rgba(0,255,65,0.03);padding:28px;position:relative;">
+          <!-- corner accents -->
+          <span style="position:absolute;top:-1px;left:-1px;width:14px;height:14px;border-top:2px solid var(--cyan);border-left:2px solid var(--cyan);display:block;"></span>
+          <span style="position:absolute;bottom:-1px;right:-1px;width:14px;height:14px;border-bottom:2px solid var(--cyan);border-right:2px solid var(--cyan);display:block;"></span>
+
+          <p style="font-size:0.62rem;letter-spacing:4px;color:var(--text);margin-bottom:14px;">&gt; MISSION_STATUS</p>
+
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
+            <span id="statusDot" style="width:10px;height:10px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s ease-in-out infinite;flex-shrink:0;"></span>
+            <span style="font-size:1.1rem;letter-spacing:4px;color:var(--green);">SURVEILLANCE_ONLINE</span>
+          </div>
+
+          <div style="display:grid;gap:6px;margin-bottom:24px;">
+            <div style="display:flex;gap:16px;font-size:0.75rem;">
+              <span style="color:var(--dimtext);width:80px;flex-shrink:0;">AGENT_ID</span>
+              <span id="spUserId" style="color:var(--cyan);"></span>
+            </div>
+            <div style="display:flex;gap:16px;font-size:0.75rem;">
+              <span style="color:var(--dimtext);width:80px;flex-shrink:0;">NOTIFY</span>
+              <span id="spEmail" style="color:var(--text);"></span>
+            </div>
+            <div style="display:flex;gap:16px;font-size:0.75rem;">
+              <span style="color:var(--dimtext);width:80px;flex-shrink:0;">URL</span>
+              <span id="spUrl" style="color:var(--text);word-break:break-all;"></span>
+            </div>
+          </div>
+
+          <p style="font-size:0.62rem;letter-spacing:3px;color:var(--cyan);border-bottom:1px solid var(--border);padding-bottom:8px;margin-bottom:14px;">&gt; APPOINTMENT_PAGE // CAPTURED AT LOGIN</p>
+
+          <div id="screenshotArea">
+            <div id="screenshotSpinner" style="color:var(--text);font-size:0.7rem;letter-spacing:2px;">
+              <span style="animation:blink 1s step-end infinite;">▮</span> LOADING SCREENSHOT...
+            </div>
+            <img id="screenshotImg" src="" alt="Appointment page"
+              style="display:none;max-width:100%;border:1px solid var(--border);margin-top:4px;" />
+          </div>
+
+          <p style="margin-top:20px;font-size:0.7rem;color:var(--text);line-height:1.7;">
+            All Canadian consulate locations are being monitored.<br/>
+            You'll receive a plain-text email the moment an earlier date is found.
+          </p>
         </div>
       </div>
     </div>
+    </div>
+
+    <style>
+      @keyframes pulse {
+        0%,100% { box-shadow: 0 0 4px var(--green), 0 0 8px var(--green); }
+        50%      { box-shadow: 0 0 10px var(--green), 0 0 24px var(--green); }
+      }
+      #appointmentUrl.url-valid   { border-color: var(--green); box-shadow: 0 0 8px rgba(0,255,65,0.3); }
+      #appointmentUrl.url-invalid { border-color: var(--red);   box-shadow: 0 0 8px rgba(255,0,68,0.2); }
+      .url-feedback { font-size:0.65rem; letter-spacing:1px; margin-top:5px; min-height:1em; }
+      .url-feedback.ok  { color: var(--green); }
+      .url-feedback.bad { color: var(--red); }
+    </style>
 
     <script>
+      // ── Expected URL pattern ───────────────────────────────────────────────
+      // https://ais.usvisa-info.com/en-ca/niv/schedule/12345678/appointment
+      const URL_RE = /^https:\/\/ais\.usvisa-info\.com\/en-[a-z]+\/niv\/schedule\/\d+\/appointment$/i;
+
+      const urlInput    = document.getElementById("appointmentUrl");
+      const urlFeedback = document.getElementById("urlFeedback");
+      const submitBtn   = document.getElementById("submitBtn");
+
+      function validateUrl() {
+        const val = urlInput.value.trim();
+        if (!val) {
+          urlInput.className = "";
+          urlFeedback.textContent = "";
+          urlFeedback.className = "url-feedback";
+          submitBtn.disabled = false;
+          return true;
+        }
+        if (URL_RE.test(val)) {
+          urlInput.classList.remove("url-invalid");
+          urlInput.classList.add("url-valid");
+          urlFeedback.textContent = "✓ Valid appointment URL";
+          urlFeedback.className = "url-feedback ok";
+          submitBtn.disabled = false;
+          return true;
+        } else {
+          urlInput.classList.remove("url-valid");
+          urlInput.classList.add("url-invalid");
+          urlFeedback.textContent =
+            "✕ Must match: https://ais.usvisa-info.com/en-ca/niv/schedule/{ID}/appointment";
+          urlFeedback.className = "url-feedback bad";
+          submitBtn.disabled = true;
+          return false;
+        }
+      }
+
+      urlInput.addEventListener("input", validateUrl);
+      urlInput.addEventListener("blur",  validateUrl);
+
+      // ── Form submit ────────────────────────────────────────────────────────
       document.getElementById("missionForm").addEventListener("submit", function (e) {
         e.preventDefault();
-
         const form = e.target;
-        const btn = document.getElementById("submitBtn");
 
-        // Basic validation
+        // Re-run URL check on submit (handles paste without triggering input)
+        if (!validateUrl()) return;
+
+        // Other required fields
         const required = ["name", "email", "username", "password", "appointment_url"];
         for (const field of required) {
           if (!form[field].value.trim()) {
-            showResult("error", "VALIDATION_ERROR", `Field "${field.toUpperCase()}" is required.`);
+            showValidationError(`Field "${field.toUpperCase().replace("_"," ")}" is required.`);
             return;
           }
         }
 
-        btn.disabled = true;
-        btn.textContent = "⟳ TRANSMITTING...";
+        submitBtn.disabled = true;
+        submitBtn.textContent = "⟳ TRANSMITTING...";
+        document.getElementById("urlValidationError").style.display = "none";
 
         const fd = new FormData(form);
         fd.set("reschedule", form.reschedule.checked ? "true" : "false");
@@ -518,33 +642,67 @@
           .then((r) => r.json())
           .then((data) => {
             if (data.status === "success") {
-              showResult("success", "RUN_ACTIVE", data.message);
-              form.reset();
-              btn.textContent = "✓ MISSION LIVE";
+              showSuccessPanel(data);
             } else if (data.status === "already_running") {
-              showResult("warning", "ALREADY_ACTIVE", data.message);
-              btn.disabled = false;
-              btn.textContent = "▶ INITIATE MISSION";
+              showValidationError("Monitoring is already active for this appointment.");
+              submitBtn.disabled = false;
+              submitBtn.textContent = "▶ INITIATE";
             } else {
-              showResult("error", "TRANSMISSION_FAILED", data.message || "Unknown error.");
-              btn.disabled = false;
-              btn.textContent = "▶ INITIATE MISSION";
+              showValidationError(data.message || "Submission failed — please try again.");
+              submitBtn.disabled = false;
+              submitBtn.textContent = "▶ INITIATE";
             }
           })
           .catch(() => {
-            showResult("error", "CONNECTION_ERROR", "Could not reach the server. Please try again.");
-            btn.disabled = false;
-            btn.textContent = "▶ INITIATE MISSION";
+            showValidationError("Connection error — could not reach the server.");
+            submitBtn.disabled = false;
+            submitBtn.textContent = "▶ INITIATE";
           });
       });
 
-      function showResult(type, title, msg) {
-        const box = document.getElementById("result");
-        box.className = type === "success" ? "" : type;
-        box.style.display = "block";
-        document.getElementById("resultTitle").textContent = "> " + title;
-        document.getElementById("resultMsg").textContent = msg;
-        box.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      // ── Success panel ──────────────────────────────────────────────────────
+      function showSuccessPanel(data) {
+        document.getElementById("missionForm").style.display = "none";
+        document.getElementById("urlValidationError").style.display = "none";
+
+        document.getElementById("spUserId").textContent = data.user_id;
+        document.getElementById("spEmail").textContent  = data.email;
+        document.getElementById("spUrl").textContent    = urlInput.value.trim();
+
+        document.getElementById("successPanel").style.display = "block";
+        document.getElementById("successPanel").scrollIntoView({ behavior: "smooth" });
+
+        pollScreenshot(data.user_id, 0);
+      }
+
+      // Poll /client_screenshot/<user_id> until the automation has logged in
+      // and captured the appointment page (usually 20–40 s).
+      function pollScreenshot(userId, attempts) {
+        if (attempts > 40) {          // ~2 min timeout — stop polling
+          document.getElementById("screenshotSpinner").textContent =
+            "Screenshot unavailable — check your email for updates.";
+          return;
+        }
+        fetch(`/client_screenshot/${encodeURIComponent(userId)}`)
+          .then((r) => r.json())
+          .then((d) => {
+            if (d.status === "ready") {
+              const img = document.getElementById("screenshotImg");
+              img.src = "data:image/png;base64," + d.image;
+              img.style.display = "block";
+              document.getElementById("screenshotSpinner").style.display = "none";
+            } else {
+              setTimeout(() => pollScreenshot(userId, attempts + 1), 3000);
+            }
+          })
+          .catch(() => setTimeout(() => pollScreenshot(userId, attempts + 1), 5000));
+      }
+
+      function showValidationError(msg) {
+        const el = document.getElementById("urlValidationError");
+        el.textContent = "⚠ " + msg;
+        el.style.display = "block";
+        el.scrollIntoView({ behavior: "smooth", block: "nearest" });
       }
     </script>
   </body>

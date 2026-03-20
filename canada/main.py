@@ -5,8 +5,6 @@ import smtplib
 import time
 
 from datetime import datetime, timedelta
-from email.mime.image import MIMEImage
-from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
 from dateutil import parser
@@ -468,7 +466,23 @@ class VisaAutomation:
         # Start playwright inside this thread
         self.playwright = sync_playwright().start()
         try:
-            self.browser = self.playwright.chromium.launch(headless=True)
+            self.browser = self.playwright.chromium.launch(
+                headless=True,
+                args=[
+                    # Required for containerised / Cloud Run environments.
+                    # Without --no-sandbox Chromium's renderer process fails to
+                    # start (Linux namespacing is restricted in containers), which
+                    # manifests as a silent hang → 30 s Page.goto timeout.
+                    "--no-sandbox",
+                    "--disable-setuid-sandbox",
+                    # Cloud Run allocates only 64 MB /dev/shm by default.
+                    # Chromium uses it for shared memory between processes and
+                    # crashes / stalls when it runs out. This flag makes it use
+                    # /tmp instead.
+                    "--disable-dev-shm-usage",
+                    "--disable-gpu",
+                ],
+            )
 
             for session_number in range(self.browsers):
                 try:
@@ -516,6 +530,8 @@ class VisaAutomation:
             self.is_running = False
 
     def send_email_notification(self, message, screenshot_path=None):
+        # screenshot_path retained in signature for call-site compat but not
+        # attached — the screenshot is shown on the client portal instead.
         recipient = self.notification_email
         if not recipient:
             logger.warning("[EMAIL] No notification_email set — skipping")
@@ -530,69 +546,21 @@ class VisaAutomation:
             logger.warning("[EMAIL] SMTP_USER / SMTP_PASSWORD not configured — skipping")
             return
 
-        has_screenshot = screenshot_path and os.path.exists(screenshot_path)
-        logger.info(f"[EMAIL] Attempting → {recipient} (screenshot={'yes' if has_screenshot else 'no'})")
-        logger.info(f"[EMAIL] Via {smtp_host}:{smtp_port} as {smtp_user}")
+        logger.info(f"[EMAIL] Attempting → {recipient} via {smtp_host}:{smtp_port}")
 
         try:
-            # ── Build message structure ───────────────────────────────────────
-            # multipart/related allows an HTML body to reference an inline image
-            # by Content-ID without the image appearing as a separate attachment.
-            outer = MIMEMultipart("related")
-            outer["From"] = f"Visa Monitor <{smtp_user}>"
-            outer["To"] = recipient
-            outer["Subject"] = "[VISA MONITOR] Appointment Update"
+            msg = MIMEText(message, "plain")
+            msg["From"] = f"Visa Monitor <{smtp_user}>"
+            msg["To"] = recipient
+            msg["Subject"] = "[VISA MONITOR] Appointment Update"
 
-            # Plain-text fallback + HTML body live inside multipart/alternative
-            alt = MIMEMultipart("alternative")
-            outer.attach(alt)
-
-            plain_text = message
-            alt.attach(MIMEText(plain_text, "plain"))
-
-            # HTML body — embeds the screenshot inline when available
-            html_message = message.replace("\n", "<br>")
-            if has_screenshot:
-                html_body = f"""
-                <html><body style="font-family:monospace;background:#000;color:#00ff41;padding:20px;">
-                  <p style="white-space:pre-wrap;">{html_message}</p>
-                  <hr style="border-color:#1a1a1a;margin:20px 0;">
-                  <p style="color:#777;font-size:0.85em;">APPOINTMENT PAGE — captured at time of alert</p>
-                  <img src="cid:appt_screenshot"
-                       style="max-width:100%;border:1px solid #333;display:block;margin-top:8px;"
-                       alt="Appointment page screenshot">
-                </body></html>"""
-            else:
-                html_body = f"""
-                <html><body style="font-family:monospace;background:#000;color:#00ff41;padding:20px;">
-                  <p style="white-space:pre-wrap;">{html_message}</p>
-                </body></html>"""
-
-            alt.attach(MIMEText(html_body, "html"))
-
-            # Attach screenshot as inline image referenced by Content-ID
-            if has_screenshot:
-                with open(screenshot_path, "rb") as f:
-                    img = MIMEImage(f.read(), _subtype="png")
-                img.add_header("Content-ID", "<appt_screenshot>")
-                img.add_header("Content-Disposition", "inline", filename="appointment_page.png")
-                outer.attach(img)
-                logger.debug(f"[EMAIL] Screenshot attached: {screenshot_path}")
-
-            # ── Send ─────────────────────────────────────────────────────────
             with smtplib.SMTP(smtp_host, smtp_port) as server:
-                logger.debug(f"[EMAIL] Connected to {smtp_host}:{smtp_port}")
-
-                ehlo_code, _ = server.ehlo()
-                logger.debug(f"[EMAIL] EHLO: {ehlo_code}")
-
+                server.ehlo()
                 server.starttls()
-                logger.debug("[EMAIL] STARTTLS OK — connection encrypted")
-
+                logger.debug("[EMAIL] STARTTLS OK")
                 server.login(smtp_user, smtp_password)
                 logger.debug(f"[EMAIL] Authenticated as {smtp_user}")
-
-                rejected = server.send_message(outer)
+                rejected = server.send_message(msg)
                 if rejected:
                     logger.warning(f"[EMAIL] Rejected recipients: {rejected}")
                 else:
@@ -606,7 +574,7 @@ class VisaAutomation:
         except smtplib.SMTPConnectError as e:
             logger.error(f"[EMAIL] Cannot connect to {smtp_host}:{smtp_port}: {e}")
         except smtplib.SMTPException as e:
-            logger.error(f"[EMAIL] SMTP error sending to {recipient}: {e}", exc_info=True)
+            logger.error(f"[EMAIL] SMTP error: {e}", exc_info=True)
         except OSError as e:
             logger.error(f"[EMAIL] Network/firewall error: {e}", exc_info=True)
 
