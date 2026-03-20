@@ -66,7 +66,9 @@ class VisaAutomation:
         self.new_date = None
         self.is_running = False
         self.last_checked_location = None
-        self.appointments_page_screenshot = None  # path to latest post-login page capture
+        self.appointments_page_screenshot = None
+        self.current_action = "IDLE"
+        self.action_log = []          # list of {"ts": "HH:MM:SS", "msg": str}
         self.screenshots_folder = str(int(time.time()))
         Path(f"./screenshots/{self.screenshots_folder}").mkdir(
             parents=True, exist_ok=True
@@ -129,7 +131,17 @@ class VisaAutomation:
         ]
 
     def stop(self):
+        self._push_action("STOPPED")
         self.is_running = False
+
+    def _push_action(self, msg):
+        """Update the live status visible on the admin panel and append to the action log."""
+        self.current_action = msg
+        entry = {"ts": datetime.now().strftime("%H:%M:%S"), "msg": msg}
+        self.action_log.append(entry)
+        if len(self.action_log) > 150:      # keep last 150 entries
+            self.action_log = self.action_log[-150:]
+        logger.info(f"[ACTION] {msg}")
 
     def capture_debug_screenshot(self, name: str):
         self.debug_screenshot_counter += 1
@@ -175,6 +187,7 @@ class VisaAutomation:
 
     def login(self, username, password, continue_login=True, press_ok=False):
         try:
+            self._push_action("LOGGING IN")
             logger.debug("Attempting to log in")
             self.go_to_page(self.login_url)
             self.capture_debug_screenshot("login_page")
@@ -204,8 +217,10 @@ class VisaAutomation:
                 logger.debug("Clicked continue button")
                 self.capture_debug_screenshot("after_continue")
 
+            self._push_action("LOGIN SUCCESS")
             logger.info("Login successful")
         except Exception as e:
+            self._push_action("LOGIN FAILED — retrying")
             logger.error(f"Login failed: {str(e)}", exc_info=True)
             self.capture_debug_screenshot("login_error")
             time.sleep(60)
@@ -238,6 +253,7 @@ class VisaAutomation:
             return False  # no warning page — nothing to do
 
         self.capture_debug_screenshot("scheduling_limit_warning")
+        self._push_action("SCHEDULING LIMIT WARNING — READING ATTEMPTS")
         logger.warning("Scheduling Limit Warning detected — reading remaining attempts")
 
         # Extract remaining attempt count from the warning body
@@ -261,6 +277,7 @@ class VisaAutomation:
                 "Auto-reschedule has been DISABLED to protect your appointment "
                 "from being permanently locked. Monitoring will continue."
             )
+            self._push_action("CRITICAL: 0 RESCHEDULE ATTEMPTS — AUTO-RESCHEDULE DISABLED")
             logger.error(msg)
             self.send_email_notification(msg)
             self.reschedule = False  # demote to monitor-only for this session
@@ -271,6 +288,7 @@ class VisaAutomation:
                 f"WARNING: Only {remaining} reschedule attempt(s) remaining.\n"
                 "Your appointment will be permanently locked if the limit is reached."
             )
+            self._push_action(f"WARNING: ONLY {remaining} RESCHEDULE ATTEMPT(S) LEFT")
             logger.warning(msg)
             self.send_email_notification(msg)
 
@@ -281,6 +299,7 @@ class VisaAutomation:
             self.page.get_by_role("button", name="Continue").click()
             self.page.wait_for_load_state("networkidle")
             self.capture_debug_screenshot("scheduling_limit_dismissed")
+            self._push_action("SCHEDULING LIMIT WARNING DISMISSED")
             logger.info("Scheduling Limit Warning dismissed — proceeding to appointment page")
         except Exception as e:
             logger.error(f"Failed to dismiss scheduling limit warning: {e}", exc_info=True)
@@ -289,6 +308,7 @@ class VisaAutomation:
 
     def navigate_to_appointments(self, appointment_id):
         try:
+            self._push_action("NAVIGATING TO APPOINTMENT PAGE")
             logger.debug(f"Navigating to appointments page for ID: {appointment_id}")
             self.page.goto(self.appointment_link.format(appointment_id))
             self.page.wait_for_load_state("networkidle")
@@ -386,6 +406,7 @@ class VisaAutomation:
     def select_location(self, location):
         if location in self.visa_locations:
             try:
+                self._push_action(f"SCANNING {location.upper()}")
                 location_selector = self.page.locator(self.location_id)
                 location_selector.select_option(location)
                 self.page.wait_for_load_state("networkidle")
@@ -426,6 +447,7 @@ class VisaAutomation:
                         message = (
                             f"Date available at {location} on {formatted_found_date}"
                         )
+                        self._push_action(f"DATE FOUND: {formatted_found_date} @ {location.upper()}")
                         logger.info(message)
                         self.capture_debug_screenshot(f"date_found_{location}")
 
@@ -449,6 +471,7 @@ class VisaAutomation:
 
             else:
                 availability_list.append(False)
+                self._push_action(f"NO DATES @ {location.upper()}")
                 logger.info(f"No dates available at {location}")
                 # self.capture_debug_screenshot(f"no_dates_{location}")
 
@@ -463,6 +486,7 @@ class VisaAutomation:
         'cannot switch to a different thread' greenlet error.
         """
         self.is_running = True
+        self._push_action("STARTING — LAUNCHING BROWSER")
         # Start playwright inside this thread
         self.playwright = sync_playwright().start()
         try:
@@ -486,6 +510,7 @@ class VisaAutomation:
 
             for session_number in range(self.browsers):
                 try:
+                    self._push_action(f"SESSION {session_number + 1}/{self.browsers} — OPENING CONTEXT")
                     self.create_new_context()
                     self.login(
                         username=self.username, password=self.password, continue_login=False
@@ -624,6 +649,7 @@ class VisaAutomation:
             self.capture_debug_screenshot("reschedule_error")
 
     def handle_soft_ban(self):
+        self._push_action("SOFT BAN DETECTED — COOLING DOWN 10 MIN")
         logger.info("Sleeping for 10 mins due to soft ban")
         time.sleep(600)
         self.poll_count = 0
@@ -632,10 +658,12 @@ class VisaAutomation:
         min_sleep = (check_number // 5) * MIN_SLEEP_BEFORE_RETRY
         max_sleep = min_sleep + MAX_SLEEP_BEFORE_RETRY
         sleep_time = random.randint(min_sleep, max_sleep)
+        self._push_action(f"SWEEP COMPLETE — SLEEPING {sleep_time}s")
         logger.info(f"Sleeping for {sleep_time} seconds before next check")
         time.sleep(sleep_time)
 
     def handle_error(self, error):
+        self._push_action("ERROR — SLEEPING 5 MIN BEFORE RETRY")
         logger.error("Error occurred while checking:", exc_info=True)
         logger.info("Sleeping for 5 mins due to error")
         time.sleep(300)

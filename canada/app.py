@@ -270,6 +270,8 @@ def _build_instance_from_form(form):
 def _serialize(inst):
     return {
         "is_running": inst.is_running,
+        "current_action": inst.current_action,
+        "action_log": inst.action_log,           # list of {ts, msg}
         "current_appointment": str(inst.current_date) if inst.current_date else None,
         "new_appointment": str(inst.new_date) if inst.new_date else None,
         "last_checked_location": inst.last_checked_location,

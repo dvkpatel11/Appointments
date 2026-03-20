@@ -337,6 +337,41 @@
       .checkbox-row label { margin: 0; }
       .warn { color: var(--red); font-size: 0.6rem; letter-spacing: 1px; }
 
+      /* ── ACTION LINE ────────────────────────────────────────────────── */
+      .action-line {
+        font-size: 0.68rem;
+        color: var(--cyan);
+        letter-spacing: 1px;
+        margin: 8px 0 12px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        min-height: 1em;
+      }
+
+      /* ── LOG PANEL ───────────────────────────────────────────────────── */
+      .log-panel {
+        display: none;
+        margin-top: 12px;
+        border-top: 1px solid var(--border);
+        padding-top: 10px;
+        max-height: 200px;
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: var(--border) transparent;
+      }
+      .log-entry {
+        font-size: 0.64rem;
+        line-height: 1.8;
+        color: var(--text);
+        display: flex;
+        gap: 8px;
+      }
+      .log-ts { color: var(--dimtext); flex-shrink: 0; }
+      .log-entry.highlight { color: var(--green); }
+      .log-entry.warn  { color: var(--yellow); }
+      .log-entry.error { color: var(--red); }
+
       /* ── NOTIFICATION TOAST ──────────────────────────────────────────── */
       #toast {
         position: fixed;
@@ -417,6 +452,7 @@
 
     <script>
       let agentCount = 0;
+      const openLogPanels = new Set();   // track which log panels are expanded
 
       // ── Toast ──────────────────────────────────────────────────────────
       function toast(msg, isError = false) {
@@ -425,6 +461,28 @@
         el.className = 'show' + (isError ? ' error' : '');
         clearTimeout(el._t);
         el._t = setTimeout(() => { el.className = ''; }, 3000);
+      }
+
+      // ── Log panel toggle ───────────────────────────────────────────────
+      function toggleLog(uid) {
+        const panel = document.getElementById('log-' + uid);
+        if (!panel) return;
+        if (openLogPanels.has(uid)) {
+          openLogPanels.delete(uid);
+          panel.style.display = 'none';
+        } else {
+          openLogPanels.add(uid);
+          panel.style.display = 'block';
+          panel.scrollTop = panel.scrollHeight;
+        }
+      }
+
+      // ── Classify log entry for colour coding ───────────────────────────
+      function logClass(msg) {
+        if (/DATE FOUND|SUCCESS|DISMISSED|RESCHEDULED/i.test(msg)) return 'highlight';
+        if (/WARNING|ATTEMPT|COOL|SLEEPING|SOFT BAN/i.test(msg))  return 'warn';
+        if (/FAILED|ERROR|CRITICAL/i.test(msg))                    return 'error';
+        return '';
       }
 
       // ── Status polling ─────────────────────────────────────────────────
@@ -442,13 +500,23 @@
         grid.innerHTML = keys.map(uid => {
           const s = data[uid];
           const running = s.is_running;
+          const logEntries = (s.action_log || []).map(e =>
+            `<div class="log-entry ${logClass(e.msg)}">
+               <span class="log-ts">${e.ts}</span><span>${e.msg}</span>
+             </div>`
+          ).join('');
+
           return `
             <div class="agent-card ${running ? 'running' : ''}">
               <div class="agent-id">&gt; ${uid}</div>
+
               <div class="status-row">
                 <div class="status-dot ${running ? 'on' : ''}"></div>
                 <div class="status-text ${running ? '' : 'off'}">${running ? 'RUNNING' : 'IDLE'}</div>
               </div>
+
+              <div class="action-line">${s.current_action || '—'}</div>
+
               <div class="data-row">
                 <span class="data-key">CURRENT</span>
                 <span class="data-val">${s.current_appointment || '—'}</span>
@@ -461,13 +529,28 @@
                 <span class="data-key">LOCATION</span>
                 <span class="data-val">${s.last_checked_location || '—'}</span>
               </div>
-              <div class="card-footer">
-                <button class="btn btn-red" onclick="stopAgent('${uid}')" style="font-size:0.65rem;padding:5px 12px;">
-                  ✕ STOP
-                </button>
+
+              <div class="card-footer" style="gap:8px;">
+                <button class="btn btn-yellow" onclick="toggleLog('${uid}')"
+                  style="font-size:0.62rem;padding:5px 10px;">▤ LOGS</button>
+                <button class="btn btn-red" onclick="stopAgent('${uid}')"
+                  style="font-size:0.65rem;padding:5px 12px;">✕ STOP</button>
+              </div>
+
+              <div class="log-panel" id="log-${uid}">
+                ${logEntries || '<div class="log-entry" style="color:var(--dimtext);">No log entries yet.</div>'}
               </div>
             </div>`;
         }).join('');
+
+        // Re-open any log panels that were expanded before the re-render
+        openLogPanels.forEach(uid => {
+          const panel = document.getElementById('log-' + uid);
+          if (panel) {
+            panel.style.display = 'block';
+            panel.scrollTop = panel.scrollHeight;   // keep scrolled to latest entry
+          }
+        });
       }
 
       function pollStatus() {
