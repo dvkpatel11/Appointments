@@ -1,7 +1,9 @@
+import base64
 import json
 import os
 import re
 import threading
+import uuid
 from functools import wraps
 
 from dotenv import load_dotenv
@@ -20,6 +22,15 @@ ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 
 # In-memory store: user_id -> VisaAutomation instance
 automation_instances = {}
+
+# Client token store.
+# token -> {
+#   "state":         "issued" | "pending" | "approved" | "rejected",
+#   "user_id":       str | None,          # set after approval
+#   "request":       dict | None,         # client-submitted data
+#   "reject_reason": str | None,
+# }
+client_tokens = {}
 
 
 # ---------------------------------------------------------------------------
@@ -69,8 +80,16 @@ def index():
 
 @app.route("/client")
 def client_form():
-    """Public page — no auth required. Clients fill this in."""
-    return render_template("client_form.html")
+    """Legacy public page — generic client form (no token)."""
+    return render_template("client_form.html", token="")
+
+
+@app.route("/client/<token>")
+def client_view(token):
+    """Unique per-client link."""
+    if token not in client_tokens:
+        return render_template("client_form.html", token="", error="Invalid or expired link."), 404
+    return render_template("client_form.html", token=token)
 
 
 # ---------------------------------------------------------------------------
@@ -80,8 +99,83 @@ def client_form():
 @app.route("/generate_client_link")
 @login_required
 def generate_client_link():
-    link = url_for("client_form", _external=True)
+    token = uuid.uuid4().hex
+    client_tokens[token] = {
+        "state": "issued",
+        "user_id": None,
+        "request": None,
+        "reject_reason": None,
+    }
+    link = url_for("client_view", token=token, _external=True)
     return jsonify({"link": link})
+
+
+@app.route("/admin/pending_requests")
+@login_required
+def pending_requests():
+    """Returns all client requests waiting for admin approval."""
+    result = {}
+    for token, data in client_tokens.items():
+        if data["state"] == "pending":
+            req = data["request"] or {}
+            result[token] = {
+                "name":           req.get("name", "—"),
+                "email":          req.get("email", "—"),
+                "appointment_id": req.get("appointment_id", "—"),
+                "appointment_url_full": req.get("appointment_url_full", "—"),
+                "reschedule":     req.get("reschedule", False),
+            }
+    return jsonify(result)
+
+
+@app.route("/admin/approve_client/<token>", methods=["POST"])
+@login_required
+def approve_client(token):
+    """Start monitoring for an approved client request."""
+    if token not in client_tokens or client_tokens[token]["state"] != "pending":
+        return jsonify({"status": "error", "message": "No pending request for this token"}), 400
+
+    req = client_tokens[token]["request"]
+    user_id = token   # token is the stable user_id so /client/<token> stays valid
+
+    if user_id in automation_instances and automation_instances[user_id].is_running:
+        client_tokens[token]["state"] = "approved"
+        client_tokens[token]["user_id"] = user_id
+        return jsonify({"status": "already_running"})
+
+    try:
+        instance = VisaAutomation(
+            username=req["username"],
+            password=req["password"],
+            appointment_id=req["appointment_id"],
+            appointment_url=req["appointment_url"],
+            notification_email=req["email"],
+            browsers=1,
+            check=12,
+            reschedule=req["reschedule"],
+        )
+        automation_instances[user_id] = instance
+        threading.Thread(target=instance.run, daemon=True).start()
+
+        client_tokens[token]["state"] = "approved"
+        client_tokens[token]["user_id"] = user_id
+        return jsonify({"status": "approved", "user_id": user_id})
+
+    except Exception as e:
+        app.logger.error(f"approve_client error for {token}: {e}", exc_info=True)
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/admin/reject_client/<token>", methods=["POST"])
+@login_required
+def reject_client(token):
+    """Reject a pending client request."""
+    if token not in client_tokens:
+        return jsonify({"status": "error", "message": "Token not found"}), 404
+    reason = request.form.get("reason", "Your request was not approved at this time.")
+    client_tokens[token]["state"] = "rejected"
+    client_tokens[token]["reject_reason"] = reason
+    return jsonify({"status": "rejected"})
 
 
 @app.route("/start_automation", methods=["POST"])
@@ -166,79 +260,112 @@ def get_all_status():
 
 
 # ---------------------------------------------------------------------------
-# Public client submission
+# Public client endpoints
 # ---------------------------------------------------------------------------
 
 @app.route("/client_submit", methods=["POST"])
 def client_submit():
-    """Public endpoint — clients submit their details to start monitoring."""
+    """
+    Queue a client request for admin approval instead of starting immediately.
+    """
     try:
-        appointment_url_full = request.form.get("appointment_url", "").strip()
+        token = request.form.get("token", "").strip()
 
-        # Extract numeric schedule ID from URL
+        # Validate token
+        if not token or token not in client_tokens:
+            return jsonify({"status": "error", "message": "Invalid or expired link."}), 400
+
+        token_data = client_tokens[token]
+
+        # Idempotency: already approved or pending
+        if token_data["state"] == "approved":
+            return jsonify({"status": "pending_approval",
+                            "message": "Your request is already approved and running."})
+        if token_data["state"] == "pending":
+            return jsonify({"status": "pending_approval",
+                            "message": "Your request is already submitted and awaiting approval."})
+        if token_data["state"] == "rejected":
+            return jsonify({"status": "rejected",
+                            "reason": token_data.get("reject_reason", "Request was not approved.")})
+
+        appointment_url_full = request.form.get("appointment_url", "").strip()
         match = re.search(r"/schedule/(\w+)/", appointment_url_full)
         if not match:
             return jsonify({
                 "status": "error",
-                "message": "Invalid appointment URL. Expected format: .../schedule/12345678/appointment",
+                "message": "Invalid appointment URL. Expected: .../schedule/12345678/appointment",
             }), 400
 
         appointment_id = match.group(1)
-        # Build template URL with placeholder
         appointment_url_template = re.sub(
             r"/schedule/\w+/appointment",
             "/schedule/{}/appointment",
             appointment_url_full,
         )
 
-        user_id = f"client_{appointment_id}"
+        # Store request data — automation will be started only after admin approves
+        client_tokens[token] = {
+            "state": "pending",
+            "user_id": None,
+            "request": {
+                "name":                 request.form.get("name", "Client"),
+                "email":                request.form.get("email", "").strip(),
+                "username":             request.form.get("username", "").strip(),
+                "password":             request.form.get("password", ""),
+                "appointment_id":       appointment_id,
+                "appointment_url":      appointment_url_template,
+                "appointment_url_full": appointment_url_full,
+                "reschedule":           request.form.get("reschedule") == "true",
+            },
+            "reject_reason": None,
+        }
 
-        if user_id in automation_instances and automation_instances[user_id].is_running:
-            return jsonify({
-                "status": "already_running",
-                "message": "Monitoring is already active for this appointment.",
-            })
-
-        name = request.form.get("name", "Client")
-        email = request.form.get("email", "").strip()
-
-        instance = VisaAutomation(
-            username=request.form.get("username", "").strip(),
-            password=request.form.get("password", ""),
-            appointment_id=appointment_id,
-            appointment_url=appointment_url_template,
-            notification_email=email,
-            browsers=1,
-            check=12,
-            reschedule=request.form.get("reschedule") == "true",
-        )
-        automation_instances[user_id] = instance
-        threading.Thread(target=instance.run, daemon=True).start()
-
-        return jsonify({
-            "status": "success",
-            "user_id": user_id,
-            "name": name,
-            "email": email,
-        })
+        return jsonify({"status": "pending_approval"})
 
     except Exception as e:
         app.logger.error(f"client_submit error: {e}", exc_info=True)
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-# ---------------------------------------------------------------------------
-# Public screenshot endpoint — polled by the client form after submission
-# ---------------------------------------------------------------------------
+@app.route("/client_status/<token>")
+def client_status(token):
+    """
+    Live status for a client's token. States:
+      issued           — link not yet submitted
+      pending_approval — submitted, waiting for admin
+      approved         — admin approved, automation starting/running
+      rejected         — admin rejected
+      ok + data        — approved and automation is active
+    """
+    if token not in client_tokens:
+        return jsonify({"status": "not_found"}), 404
+
+    data = client_tokens[token]
+    state = data["state"]
+
+    if state == "issued":
+        return jsonify({"status": "issued"})
+
+    if state == "pending":
+        return jsonify({"status": "pending_approval"})
+
+    if state == "rejected":
+        return jsonify({
+            "status": "rejected",
+            "reason": data.get("reject_reason", "Request was not approved."),
+        })
+
+    # state == "approved"
+    user_id = data["user_id"]
+    if not user_id or user_id not in automation_instances:
+        return jsonify({"status": "approved"})   # approved but automation not started yet
+
+    return jsonify({"status": "ok", **_serialize(automation_instances[user_id])})
+
 
 @app.route("/client_screenshot/<user_id>")
 def client_screenshot(user_id):
-    """
-    Returns the appointment-page screenshot for a given user_id as base64 JSON.
-    The client form polls this after submit to display confirmation to the client.
-    No auth required — user_id is an unguessable string (client_{schedule_id}).
-    """
-    import base64
+    """Screenshot of the appointment page, served as base64."""
     inst = automation_instances.get(user_id)
     if inst is None:
         return jsonify({"status": "not_found"}), 404
@@ -269,11 +396,11 @@ def _build_instance_from_form(form):
 
 def _serialize(inst):
     return {
-        "is_running": inst.is_running,
-        "current_action": inst.current_action,
-        "action_log": inst.action_log,           # list of {ts, msg}
-        "current_appointment": str(inst.current_date) if inst.current_date else None,
-        "new_appointment": str(inst.new_date) if inst.new_date else None,
+        "is_running":           inst.is_running,
+        "current_action":       inst.current_action,
+        "action_log":           inst.action_log,
+        "current_appointment":  str(inst.current_date) if inst.current_date else None,
+        "new_appointment":      str(inst.new_date) if inst.new_date else None,
         "last_checked_location": inst.last_checked_location,
     }
 

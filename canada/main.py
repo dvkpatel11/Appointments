@@ -252,7 +252,7 @@ class VisaAutomation:
         except TimeoutError:
             return False  # no warning page — nothing to do
 
-        self.capture_debug_screenshot("scheduling_limit_warning")
+        # self.capture_debug_screenshot("scheduling_limit_warning")
         self._push_action("SCHEDULING LIMIT WARNING — READING ATTEMPTS")
         logger.warning("Scheduling Limit Warning detected — reading remaining attempts")
 
@@ -295,10 +295,10 @@ class VisaAutomation:
         # Dismiss: tick 'I understand', then click Continue
         try:
             self.page.locator("label", has_text="I understand").click()
-            self.capture_debug_screenshot("scheduling_limit_acknowledged")
+            # self.capture_debug_screenshot("scheduling_limit_acknowledged")
             self.page.get_by_role("button", name="Continue").click()
             self.page.wait_for_load_state("networkidle")
-            self.capture_debug_screenshot("scheduling_limit_dismissed")
+            # self.capture_debug_screenshot("scheduling_limit_dismissed")
             self._push_action("SCHEDULING LIMIT WARNING DISMISSED")
             logger.info("Scheduling Limit Warning dismissed — proceeding to appointment page")
         except Exception as e:
@@ -312,7 +312,6 @@ class VisaAutomation:
             logger.debug(f"Navigating to appointments page for ID: {appointment_id}")
             self.page.goto(self.appointment_link.format(appointment_id))
             self.page.wait_for_load_state("networkidle")
-            self.capture_debug_screenshot("appointments_page")
 
             # The site intercepts navigation with a Scheduling Limit Warning page
             # when reschedule attempts are running low. Detect and dismiss it so
@@ -322,7 +321,7 @@ class VisaAutomation:
             # Capture the appointment details page — attached to every email alert
             # so recipients can see the current booking state at a glance.
             appt_screenshot_path = (
-                f"./screenshots/{self.screenshots_folder}/appointment_details.png"
+                f"./screenshots/{self.screenshots_folder}/004_logged_in.png"
             )
             self.page.screenshot(path=appt_screenshot_path)
             self.appointments_page_screenshot = appt_screenshot_path
@@ -429,7 +428,7 @@ class VisaAutomation:
             self.page.route(re.compile(self.network_request_regex), self.handle_request)
             logger.info(f"Checking availability at {location}")
             self.select_location(location)
-            self.capture_debug_screenshot(f"location_{location}")
+            # self.capture_debug_screenshot(f"location_{location}")
 
             if self.is_date_available():
                 availability_list.append(True)
@@ -658,7 +657,7 @@ class VisaAutomation:
         min_sleep = (check_number // 5) * MIN_SLEEP_BEFORE_RETRY
         max_sleep = min_sleep + MAX_SLEEP_BEFORE_RETRY
         sleep_time = random.randint(min_sleep, max_sleep)
-        self._push_action(f"SWEEP COMPLETE — SLEEPING {sleep_time}s")
+        self._push_action(f"SCAN COMPLETE — SLEEPING {sleep_time}s")
         logger.info(f"Sleeping for {sleep_time} seconds before next check")
         time.sleep(sleep_time)
 

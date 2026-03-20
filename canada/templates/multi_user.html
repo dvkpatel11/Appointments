@@ -170,6 +170,47 @@
         white-space: nowrap;
       }
 
+      /* ── PENDING REQUEST CARDS ───────────────────────────────────────── */
+      #pendingGrid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 14px;
+        margin-bottom: 8px;
+      }
+
+      .pending-card {
+        border: 1px solid rgba(255,230,0,0.3);
+        background: rgba(255,230,0,0.02);
+        padding: 18px 20px;
+        position: relative;
+      }
+      .pending-card::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, var(--yellow), transparent);
+        animation: scanline-y 2.5s linear infinite;
+      }
+      @keyframes scanline-y {
+        0%   { opacity: 0; transform: scaleX(0.2) translateX(-250%); }
+        50%  { opacity: 1; }
+        100% { opacity: 0; transform: scaleX(0.2) translateX(250%); }
+      }
+
+      .pending-name {
+        font-size: 0.9rem;
+        color: var(--yellow);
+        letter-spacing: 2px;
+        margin-bottom: 12px;
+      }
+
+      .pending-action-row {
+        display: flex;
+        gap: 8px;
+        margin-top: 14px;
+      }
+
       /* ── AGENT CARDS ─────────────────────────────────────────────────── */
       #agentGrid {
         display: grid;
@@ -418,6 +459,17 @@
         <button class="btn btn-cyan" id="copyLinkBtn">COPY</button>
       </div>
 
+      <!-- ── PENDING REQUESTS ───────────────────────────────────────────── -->
+      <div class="section-header">
+        <span class="section-title">PENDING_REQUESTS</span>
+        <div class="section-line"></div>
+        <span class="section-title" id="pendingCount" style="color:var(--yellow);">0 PENDING</span>
+      </div>
+
+      <div id="pendingGrid">
+        <p class="no-agents" style="color:var(--dimtext);">&gt; NO PENDING REQUESTS</p>
+      </div>
+
       <!-- ── ACTIVE AGENTS ─────────────────────────────────────────────── -->
       <div class="section-header">
         <span class="section-title">ACTIVE_AGENTS</span>
@@ -555,28 +607,134 @@
 
       function pollStatus() {
         fetch('/get_all_status')
-          .then(r => r.json())
-          .then(renderAgents)
+          .then(r => {
+            if (r.status === 401 || r.redirected) {
+              // Session expired — redirect to login
+              window.location.href = '/login';
+              return null;
+            }
+            return r.json();
+          })
+          .then(d => { if (d) renderAgents(d); })
           .catch(() => {});
       }
 
       pollStatus();
+      pollPending();
       setInterval(pollStatus, 5000);
+      setInterval(pollPending, 6000);
+
+      // ── Pending requests ───────────────────────────────────────────────
+      function pollPending() {
+        fetch('/admin/pending_requests')
+          .then(r => {
+            if (r.status === 401 || r.redirected) { window.location.href = '/login'; return null; }
+            return r.json();
+          })
+          .then(d => { if (d) renderPending(d); })
+          .catch(() => {});
+      }
+
+      function renderPending(data) {
+        const grid = document.getElementById('pendingGrid');
+        const keys = Object.keys(data);
+        document.getElementById('pendingCount').textContent = keys.length + ' PENDING';
+
+        if (keys.length === 0) {
+          grid.innerHTML = '<p class="no-agents" style="color:var(--dimtext);">&gt; NO PENDING REQUESTS</p>';
+          return;
+        }
+
+        grid.innerHTML = keys.map(token => {
+          const r = data[token];
+          const short = token.slice(0, 12) + '…';
+          return `
+            <div class="pending-card">
+              <div class="pending-name">${escHtml(r.name)}</div>
+              <div class="data-row">
+                <span class="data-key">TOKEN</span>
+                <span class="data-val" style="color:var(--dimtext);font-size:0.65rem;">${short}</span>
+              </div>
+              <div class="data-row">
+                <span class="data-key">EMAIL</span>
+                <span class="data-val">${escHtml(r.email)}</span>
+              </div>
+              <div class="data-row">
+                <span class="data-key">APT_ID</span>
+                <span class="data-val">${escHtml(r.appointment_id)}</span>
+              </div>
+              <div class="data-row">
+                <span class="data-key">RESCHEDULE</span>
+                <span class="data-val" style="color:${r.reschedule ? 'var(--red)' : 'var(--text)'};">
+                  ${r.reschedule ? '⚠ YES' : 'NO'}
+                </span>
+              </div>
+              <div class="data-row">
+                <span class="data-key">URL</span>
+                <span class="data-val" style="font-size:0.62rem;" title="${escHtml(r.appointment_url_full)}">
+                  ${escHtml(r.appointment_url_full.slice(0, 40))}…
+                </span>
+              </div>
+              <div class="pending-action-row">
+                <button class="btn btn-green" style="font-size:0.65rem;padding:6px 14px;"
+                  onclick="approveClient('${token}')">✓ APPROVE</button>
+                <button class="btn btn-red" style="font-size:0.65rem;padding:6px 14px;"
+                  onclick="rejectClient('${token}')">✕ REJECT</button>
+              </div>
+            </div>`;
+        }).join('');
+      }
+
+      function approveClient(token) {
+        const fd = new FormData();
+        fetch(`/admin/approve_client/${encodeURIComponent(token)}`, { method: 'POST', body: fd })
+          .then(r => r.json())
+          .then(d => {
+            toast('APPROVED // AGENT LAUNCHED');
+            pollPending();
+            setTimeout(pollStatus, 1200);
+          })
+          .catch(() => toast('APPROVE FAILED', true));
+      }
+
+      function rejectClient(token) {
+        const reason = prompt('Rejection reason (optional):') ?? '';
+        const fd = new FormData();
+        fd.append('reason', reason);
+        fetch(`/admin/reject_client/${encodeURIComponent(token)}`, { method: 'POST', body: fd })
+          .then(r => r.json())
+          .then(d => { toast('REQUEST_REJECTED'); pollPending(); })
+          .catch(() => toast('REJECT FAILED', true));
+      }
+
+      function escHtml(s) {
+        return String(s)
+          .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      }
 
       // ── Stop individual agent ──────────────────────────────────────────
       function stopAgent(userId) {
         const fd = new FormData();
         fd.append('user_id', userId);
         fetch('/stop_automation', { method: 'POST', body: fd })
-          .then(r => r.json())
-          .then(d => { toast(d.status); pollStatus(); });
+          .then(r => {
+            if (!r.ok) { toast('SESSION_EXPIRED // RELOAD PAGE', true); return null; }
+            return r.json();
+          })
+          .then(d => { if (d) { toast(d.status); pollStatus(); } })
+          .catch(() => toast('CONNECTION_ERROR // STOP FAILED', true));
       }
 
       // ── Kill all ───────────────────────────────────────────────────────
       document.getElementById('killAllBtn').addEventListener('click', () => {
         fetch('/stop_all_automation', { method: 'POST' })
-          .then(r => r.json())
-          .then(d => { toast(d.status, true); pollStatus(); });
+          .then(r => {
+            if (!r.ok) { toast('SESSION_EXPIRED // RELOAD PAGE', true); return null; }
+            return r.json();
+          })
+          .then(d => { if (d) { toast(d.status, true); pollStatus(); } })
+          .catch(() => toast('CONNECTION_ERROR // KILL FAILED', true));
       });
 
       // ── Generate client link ───────────────────────────────────────────
@@ -587,7 +745,9 @@
             const banner = document.getElementById('linkBanner');
             document.getElementById('clientLinkText').textContent = d.link;
             banner.classList.add('visible');
-          });
+            toast('CLIENT_LINK_GENERATED // UNIQUE TOKEN');
+          })
+          .catch(() => toast('FAILED TO GENERATE LINK', true));
       });
 
       document.getElementById('copyLinkBtn').addEventListener('click', () => {
@@ -679,9 +839,12 @@
         fd.append('users_data', JSON.stringify(usersData));
 
         fetch('/start_multi_automation', { method: 'POST', body: fd })
-          .then(r => r.json())
-          .then(d => { toast(d.status); setTimeout(pollStatus, 1000); })
-          .catch(() => toast('CONNECTION ERROR', true));
+          .then(r => {
+            if (!r.ok) { toast('SESSION_EXPIRED // RELOAD PAGE', true); return null; }
+            return r.json();
+          })
+          .then(d => { if (d) { toast(d.status); setTimeout(pollStatus, 1000); } })
+          .catch(() => toast('CONNECTION_ERROR', true));
       });
     </script>
   </body>

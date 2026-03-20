@@ -6,7 +6,9 @@
       "Read(//c/Users/deepv/Desktop/Projects/**)",
       "Bash(find /mnt -name UsVisaAppointment -maxdepth 8)",
       "Bash(find ~/Desktop/Projects/UsVisaAppointment -name *.png -o -name *.jpg -o -name *.jpeg -o -name *.webp)",
-      "Bash(find ~/Desktop/Projects/UsVisaAppointment/screenshots -name *.png)"
+      "Bash(find ~/Desktop/Projects/UsVisaAppointment/screenshots -name *.png)",
+      "Bash(python -c \"import ast, sys; ast.parse\\(open\\(''app.py''\\).read\\(\\)\\); print\\(''app.py OK''\\)\")",
+      "Bash(python -c \":*)"
     ]
   }
 }

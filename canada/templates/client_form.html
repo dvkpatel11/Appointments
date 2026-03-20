@@ -67,7 +67,7 @@
       }
 
       .wrapper {
-        width: min(680px, 100%);
+        width: min(720px, 100%);
       }
 
       /* ── HEADER ─────────────────────────────────────────────────── */
@@ -184,7 +184,6 @@
         position: relative;
       }
 
-      /* Corner accents */
       .form-panel::before,
       .form-panel::after {
         content: "";
@@ -260,7 +259,6 @@
         box-shadow: 0 0 8px rgba(0, 255, 65, 0.2);
       }
 
-      /* URL validation states */
       input.url-valid {
         border-color: var(--green);
         box-shadow: 0 0 8px rgba(0, 255, 65, 0.3);
@@ -269,18 +267,18 @@
         border-color: var(--red);
         box-shadow: 0 0 8px rgba(255, 0, 68, 0.2);
       }
-      .url-error {
+
+      .url-feedback {
         font-size: 0.65rem;
-        color: var(--red);
         letter-spacing: 1px;
-        margin-top: 4px;
+        margin-top: 5px;
         min-height: 1em;
       }
-      .url-ok {
-        font-size: 0.65rem;
+      .url-feedback.ok {
         color: var(--green);
-        letter-spacing: 1px;
-        margin-top: 4px;
+      }
+      .url-feedback.bad {
+        color: var(--red);
       }
 
       .hint {
@@ -367,36 +365,227 @@
         cursor: not-allowed;
       }
 
-      /* ── RESULT ─────────────────────────────────────────────────── */
-      #result {
+      /* ── MONITORING PANEL ───────────────────────────────────────── */
+      #monitorPanel {
         display: none;
-        margin-top: 20px;
-        padding: 18px 20px;
-        border: 1px solid var(--green);
-        background: rgba(0, 255, 65, 0.04);
-        box-shadow: 0 0 20px rgba(0, 255, 65, 0.1);
-      }
-      #result.error {
-        border-color: var(--red);
-        background: rgba(255, 0, 68, 0.04);
-        box-shadow: 0 0 20px rgba(255, 0, 68, 0.1);
-        color: var(--red);
-      }
-      #result.warning {
-        border-color: var(--yellow);
-        background: rgba(255, 230, 0, 0.04);
-        color: var(--yellow);
       }
 
-      .result-title {
-        font-size: 0.7rem;
-        letter-spacing: 3px;
-        margin-bottom: 8px;
+      .monitor-header {
+        border: 1px solid var(--green);
+        background: rgba(0, 255, 65, 0.03);
+        padding: 24px 28px;
+        position: relative;
+        margin-bottom: 16px;
       }
-      .result-msg {
-        font-size: 0.8rem;
+      .monitor-header::before {
+        content: "";
+        position: absolute;
+        top: -1px;
+        left: -1px;
+        width: 14px;
+        height: 14px;
+        border-top: 2px solid var(--cyan);
+        border-left: 2px solid var(--cyan);
+      }
+      .monitor-header::after {
+        content: "";
+        position: absolute;
+        bottom: -1px;
+        right: -1px;
+        width: 14px;
+        height: 14px;
+        border-bottom: 2px solid var(--cyan);
+        border-right: 2px solid var(--cyan);
+      }
+
+      .monitor-status-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 18px;
+      }
+
+      .status-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--border);
+        flex-shrink: 0;
+      }
+      .status-dot.on {
+        background: var(--green);
+        box-shadow:
+          0 0 8px var(--green),
+          0 0 16px var(--green);
+        animation: pulse 2s ease-in-out infinite;
+      }
+      .status-dot.stopped {
+        background: var(--red);
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          box-shadow:
+            0 0 4px var(--green),
+            0 0 8px var(--green);
+        }
+        50% {
+          box-shadow:
+            0 0 12px var(--green),
+            0 0 28px var(--green);
+        }
+      }
+      @keyframes pulse-yellow {
+        0%,
+        100% {
+          box-shadow:
+            0 0 4px var(--yellow),
+            0 0 8px var(--yellow);
+        }
+        50% {
+          box-shadow:
+            0 0 12px var(--yellow),
+            0 0 24px var(--yellow);
+        }
+      }
+
+      .monitor-status-text {
+        font-size: 1.1rem;
+        letter-spacing: 4px;
+      }
+      .monitor-status-text.on {
+        color: var(--green);
+      }
+      .monitor-status-text.stopped {
+        color: var(--red);
+      }
+      .monitor-status-text.idle {
         color: var(--text);
-        line-height: 1.6;
+      }
+
+      .monitor-meta {
+        display: grid;
+        gap: 6px;
+        margin-bottom: 16px;
+      }
+      .meta-row {
+        display: flex;
+        gap: 16px;
+        font-size: 0.75rem;
+      }
+      .meta-key {
+        color: var(--dimtext);
+        width: 100px;
+        flex-shrink: 0;
+      }
+      .meta-val {
+        color: var(--text);
+      }
+      .meta-val.found {
+        color: var(--cyan);
+        text-shadow: 0 0 8px var(--cyan);
+      }
+
+      .action-bar {
+        font-size: 0.75rem;
+        color: var(--cyan);
+        letter-spacing: 1px;
+        padding: 8px 0;
+        border-top: 1px solid var(--border);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      /* Log panel */
+      .log-section-label {
+        font-size: 0.65rem;
+        letter-spacing: 3px;
+        color: var(--text);
+        margin: 20px 0 10px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .log-section-label::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: var(--border);
+      }
+
+      .log-panel {
+        border: 1px solid var(--border);
+        background: var(--panel);
+        padding: 14px;
+        max-height: 360px;
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: var(--border) transparent;
+      }
+
+      .log-entry {
+        font-size: 0.68rem;
+        line-height: 1.8;
+        color: var(--text);
+        display: flex;
+        gap: 10px;
+      }
+      .log-ts {
+        color: var(--dimtext);
+        flex-shrink: 0;
+      }
+      .log-entry.highlight {
+        color: var(--green);
+      }
+      .log-entry.warn {
+        color: var(--yellow);
+      }
+      .log-entry.error {
+        color: var(--red);
+      }
+
+      .log-empty {
+        color: var(--dimtext);
+        font-size: 0.68rem;
+        letter-spacing: 1px;
+      }
+
+      /* screenshot */
+      .screenshot-section {
+        margin-top: 20px;
+        border: 1px solid var(--border);
+        background: var(--panel);
+        padding: 16px;
+      }
+      .screenshot-label {
+        font-size: 0.62rem;
+        letter-spacing: 3px;
+        color: var(--cyan);
+        margin-bottom: 12px;
+      }
+      #screenshotImg {
+        max-width: 100%;
+        border: 1px solid var(--border);
+        display: none;
+      }
+      #screenshotSpinner {
+        color: var(--text);
+        font-size: 0.7rem;
+        letter-spacing: 2px;
+      }
+
+      /* ── ERROR/VALIDATION ────────────────────────────────────────── */
+      #urlValidationError {
+        display: none;
+        margin-top: 12px;
+        padding: 12px 16px;
+        border: 1px solid var(--red);
+        background: rgba(255, 0, 68, 0.05);
+        color: var(--red);
+        font-size: 0.72rem;
+        letter-spacing: 1px;
       }
 
       .blink {
@@ -418,11 +607,12 @@
       <!-- Header -->
       <div class="page-header">
         <p class="sys-badge">&gt; VISA_CTRL</p>
-        <h1 class="page-title">APPOINTMENT<br />RESCHEDULER</h1>
+        <h1 class="page-title">APPOINTMENT<br />MONITOR</h1>
         <p class="page-desc">
           Submit your credentials below to initialize automated monitoring of your US visa appointment slot.<br /><br />
           We'll scan all Canadian consulate locations and notify you
-          <span>via email</span> the moment an earlier date becomes available.
+          <span>via email</span> the moment an earlier date becomes available. This page will show your
+          <span>live monitoring status</span> after submission.
         </p>
       </div>
 
@@ -438,151 +628,304 @@
         </div>
         <div class="step">
           <div class="step-num">03</div>
-          <div class="step-label"><strong>NOTIFY</strong>Email alert the instant an earlier slot appears</div>
+          <div class="step-label"><strong>MONITOR</strong>Watch live logs on this page</div>
         </div>
         <div class="step">
           <div class="step-num">04</div>
-          <div class="step-label"><strong>BOOK</strong>You reschedule manually (or enable auto)</div>
+          <div class="step-label"><strong>NOTIFY</strong>Email alert the instant an earlier slot appears</div>
         </div>
       </div>
 
-      <!-- Form -->
-      <div class="form-panel">
-        <form id="missionForm" autocomplete="off" novalidate>
-          <p class="form-section-label">&gt; PERSONAL DETAILS</p>
-          <div class="form-grid">
-            <div class="form-group">
-              <label>Your Name</label>
-              <input type="text" name="name" placeholder="Jane Smith" required />
-            </div>
-            <div class="form-group">
-              <label>Notification Email</label>
-              <input type="email" name="email" placeholder="jane@example.com" required />
-              <p class="hint">// Alerts will be sent here</p>
-            </div>
-          </div>
+      <!-- ── SUBMISSION FORM ──────────────────────────────────────── -->
+      <div id="formSection">
+        {% if error %}
+        <div
+          style="
+            border: 1px solid var(--red);
+            background: rgba(255, 0, 68, 0.05);
+            color: var(--red);
+            font-size: 0.72rem;
+            letter-spacing: 1px;
+            padding: 14px 18px;
+            margin-bottom: 20px;
+          "
+        >
+          ⚠ {{ error }}
+        </div>
+        {% endif %}
 
-          <p class="form-section-label">&gt; VISA PORTAL CREDENTIALS</p>
-          <div class="form-grid">
-            <div class="form-group">
-              <label>Portal Login (Email)</label>
-              <input type="text" name="username" placeholder="your@login.com" required />
-              <p class="hint">// ais.usvisa-info.com login</p>
-            </div>
-            <div class="form-group">
-              <label>Portal Password</label>
-              <input type="password" name="password" required />
-            </div>
-          </div>
+        <div class="form-panel">
+          <form id="missionForm" autocomplete="off" novalidate>
+            <input type="hidden" name="token" id="tokenField" value="{{ token }}" />
 
-          <p class="form-section-label">&gt; APPOINTMENT DETAILS</p>
-          <div class="form-grid">
-            <div class="form-group full">
-              <label>Appointment URL</label>
-              <input
-                type="text"
-                name="appointment_url"
-                id="appointmentUrl"
-                required
-                autocomplete="off"
-                spellcheck="false"
-                placeholder="https://ais.usvisa-info.com/en-ca/niv/schedule/12345678/appointment"
-              />
-              <p class="hint">// Paste the full URL from your appointment confirmation page</p>
-              <p id="urlFeedback"></p>
+            <p class="form-section-label">&gt; PERSONAL DETAILS</p>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Your Name</label>
+                <input type="text" name="name" placeholder="Jane Smith" required />
+              </div>
+              <div class="form-group">
+                <label>Notification Email</label>
+                <input type="email" name="email" placeholder="jane@example.com" required />
+                <p class="hint">// Alerts will be sent here</p>
+              </div>
             </div>
-          </div>
 
-          <!-- Reschedule -->
-          <div class="reschedule-box">
-            <p class="reschedule-header">⚠ DANGER ZONE // AUTO-RESCHEDULE</p>
-            <div class="checkbox-row">
-              <input type="checkbox" name="reschedule" id="reschedule" />
-              <label class="checkbox-desc" for="reschedule">
-                Enable <strong>automatic rescheduling</strong> — if an earlier date is found, the system will book it
-                immediately without further confirmation. Only enable this if you are comfortable with any available
-                location.
-              </label>
+            <p class="form-section-label">&gt; VISA PORTAL CREDENTIALS</p>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Portal Login (Email)</label>
+                <input type="text" name="username" placeholder="your@login.com" required />
+                <p class="hint">// ais.usvisa-info.com login</p>
+              </div>
+              <div class="form-group">
+                <label>Portal Password</label>
+                <input type="password" name="password" required />
+              </div>
             </div>
-          </div>
 
-          <div class="submit-row">
-            <button type="submit" class="btn-submit" id="submitBtn">▶ INITIATE</button>
-          </div>
-        </form>
+            <p class="form-section-label">&gt; APPOINTMENT DETAILS</p>
+            <div class="form-grid">
+              <div class="form-group full">
+                <label>Appointment URL</label>
+                <input
+                  type="text"
+                  name="appointment_url"
+                  id="appointmentUrl"
+                  required
+                  autocomplete="off"
+                  spellcheck="false"
+                  placeholder="https://ais.usvisa-info.com/en-ca/niv/schedule/12345678/appointment"
+                />
+                <p class="hint">// Paste the full URL from your appointment confirmation page</p>
+                <p id="urlFeedback" class="url-feedback"></p>
+              </div>
+            </div>
 
-        <!-- Inline error for invalid URL -->
-        <div id="urlValidationError" style="display:none;margin-top:12px;padding:12px 16px;border:1px solid var(--red);background:rgba(255,0,68,0.05);color:var(--red);font-size:0.72rem;letter-spacing:1px;"></div>
+            <!-- Reschedule -->
+            <div class="reschedule-box">
+              <p class="reschedule-header">⚠ DANGER ZONE // AUTO-RESCHEDULE</p>
+              <div class="checkbox-row">
+                <input type="checkbox" name="reschedule" id="reschedule" />
+                <label class="checkbox-desc" for="reschedule">
+                  Enable <strong>automatic rescheduling</strong> — if an earlier date is found, the system will book it
+                  immediately without further confirmation. Only enable this if you are comfortable with any available
+                  location.
+                </label>
+              </div>
+            </div>
+
+            <div class="submit-row">
+              <button type="submit" class="btn-submit" id="submitBtn">▶ INITIATE</button>
+            </div>
+          </form>
+
+          <div id="urlValidationError"></div>
+        </div>
       </div>
 
-      <!-- ── SUCCESS PANEL (replaces form after submit) ─────────────── -->
-      <div id="successPanel" style="display:none;">
-        <div style="border:1px solid var(--green);background:rgba(0,255,65,0.03);padding:28px;position:relative;">
-          <!-- corner accents -->
-          <span style="position:absolute;top:-1px;left:-1px;width:14px;height:14px;border-top:2px solid var(--cyan);border-left:2px solid var(--cyan);display:block;"></span>
-          <span style="position:absolute;bottom:-1px;right:-1px;width:14px;height:14px;border-bottom:2px solid var(--cyan);border-right:2px solid var(--cyan);display:block;"></span>
+      <!-- ── PENDING APPROVAL PANEL ──────────────────────────────────── -->
+      <div id="pendingPanel" style="display: none">
+        <div
+          style="
+            border: 1px solid var(--yellow);
+            background: rgba(255, 230, 0, 0.03);
+            padding: 28px;
+            position: relative;
+          "
+        >
+          <span
+            style="
+              position: absolute;
+              top: -1px;
+              left: -1px;
+              width: 14px;
+              height: 14px;
+              border-top: 2px solid var(--yellow);
+              border-left: 2px solid var(--yellow);
+              display: block;
+            "
+          ></span>
+          <span
+            style="
+              position: absolute;
+              bottom: -1px;
+              right: -1px;
+              width: 14px;
+              height: 14px;
+              border-bottom: 2px solid var(--yellow);
+              border-right: 2px solid var(--yellow);
+              display: block;
+            "
+          ></span>
 
-          <p style="font-size:0.62rem;letter-spacing:4px;color:var(--text);margin-bottom:14px;">&gt; MISSION_STATUS</p>
-
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
-            <span id="statusDot" style="width:10px;height:10px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s ease-in-out infinite;flex-shrink:0;"></span>
-            <span style="font-size:1.1rem;letter-spacing:4px;color:var(--green);">SURVEILLANCE_ONLINE</span>
-          </div>
-
-          <div style="display:grid;gap:6px;margin-bottom:24px;">
-            <div style="display:flex;gap:16px;font-size:0.75rem;">
-              <span style="color:var(--dimtext);width:80px;flex-shrink:0;">AGENT_ID</span>
-              <span id="spUserId" style="color:var(--cyan);"></span>
-            </div>
-            <div style="display:flex;gap:16px;font-size:0.75rem;">
-              <span style="color:var(--dimtext);width:80px;flex-shrink:0;">NOTIFY</span>
-              <span id="spEmail" style="color:var(--text);"></span>
-            </div>
-            <div style="display:flex;gap:16px;font-size:0.75rem;">
-              <span style="color:var(--dimtext);width:80px;flex-shrink:0;">URL</span>
-              <span id="spUrl" style="color:var(--text);word-break:break-all;"></span>
-            </div>
-          </div>
-
-          <p style="font-size:0.62rem;letter-spacing:3px;color:var(--cyan);border-bottom:1px solid var(--border);padding-bottom:8px;margin-bottom:14px;">&gt; APPOINTMENT_PAGE // CAPTURED AT LOGIN</p>
-
-          <div id="screenshotArea">
-            <div id="screenshotSpinner" style="color:var(--text);font-size:0.7rem;letter-spacing:2px;">
-              <span style="animation:blink 1s step-end infinite;">▮</span> LOADING SCREENSHOT...
-            </div>
-            <img id="screenshotImg" src="" alt="Appointment page"
-              style="display:none;max-width:100%;border:1px solid var(--border);margin-top:4px;" />
-          </div>
-
-          <p style="margin-top:20px;font-size:0.7rem;color:var(--text);line-height:1.7;">
-            All Canadian consulate locations are being monitored.<br/>
-            You'll receive a plain-text email the moment an earlier date is found.
+          <p style="font-size: 0.62rem; letter-spacing: 4px; color: var(--text); margin-bottom: 14px">
+            &gt; REQUEST_STATUS
           </p>
+
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px">
+            <span
+              style="
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                background: var(--yellow);
+                box-shadow: 0 0 8px var(--yellow);
+                animation: pulse-yellow 1.5s ease-in-out infinite;
+                flex-shrink: 0;
+              "
+            ></span>
+            <span style="font-size: 1.1rem; letter-spacing: 4px; color: var(--yellow)">AWAITING_APPROVAL</span>
+          </div>
+
+          <p style="font-size: 0.75rem; color: var(--text); line-height: 1.8; margin-bottom: 16px">
+            Your request has been received and is pending review.<br />
+            This page will automatically update once approved — no need to refresh.
+          </p>
+
+          <div style="display: flex; gap: 16px; font-size: 0.75rem; margin-bottom: 8px">
+            <span style="color: var(--dimtext); width: 80px; flex-shrink: 0">NOTIFY</span>
+            <span id="pEmail" style="color: var(--text)"></span>
+          </div>
+          <div style="display: flex; gap: 16px; font-size: 0.75rem">
+            <span style="color: var(--dimtext); width: 80px; flex-shrink: 0">STATUS</span>
+            <span style="color: var(--yellow)">Pending admin approval <span class="blink">▮</span></span>
+          </div>
         </div>
       </div>
-    </div>
-    </div>
 
-    <style>
-      @keyframes pulse {
-        0%,100% { box-shadow: 0 0 4px var(--green), 0 0 8px var(--green); }
-        50%      { box-shadow: 0 0 10px var(--green), 0 0 24px var(--green); }
-      }
-      #appointmentUrl.url-valid   { border-color: var(--green); box-shadow: 0 0 8px rgba(0,255,65,0.3); }
-      #appointmentUrl.url-invalid { border-color: var(--red);   box-shadow: 0 0 8px rgba(255,0,68,0.2); }
-      .url-feedback { font-size:0.65rem; letter-spacing:1px; margin-top:5px; min-height:1em; }
-      .url-feedback.ok  { color: var(--green); }
-      .url-feedback.bad { color: var(--red); }
-    </style>
+      <!-- ── REJECTED PANEL ────────────────────────────────────────────── -->
+      <div id="rejectedPanel" style="display: none">
+        <div
+          style="border: 1px solid var(--red); background: rgba(255, 0, 68, 0.03); padding: 28px; position: relative"
+        >
+          <span
+            style="
+              position: absolute;
+              top: -1px;
+              left: -1px;
+              width: 14px;
+              height: 14px;
+              border-top: 2px solid var(--red);
+              border-left: 2px solid var(--red);
+              display: block;
+            "
+          ></span>
+          <span
+            style="
+              position: absolute;
+              bottom: -1px;
+              right: -1px;
+              width: 14px;
+              height: 14px;
+              border-bottom: 2px solid var(--red);
+              border-right: 2px solid var(--red);
+              display: block;
+            "
+          ></span>
+
+          <p style="font-size: 0.62rem; letter-spacing: 4px; color: var(--text); margin-bottom: 14px">
+            &gt; REQUEST_STATUS
+          </p>
+
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px">
+            <span
+              style="
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                background: var(--red);
+                box-shadow: 0 0 8px var(--red);
+                flex-shrink: 0;
+              "
+            ></span>
+            <span style="font-size: 1.1rem; letter-spacing: 4px; color: var(--red)">REQUEST_DECLINED</span>
+          </div>
+
+          <p style="font-size: 0.72rem; color: var(--text); margin-bottom: 10px">Reason:</p>
+          <p
+            id="rejectReason"
+            style="
+              font-size: 0.8rem;
+              color: var(--red);
+              line-height: 1.7;
+              border-left: 2px solid var(--red);
+              padding-left: 12px;
+            "
+          ></p>
+        </div>
+      </div>
+
+      <!-- ── MONITORING PANEL (shown after submit) ────────────────── -->
+      <div id="monitorPanel">
+        <div class="monitor-header">
+          <p style="font-size: 0.62rem; letter-spacing: 4px; color: var(--text); margin-bottom: 14px">
+            &gt; MISSION_STATUS
+          </p>
+
+          <div class="monitor-status-row">
+            <span class="status-dot" id="mStatusDot"></span>
+            <span class="monitor-status-text" id="mStatusText">INITIALIZING...</span>
+          </div>
+
+          <div class="monitor-meta">
+            <div class="meta-row">
+              <span class="meta-key">AGENT_ID</span>
+              <span class="meta-val" id="mUserId"></span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-key">NOTIFY</span>
+              <span class="meta-val" id="mEmail"></span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-key">CURRENT_APT</span>
+              <span class="meta-val" id="mCurrentApt">—</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-key">FOUND_APT</span>
+              <span class="meta-val found" id="mFoundApt" style="display: none"></span>
+              <span class="meta-val" id="mFoundAptNone">—</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-key">LOCATION</span>
+              <span class="meta-val" id="mLocation">—</span>
+            </div>
+          </div>
+
+          <div class="action-bar" id="mActionBar">—</div>
+        </div>
+
+        <!-- Appointment screenshot -->
+        <div class="screenshot-section">
+          <p class="screenshot-label">&gt; APPOINTMENT_PAGE // CAPTURED AT LOGIN</p>
+          <div id="screenshotSpinner"><span class="blink">▮</span> Loading screenshot...</div>
+          <img id="screenshotImg" src="" alt="Appointment page" />
+        </div>
+
+        <!-- Live log -->
+        <div class="log-section-label">&gt; LIVE_LOG</div>
+        <div class="log-panel" id="mLogPanel">
+          <p class="log-empty"><span class="blink">▮</span> Waiting for log entries...</p>
+        </div>
+
+        <p style="margin-top: 20px; font-size: 0.68rem; color: var(--dimtext); letter-spacing: 1px; line-height: 1.8">
+          Bookmark this page — you can return at any time to check your monitoring status.<br />
+          All Canadian consulate locations are being scanned. Email notification will be sent when an earlier date is
+          found.
+        </p>
+      </div>
+    </div>
+    <!-- /wrapper -->
 
     <script>
-      // ── Expected URL pattern ───────────────────────────────────────────────
-      // https://ais.usvisa-info.com/en-ca/niv/schedule/12345678/appointment
-      const URL_RE = /^https:\/\/ais\.usvisa-info\.com\/en-[a-z]+\/niv\/schedule\/\d+\/appointment$/i;
+      // ── Token from Flask template ──────────────────────────────────────────
+      const PAGE_TOKEN = document.getElementById("tokenField").value.trim();
 
-      const urlInput    = document.getElementById("appointmentUrl");
+      // ── URL validation ─────────────────────────────────────────────────────
+      const URL_RE = /^https:\/\/ais\.usvisa-info\.com\/en-[a-z]+\/niv\/schedule\/\d+\/appointment$/i;
+      const urlInput = document.getElementById("appointmentUrl");
       const urlFeedback = document.getElementById("urlFeedback");
-      const submitBtn   = document.getElementById("submitBtn");
+      const submitBtn = document.getElementById("submitBtn");
 
       function validateUrl() {
         const val = urlInput.value.trim();
@@ -603,8 +946,7 @@
         } else {
           urlInput.classList.remove("url-valid");
           urlInput.classList.add("url-invalid");
-          urlFeedback.textContent =
-            "✕ Must match: https://ais.usvisa-info.com/en-ca/niv/schedule/{ID}/appointment";
+          urlFeedback.textContent = "✕ Must match: https://ais.usvisa-info.com/en-ca/niv/schedule/{ID}/appointment";
           urlFeedback.className = "url-feedback bad";
           submitBtn.disabled = true;
           return false;
@@ -612,21 +954,19 @@
       }
 
       urlInput.addEventListener("input", validateUrl);
-      urlInput.addEventListener("blur",  validateUrl);
+      urlInput.addEventListener("blur", validateUrl);
 
       // ── Form submit ────────────────────────────────────────────────────────
       document.getElementById("missionForm").addEventListener("submit", function (e) {
         e.preventDefault();
         const form = e.target;
 
-        // Re-run URL check on submit (handles paste without triggering input)
         if (!validateUrl()) return;
 
-        // Other required fields
         const required = ["name", "email", "username", "password", "appointment_url"];
         for (const field of required) {
           if (!form[field].value.trim()) {
-            showValidationError(`Field "${field.toUpperCase().replace("_"," ")}" is required.`);
+            showValidationError(`Field "${field.toUpperCase().replace("_", " ")}" is required.`);
             return;
           }
         }
@@ -641,12 +981,10 @@
         fetch("/client_submit", { method: "POST", body: fd })
           .then((r) => r.json())
           .then((data) => {
-            if (data.status === "success") {
-              showSuccessPanel(data);
-            } else if (data.status === "already_running") {
-              showValidationError("Monitoring is already active for this appointment.");
-              submitBtn.disabled = false;
-              submitBtn.textContent = "▶ INITIATE";
+            if (data.status === "pending_approval") {
+              showPendingPanel(form.email.value);
+            } else if (data.status === "rejected") {
+              showRejectedPanel(data.reason || "Your request was not approved.");
             } else {
               showValidationError(data.message || "Submission failed — please try again.");
               submitBtn.disabled = false;
@@ -660,25 +998,129 @@
           });
       });
 
-      // ── Success panel ──────────────────────────────────────────────────────
-      function showSuccessPanel(data) {
-        document.getElementById("missionForm").style.display = "none";
-        document.getElementById("urlValidationError").style.display = "none";
+      // ── State panels ───────────────────────────────────────────────────────
 
-        document.getElementById("spUserId").textContent = data.user_id;
-        document.getElementById("spEmail").textContent  = data.email;
-        document.getElementById("spUrl").textContent    = urlInput.value.trim();
-
-        document.getElementById("successPanel").style.display = "block";
-        document.getElementById("successPanel").scrollIntoView({ behavior: "smooth" });
-
-        pollScreenshot(data.user_id, 0);
+      function showPendingPanel(email) {
+        document.getElementById("formSection").style.display = "none";
+        document.getElementById("pendingPanel").style.display = "block";
+        document.getElementById("pEmail").textContent = email || "";
+        document.getElementById("pendingPanel").scrollIntoView({ behavior: "smooth" });
+        // Start polling — when approved, auto-transition to monitor view
+        startStatusPolling();
       }
 
-      // Poll /client_screenshot/<user_id> until the automation has logged in
-      // and captured the appointment page (usually 20–40 s).
+      function showRejectedPanel(reason) {
+        document.getElementById("formSection").style.display = "none";
+        document.getElementById("pendingPanel").style.display = "none";
+        document.getElementById("monitorPanel").style.display = "none";
+        document.getElementById("rejectedPanel").style.display = "block";
+        document.getElementById("rejectReason").textContent = reason;
+        document.getElementById("rejectedPanel").scrollIntoView({ behavior: "smooth" });
+        if (_pollInterval) {
+          clearInterval(_pollInterval);
+          _pollInterval = null;
+        }
+      }
+
+      function showMonitorPanel(email) {
+        document.getElementById("formSection").style.display = "none";
+        document.getElementById("pendingPanel").style.display = "none";
+        document.getElementById("monitorPanel").style.display = "block";
+        if (email) document.getElementById("mEmail").textContent = email;
+        document.getElementById("monitorPanel").scrollIntoView({ behavior: "smooth" });
+        // Screenshot polling uses token as user_id (approved clients)
+        pollScreenshot(PAGE_TOKEN, 0);
+      }
+
+      // ── Status polling (handles all state transitions) ─────────────────────
+      let _pollInterval = null;
+
+      function startStatusPolling() {
+        if (!PAGE_TOKEN) return;
+        if (_pollInterval) clearInterval(_pollInterval);
+
+        function doPoll() {
+          fetch(`/client_status/${encodeURIComponent(PAGE_TOKEN)}`)
+            .then((r) => r.json())
+            .then(handleStateUpdate)
+            .catch(() => {});
+        }
+
+        doPoll();
+        _pollInterval = setInterval(doPoll, 4000);
+      }
+
+      function handleStateUpdate(d) {
+        if (d.status === "pending_approval" || d.status === "issued" || d.status === "approved") {
+          // Still waiting — keep polling
+          return;
+        }
+        if (d.status === "rejected") {
+          showRejectedPanel(d.reason || "Your request was not approved.");
+          return;
+        }
+        if (d.status === "ok") {
+          // Approved and automation is running — switch to monitor view
+          showMonitorPanel(document.getElementById("mEmail").textContent);
+          updateMonitorUI(d);
+          // Continue polling for live updates
+        }
+        if (d.status === "ok" || d.status === "approved") {
+          updateMonitorUI(d);
+        }
+      }
+
+      // ── Log classification ─────────────────────────────────────────────────
+      function logClass(msg) {
+        if (/DATE FOUND|SUCCESS|DISMISSED|RESCHEDULED/i.test(msg)) return "highlight";
+        if (/WARNING|ATTEMPT|COOL|SLEEPING|SOFT BAN/i.test(msg)) return "warn";
+        if (/FAILED|ERROR|CRITICAL/i.test(msg)) return "error";
+        return "";
+      }
+
+      function updateMonitorUI(d) {
+        const running = d.is_running;
+        const dot = document.getElementById("mStatusDot");
+        const text = document.getElementById("mStatusText");
+
+        dot.className = "status-dot " + (running ? "on" : "stopped");
+        text.className = "monitor-status-text " + (running ? "on" : "stopped");
+        text.textContent = running ? "SURVEILLANCE_ONLINE" : "STOPPED";
+
+        document.getElementById("mActionBar").textContent = d.current_action || "—";
+        document.getElementById("mCurrentApt").textContent = d.current_appointment || "—";
+        document.getElementById("mLocation").textContent = d.last_checked_location || "—";
+
+        if (d.new_appointment) {
+          document.getElementById("mFoundApt").textContent = d.new_appointment;
+          document.getElementById("mFoundApt").style.display = "";
+          document.getElementById("mFoundAptNone").style.display = "none";
+        } else {
+          document.getElementById("mFoundApt").style.display = "none";
+          document.getElementById("mFoundAptNone").style.display = "";
+        }
+
+        const log = d.action_log || [];
+        const panel = document.getElementById("mLogPanel");
+        if (log.length === 0) {
+          panel.innerHTML = '<p class="log-empty"><span class="blink">▮</span> Waiting for log entries...</p>';
+        } else {
+          const atBottom = panel.scrollHeight - panel.scrollTop <= panel.clientHeight + 40;
+          panel.innerHTML = log
+            .map(
+              (e) =>
+                `<div class="log-entry ${logClass(e.msg)}">
+               <span class="log-ts">${e.ts}</span><span>${e.msg}</span>
+             </div>`,
+            )
+            .join("");
+          if (atBottom) panel.scrollTop = panel.scrollHeight;
+        }
+      }
+
+      // ── Screenshot polling ─────────────────────────────────────────────────
       function pollScreenshot(userId, attempts) {
-        if (attempts > 40) {          // ~2 min timeout — stop polling
+        if (attempts > 40) {
           document.getElementById("screenshotSpinner").textContent =
             "Screenshot unavailable — check your email for updates.";
           return;
@@ -698,12 +1140,34 @@
           .catch(() => setTimeout(() => pollScreenshot(userId, attempts + 1), 5000));
       }
 
+      // ── Validation error ───────────────────────────────────────────────────
       function showValidationError(msg) {
         const el = document.getElementById("urlValidationError");
         el.textContent = "⚠ " + msg;
         el.style.display = "block";
         el.scrollIntoView({ behavior: "smooth", block: "nearest" });
       }
+
+      // ── On page load: check existing token state ───────────────────────────
+      // Client returning to their link after having already submitted
+      (function checkExistingSession() {
+        if (!PAGE_TOKEN) return;
+        fetch(`/client_status/${encodeURIComponent(PAGE_TOKEN)}`)
+          .then((r) => r.json())
+          .then((d) => {
+            if (d.status === "issued") return; // not yet submitted — show form
+            if (d.status === "pending_approval") {
+              showPendingPanel("");
+            } else if (d.status === "rejected") {
+              showRejectedPanel(d.reason || "Your request was not approved.");
+            } else if (d.status === "ok" || d.status === "approved") {
+              showMonitorPanel("");
+              if (d.status === "ok") updateMonitorUI(d);
+              startStatusPolling();
+            }
+          })
+          .catch(() => {});
+      })();
     </script>
   </body>
 </html>
