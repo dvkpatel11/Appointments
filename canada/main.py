@@ -2,6 +2,7 @@ import re
 import random
 import time
 import os
+import multiprocessing
 
 from datetime import datetime
 from pathlib import Path
@@ -38,7 +39,27 @@ MAX_POLLS = 30
 MIN_SLEEP_BEFORE_RETRY = 30
 MAX_SLEEP_BEFORE_RETRY = 60
 
-logger = setup_logger("canada_app", "canada/app.log")
+
+def run_in_subprocess(user_id, username, password, appointment_id, appointment_url,
+                      notification_email=None, browsers=1, check=12, reschedule=False,
+                      telegram_chat_id=None, send_telegram=False):
+    """Entry point for multiprocessing - runs Playwright in separate process."""
+    logger = setup_logger("canada_app", "app.log")
+    
+    instance = VisaAutomation(
+        username=username,
+        password=password,
+        appointment_id=appointment_id,
+        appointment_url=appointment_url,
+        notification_email=notification_email,
+        browsers=browsers,
+        check=check,
+        reschedule=reschedule,
+        telegram_chat_id=telegram_chat_id,
+        send_telegram=send_telegram,
+        logger=logger,
+    )
+    instance.run()
 
 
 class VisaAutomation:
@@ -54,7 +75,9 @@ class VisaAutomation:
         reschedule=False,
         telegram_chat_id=None,
         send_telegram=False,
+        logger=None,
     ):
+        self._logger = logger
         self.playwright = sync_playwright().start()
         self.browser = self.playwright.chromium.launch(headless=True)
         self.screenshots_folder = str(int(time.time()))
@@ -154,7 +177,10 @@ class VisaAutomation:
         self.action_log.append(entry)
         if len(self.action_log) > 100:
             self.action_log = self.action_log[-100:]
-        getattr(logger, level)(msg)
+        if self._logger:
+            getattr(self._logger, level)(msg)
+        else:
+            print(f"[{level.upper()}] {msg}")
 
     def capture_debug_screenshot(self, name: str):
         self.debug_screenshot_counter += 1

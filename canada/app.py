@@ -4,6 +4,7 @@ import os
 import re
 import threading
 import uuid
+import multiprocessing
 from datetime import datetime
 from functools import wraps
 
@@ -12,7 +13,7 @@ from flask import (
     Flask, jsonify, redirect, render_template,
     request, session, url_for,
 )
-from main import VisaAutomation
+from main import VisaAutomation, run_in_subprocess
 
 load_dotenv()
 
@@ -194,7 +195,13 @@ def start_automation():
     try:
         instance = _build_instance_from_form(request.form)
         automation_instances[user_id] = instance
-        threading.Thread(target=instance.run, daemon=True).start()
+        process = multiprocessing.Process(
+            target=run_in_subprocess,
+            args=(user_id, instance.username, instance.password, instance.appointment_id,
+                  instance.appointment_url, instance.notification_email, instance.browsers,
+                  instance.check, instance.reschedule, instance.telegram_chat_id, instance.send_telegram)
+        )
+        process.start()
         return jsonify({"status": f"ONLINE // {user_id}"})
     except (ValueError, TypeError) as e:
         return jsonify({"status": f"ERROR // {e}"}), 400
@@ -226,7 +233,13 @@ def start_multi_automation():
                 send_telegram=bool(data.get("send_telegram", False)),
             )
             automation_instances[user_id] = instance
-            threading.Thread(target=instance.run, daemon=True).start()
+            process = multiprocessing.Process(
+                target=run_in_subprocess,
+                args=(user_id, instance.username, instance.password, instance.appointment_id,
+                      instance.appointment_url, instance.notification_email, instance.browsers,
+                      instance.check, instance.reschedule, instance.telegram_chat_id, instance.send_telegram)
+            )
+            process.start()
             started.append(user_id)
         except Exception as e:
             app.logger.error(f"Failed to start {user_id}: {e}")
