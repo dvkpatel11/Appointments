@@ -163,7 +163,13 @@ def approve_client(token):
             reschedule=req["reschedule"],
         )
         automation_instances[user_id] = instance
-        threading.Thread(target=instance.run, daemon=True).start()
+        process = multiprocessing.Process(
+            target=run_in_subprocess,
+            args=(user_id, instance.username, instance.password, instance.appointment_id,
+                  instance.appointment_url, instance.notification_email, instance.browsers,
+                  instance.check, instance.reschedule, instance.telegram_chat_id, instance.send_telegram)
+        )
+        process.start()
 
         client_tokens[token]["state"] = "approved"
         client_tokens[token]["user_id"] = user_id
