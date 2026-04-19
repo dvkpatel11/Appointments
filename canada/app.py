@@ -5,13 +5,14 @@ import re
 import threading
 import uuid
 import multiprocessing
+import requests
 from datetime import datetime
 from functools import wraps
 
 from dotenv import load_dotenv
 from flask import (
     Flask, jsonify, redirect, render_template,
-    request, session, url_for,
+    request, session, url_for, send_from_directory,
 )
 from main import VisaAutomation, run_in_subprocess
 
@@ -24,6 +25,31 @@ ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 
 # In-memory store: user_id -> VisaAutomation instance
 automation_instances = {}
+
+# Settings store (global defaults)
+SETTINGS_FILE = "canada/settings.json"
+settings_store = {
+    "default_notif_email": "",
+    "default_telegram_chat_id": "",
+    "email_enabled": True,
+    "telegram_enabled": False,
+}
+
+def _load_settings():
+    global settings_store
+    if os.path.exists(SETTINGS_FILE):
+        try:
+            with open(SETTINGS_FILE, "r") as f:
+                settings_store.update(json.load(f))
+        except:
+            pass
+
+def _save_settings():
+    os.makedirs(os.path.dirname(SETTINGS_FILE), exist_ok=True)
+    with open(SETTINGS_FILE, "w") as f:
+        json.dump(settings_store, f)
+
+_load_settings()
 
 # Client token store.
 # token -> {
@@ -173,6 +199,12 @@ def approve_client(token):
 
         client_tokens[token]["state"] = "approved"
         client_tokens[token]["user_id"] = user_id
+        notification_email = client_tokens[token].get("request", {}).get("notification_email")
+        if notification_email:
+            client_tokens[token]["notification_email"] = notification_email
+        telegram_chat_id = client_tokens[token].get("telegram_chat_id")
+        if telegram_chat_id:
+            client_tokens[token]["send_telegram"] = True
         return jsonify({"status": "approved", "user_id": user_id})
 
     except Exception as e:
@@ -259,6 +291,12 @@ def stop_automation():
     user_id = request.form.get("user_id", "default")
     if user_id in automation_instances and automation_instances[user_id].is_running:
         automation_instances[user_id].stop()
+        state_file = f"canada/status/{user_id}.json"
+        if os.path.exists(state_file):
+            try:
+                os.remove(state_file)
+            except:
+                pass
         return jsonify({"status": f"TERMINATED // {user_id}"})
     return jsonify({"status": f"NOT_RUNNING // {user_id}"})
 
@@ -284,7 +322,14 @@ def get_status():
 @app.route("/get_all_status")
 @login_required
 def get_all_status():
-    return jsonify({uid: _serialize(inst) for uid, inst in automation_instances.items()})
+    result = {}
+    for uid, inst in automation_instances.items():
+        state = _load_state(uid)
+        if state:
+            result[uid] = state
+        else:
+            result[uid] = _serialize(inst)
+    return jsonify(result)
 
 
 # ---------------------------------------------------------------------------
@@ -386,8 +431,11 @@ def client_status(token):
     # state == "approved"
     user_id = data["user_id"]
     if not user_id or user_id not in automation_instances:
-        return jsonify({"status": "approved"})   # approved but automation not started yet
+        return jsonify({"status": "approved"})
 
+    state = _load_state(user_id)
+    if state:
+        return jsonify({"status": "ok", **state})
     return jsonify({"status": "ok", **_serialize(automation_instances[user_id])})
 
 
@@ -400,9 +448,11 @@ def client_screenshot(user_id):
     path = inst.appointments_page_screenshot
     if not path or not os.path.exists(path):
         return jsonify({"status": "pending"})
-    with open(path, "rb") as f:
-        data = base64.b64encode(f.read()).decode()
-    return jsonify({"status": "ready", "image": data})
+    return jsonify({"status": "ready", "image_url": path})
+
+@app.route("/screenshots/<path:filename>")
+def serve_screenshot(filename):
+    return send_from_directory("screenshots", filename)
 
 
 @app.route("/view_log/<user_id>")
@@ -426,6 +476,81 @@ def download_log():
         return "Log file not found", 404
     from flask import send_file
     return send_file(log_path, as_attachment=True, download_name="visa_automation.log")
+
+
+# ---------------------------------------------------------------------------
+# Settings API
+# ---------------------------------------------------------------------------
+
+@app.route("/get_settings")
+@login_required
+def get_settings():
+    return jsonify(settings_store)
+
+
+@app.route("/save_settings", methods=["POST"])
+@login_required
+def save_settings():
+    global settings_store
+    settings_store["default_notif_email"] = request.form.get("default_notif_email", "")
+    settings_store["default_telegram_chat_id"] = request.form.get("default_telegram_chat_id", "")
+    settings_store["email_enabled"] = request.form.get("email_enabled") in ("true", "on")
+    settings_store["telegram_enabled"] = request.form.get("telegram_enabled") in ("true", "on")
+    _save_settings()
+    return jsonify({"status": "ok"})
+
+
+@app.route("/test_email", methods=["POST"])
+@login_required
+def test_email():
+    email = request.form.get("email", "")
+    if not email:
+        email = settings_store.get("default_notif_email", "")
+    if not email:
+        return jsonify({"status": "error", "error": "No email address provided"})
+
+    api_key = os.environ.get("RESEND_API_KEY")
+    if not api_key:
+        return jsonify({"status": "error", "error": "RESEND_API_KEY not configured"})
+
+    try:
+        import resend
+        resend.api_key = api_key
+        resend.Emails.send({
+            "from": "Visa Alerts <onboarding@resend.dev>",
+            "to": [email],
+            "subject": "Test Notification - Visa Automation",
+            "text": "This is a test notification from Visa Automation. If you receive this, your email notifications are working!",
+        })
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)})
+
+
+@app.route("/test_telegram", methods=["POST"])
+@login_required
+def test_telegram():
+    chat_id = request.form.get("chat_id", "")
+    if not chat_id:
+        chat_id = settings_store.get("default_telegram_chat_id", "")
+    if not chat_id:
+        return jsonify({"status": "error", "error": "No chat ID provided"})
+
+    bot_token = os.environ.get("TELEGRAM_BOT_TOKEN")
+    if not bot_token:
+        return jsonify({"status": "error", "error": "TELEGRAM_BOT_TOKEN not configured"})
+
+    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+    data = {"chat_id": chat_id, "text": "🇨🇦 Test message from Visa Automation - Notifications are working!"}
+
+    try:
+        response = requests.post(url, json=data, timeout=10)
+        if response.status_code == 200:
+            return jsonify({"status": "ok"})
+        else:
+            return jsonify({"status": "error", "error": f"Telegram error: {response.status_code}"})
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)})
 
 
 # ---------------------------------------------------------------------------
@@ -457,6 +582,101 @@ def _serialize(inst):
         "last_checked_location": inst.last_checked_location,
     }
 
+
+def _load_state(user_id):
+    """Load state from JSON file written by subprocess."""
+    state_file = f"canada/status/{user_id}.json"
+    if os.path.exists(state_file):
+        try:
+            with open(state_file, "r") as f:
+                return json.load(f)
+        except:
+            pass
+    return None
+
+
+pending_links = {}
+import time
+
+def _cleanup_pending_links():
+    """Remove stale pending links older than 10 minutes."""
+    global pending_links
+    now = time.time()
+    stale = [k for k, v in pending_links.items() if now - v["created"] > 600]
+    for k in stale:
+        del pending_links[k]
+
+@app.route("/set_telegram_webhook", methods=["GET"])
+def set_telegram_webhook():
+    """Helper to configure the Telegram bot webhook - visit this to set it up."""
+    bot_token = os.environ.get("TELEGRAM_BOT_TOKEN")
+    if not bot_token:
+        return "TELEGRAM_BOT_TOKEN not set"
+    webhook_url = url_for("telegram_webhook", _external=True)
+    r = requests.post(f"https://api.telegram.org/bot{bot_token}/setWebhook", json={"url": webhook_url})
+    return f"Webhook set: {r.json()}"
+
+@app.route("/telegram_webhook", methods=["POST"])
+def telegram_webhook():
+    """Handle incoming Telegram updates - register chat_id when user starts bot."""
+    bot_token = os.environ.get("TELEGRAM_BOT_TOKEN")
+    if not bot_token:
+        return jsonify({"ok": True})
+
+    try:
+        data = request.get_json() or {}
+        message = data.get("message", {})
+        chat = message.get("chat", {})
+        chat_id = chat.get("id")
+        text = message.get("text", "")
+
+        if text.startswith("/start ") or text.startswith("/start"):
+            token = text.replace("/start ", "").strip()
+            if token and token in pending_links:
+                pending_links[token]["chat_id"] = str(chat_id)
+                pending_links[token]["linked_at"] = time.time()
+                requests.post(
+                    f"https://api.telegram.org/bot{bot_token}/sendMessage",
+                    json={"chat_id": chat_id, "text": "✓ VisaCtrl Notifications linked! You'll receive alerts when earlier visa appointment dates become available."}
+                )
+    except:
+        pass
+    return jsonify({"ok": True})
+
+@app.route("/generate_telegram_link", methods=["POST"])
+def generate_telegram_link():
+    """Generate a unique token for linking Telegram."""
+    token = str(uuid.uuid4())
+    pending_links[token] = {"created": time.time(), "chat_id": None}
+    return jsonify({"token": token})
+
+@app.route("/check_telegram_linked", methods=["POST"])
+def check_telegram_linked():
+    """Check if a Telegram token has been linked."""
+    data = request.get_json() or {}
+    token = data.get("token")
+    if token in pending_links:
+        link_data = pending_links[token]
+        if link_data["chat_id"]:
+            return jsonify({"linked": True, "chat_id": link_data["chat_id"]})
+    return jsonify({"linked": False})
+
+@app.route("/client_link_telegram", methods=["POST"])
+def client_link_telegram():
+    """Link Telegram chat_id to an existing client."""
+    data = request.get_json() or {}
+    user_id = data.get("user_id")
+    chat_id = data.get("chat_id")
+    if not user_id or not chat_id:
+        return jsonify({"status": "error", "message": "Missing user_id or chat_id"})
+    user_id = user_id.strip()
+    if user_id in client_tokens:
+        client_tokens[user_id]["telegram_chat_id"] = chat_id
+    inst = automation_instances.get(user_id)
+    if inst:
+        inst.telegram_chat_id = chat_id
+        inst.send_telegram = True
+    return jsonify({"status": "ok"})
 
 if __name__ == "__main__":
     debug = os.environ.get("FLASK_DEBUG", "false").lower() == "true"

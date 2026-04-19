@@ -118,8 +118,13 @@
       .btn-cyan   { color: var(--cyan);    }
       .btn-red    { color: var(--red);     }
       .btn-yellow { color: var(--yellow);  }
+      .btn-magenta { color: var(--magenta); }
 
-      .btn:hover { background: currentColor; color: #000; box-shadow: 0 0 16px currentColor; }
+      .btn:hover { background: rgba(128,128,128,0.15); border-color: currentColor; color: currentColor; box-shadow: 0 0 12px rgba(128,128,128,0.3); }
+      .btn.loading { pointer-events: none; opacity: 0.7; }
+      .btn.loading .spinner { display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:6px; }
+      .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+      @keyframes spin { to { transform: rotate(360deg); } }
 
       /* ── LAYOUT ──────────────────────────────────────────────────────── */
       .main {
@@ -434,6 +439,21 @@
       }
       #toast.show { opacity: 1; transform: translateY(0); }
       #toast.error { border-color: var(--red); color: var(--red); }
+
+      /* ── SETTINGS MODAL ─────────────────────────────────────────────── */
+      .modal { display:none;position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:10000;align-items:center;justify-content:center; }
+      .modal.visible { display:flex; }
+      .modal-content { background:var(--panel);border:1px solid var(--border);width:90%;max-width:480px;max-height:90vh;overflow:hidden;display:flex;flex-direction:column; }
+      .modal-header { padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center; }
+      .modal-title { color:var(--magenta);font-size:0.8rem;letter-spacing:2px; }
+      .modal-close { padding:4px 10px;font-size:0.7rem; }
+      .modal-tabs { display:flex;border-bottom:1px solid var(--border); }
+      .modal-tab { flex:1;background:transparent;border:none;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:0.7rem;letter-spacing:2px;padding:12px;cursor:pointer;transition:all 0.15s;border-bottom:2px solid transparent; }
+      .modal-tab:hover { color:var(--green); }
+      .modal-tab.active { color:var(--magenta);border-bottom-color:var(--magenta); }
+      .modal-body { padding:20px;overflow-y:auto;flex:1; }
+      .tab-content { display:none; }
+      .tab-content.active { display:block; }
     </style>
   </head>
   <body>
@@ -446,6 +466,7 @@
       <nav class="header-nav">
         <button class="btn btn-cyan" id="genLinkBtn">⬡ CLIENT LINK</button>
         <button class="btn btn-yellow" id="viewLogBtn">◰ LOGS</button>
+        <button class="btn btn-magenta" id="settingsBtn">⚙ SETTINGS</button>
         <button class="btn btn-red"  id="killAllBtn">✕ KILL ALL</button>
         <a class="btn btn-green" href="/logout">⏻ LOGOUT</a>
       </nav>
@@ -502,6 +523,67 @@
 
     <!-- Toast -->
     <div id="toast"></div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <span class="modal-title">// SETTINGS</span>
+          <button class="btn btn-red modal-close" id="closeSettingsModal">✕</button>
+        </div>
+        <div class="modal-tabs">
+          <button class="modal-tab active" data-tab="notifications">NOTIFICATIONS</button>
+          <button class="modal-tab" data-tab="test">TEST</button>
+        </div>
+        <div class="modal-body">
+          <!-- Notifications Tab -->
+          <div class="tab-content active" id="tab-notifications">
+            <div class="form-grid">
+              <div class="form-group full">
+                <label>Default Notification Email</label>
+                <input type="email" id="defaultNotifEmail" placeholder="admin@example.com" />
+              </div>
+              <div class="form-group full">
+                <label>Default Telegram Chat ID</label>
+                <input type="text" id="defaultTelegramChatId" placeholder="123456789" />
+              </div>
+              <div class="form-group full">
+                <div class="checkbox-row">
+                  <input type="checkbox" id="enableEmailNotif" />
+                  <label for="enableEmailNotif">Enable Email Notifications</label>
+                </div>
+                <div class="checkbox-row">
+                  <input type="checkbox" id="enableTelegramNotif" />
+                  <label for="enableTelegramNotif">Enable Telegram Notifications</label>
+                </div>
+              </div>
+              <div class="form-group full" style="margin-top:16px;">
+                <button class="btn btn-green" id="saveSettingsBtn">◼ SAVE SETTINGS</button>
+              </div>
+            </div>
+          </div>
+          <!-- Test Tab -->
+          <div class="tab-content" id="tab-test">
+            <div class="form-grid">
+              <div class="form-group full">
+                <label>Test Email Address</label>
+                <input type="email" id="testEmailAddress" placeholder="test@example.com" />
+              </div>
+              <div class="form-group full">
+                <button class="btn btn-cyan" id="testEmailBtn" style="width:100%;">✉ TEST EMAIL</button>
+              </div>
+              <div class="form-group full" style="margin-top:24px;">
+                <label>Test Telegram Chat ID</label>
+                <input type="text" id="testTelegramChatId" placeholder="123456789" />
+              </div>
+              <div class="form-group full">
+                <button class="btn btn-yellow" id="testTelegramBtn" style="width:100%;">✈ TEST TELEGRAM</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <script>
       let agentCount = 0;
@@ -586,7 +668,7 @@
               <div class="card-footer" style="gap:8px;">
                 <button class="btn btn-yellow" onclick="toggleLog('${uid}')"
                   style="font-size:0.62rem;padding:5px 10px;">▤ LOGS</button>
-                <button class="btn btn-red" onclick="stopAgent('${uid}')"
+                <button class="btn btn-red" onclick="stopAgent(this, '${uid}')"
                   style="font-size:0.65rem;padding:5px 12px;">✕ STOP</button>
               </div>
 
@@ -678,34 +760,39 @@
               </div>
               <div class="pending-action-row">
                 <button class="btn btn-green" style="font-size:0.65rem;padding:6px 14px;"
-                  onclick="approveClient('${token}')">✓ APPROVE</button>
+                  onclick="approveClient(this, '${token}')">✓ APPROVE</button>
                 <button class="btn btn-red" style="font-size:0.65rem;padding:6px 14px;"
-                  onclick="rejectClient('${token}')">✕ REJECT</button>
+                  onclick="rejectClient(this, '${token}')">✕ REJECT</button>
               </div>
             </div>`;
         }).join('');
       }
 
-      function approveClient(token) {
-        const fd = new FormData();
-        fetch(`/admin/approve_client/${encodeURIComponent(token)}`, { method: 'POST', body: fd })
+      function approveClient(btn, token) {
+        btn.disabled = true;
+        btn.classList.add('loading');
+        btn.innerHTML = '<span class="spinner"></span>APPROVING...';
+        fetch(`/admin/approve_client/${encodeURIComponent(token)}`, { method: 'POST' })
           .then(r => r.json())
           .then(d => {
             toast('APPROVED // AGENT LAUNCHED');
             pollPending();
             setTimeout(pollStatus, 1200);
           })
-          .catch(() => toast('APPROVE FAILED', true));
+          .catch(() => { toast('APPROVE FAILED', true); btn.disabled = false; btn.classList.remove('loading'); btn.innerHTML = '✓ APPROVE'; });
       }
 
-      function rejectClient(token) {
+      function rejectClient(btn, token) {
+        btn.disabled = true;
+        btn.classList.add('loading');
+        btn.innerHTML = '<span class="spinner"></span>REJECTING...';
         const reason = prompt('Rejection reason (optional):') ?? '';
         const fd = new FormData();
         fd.append('reason', reason);
         fetch(`/admin/reject_client/${encodeURIComponent(token)}`, { method: 'POST', body: fd })
           .then(r => r.json())
           .then(d => { toast('REQUEST_REJECTED'); pollPending(); })
-          .catch(() => toast('REJECT FAILED', true));
+          .catch(() => { toast('REJECT FAILED', true); btn.disabled = false; btn.classList.remove('loading'); btn.innerHTML = '✕ REJECT'; });
       }
 
       function escHtml(s) {
@@ -715,7 +802,10 @@
       }
 
       // ── Stop individual agent ──────────────────────────────────────────
-      function stopAgent(userId) {
+      function stopAgent(btn, userId) {
+        btn.disabled = true;
+        btn.classList.add('loading');
+        btn.innerHTML = '<span class="spinner"></span>STOPPING...';
         const fd = new FormData();
         fd.append('user_id', userId);
         fetch('/stop_automation', { method: 'POST', body: fd })
@@ -728,7 +818,10 @@
       }
 
       // ── Kill all ───────────────────────────────────────────────────────
-      document.getElementById('killAllBtn').addEventListener('click', () => {
+      document.getElementById('killAllBtn').addEventListener('click', function() {
+        this.disabled = true;
+        this.classList.add('loading');
+        this.innerHTML = '<span class="spinner"></span>KILLING...';
         fetch('/stop_all_automation', { method: 'POST' })
           .then(r => {
             if (!r.ok) { toast('SESSION_EXPIRED // RELOAD PAGE', true); return null; }
@@ -864,9 +957,14 @@
       }
 
       // ── Execute all agents ─────────────────────────────────────────────
-      document.getElementById('executeAllBtn').addEventListener('click', () => {
+      document.getElementById('executeAllBtn').addEventListener('click', function() {
+        const btn = this;
         const forms = document.querySelectorAll('.user-form');
         if (forms.length === 0) { toast('NO AGENTS CONFIGURED', true); return; }
+
+        btn.disabled = true;
+        btn.classList.add('loading');
+        btn.innerHTML = '<span class="spinner"></span>LAUNCHING...';
 
         const usersData = {};
         forms.forEach(form => {
@@ -893,8 +991,96 @@
             if (!r.ok) { toast('SESSION_EXPIRED // RELOAD PAGE', true); return null; }
             return r.json();
           })
-          .then(d => { if (d) { toast(d.status); setTimeout(pollStatus, 1000); } })
-          .catch(() => toast('CONNECTION_ERROR', true));
+          .then(d => { 
+            if (d) { toast(d.status); setTimeout(pollStatus, 1000); } 
+          })
+          .catch(() => { toast('CONNECTION_ERROR', true); })
+          .finally(() => { btn.disabled = false; btn.classList.remove('loading'); btn.innerHTML = '▶ EXECUTE ALL'; });
+      });
+
+      // ── Settings Modal ─────────────────────────────────────────────────
+      document.getElementById('settingsBtn').addEventListener('click', () => {
+        fetch('/get_settings')
+          .then(r => r.json())
+          .then(d => {
+            document.getElementById('defaultNotifEmail').value = d.default_notif_email || '';
+            document.getElementById('defaultTelegramChatId').value = d.default_telegram_chat_id || '';
+            document.getElementById('enableEmailNotif').checked = d.email_enabled !== false;
+            document.getElementById('enableTelegramNotif').checked = d.telegram_enabled !== false;
+            document.getElementById('settingsModal').classList.add('visible');
+          })
+          .catch(() => document.getElementById('settingsModal').classList.add('visible'));
+      });
+
+      document.getElementById('closeSettingsModal').addEventListener('click', () => {
+        document.getElementById('settingsModal').classList.remove('visible');
+      });
+
+      document.querySelectorAll('.modal-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));
+          document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+          tab.classList.add('active');
+          document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+        });
+      });
+
+      // Save settings
+      document.getElementById('saveSettingsBtn').addEventListener('click', function() {
+        const btn = this;
+        btn.classList.add('loading');
+        btn.innerHTML = '<span class="spinner"></span>Saving...';
+
+        const fd = new FormData();
+        fd.append('default_notif_email', document.getElementById('defaultNotifEmail').value);
+        fd.append('default_telegram_chat_id', document.getElementById('defaultTelegramChatId').value);
+        fd.append('email_enabled', document.getElementById('enableEmailNotif').checked);
+        fd.append('telegram_enabled', document.getElementById('enableTelegramNotif').checked);
+
+        fetch('/save_settings', { method: 'POST', body: fd })
+          .then(r => r.json())
+          .then(d => { toast('SETTINGS_SAVED'); btn.classList.remove('loading'); btn.innerHTML = '◼ SAVE SETTINGS'; })
+          .catch(() => { toast('SAVE_FAILED', true); btn.classList.remove('loading'); btn.innerHTML = '◼ SAVE SETTINGS'; });
+      });
+
+      // Test email
+      document.getElementById('testEmailBtn').addEventListener('click', function() {
+        const btn = this;
+        btn.classList.add('loading');
+        btn.innerHTML = '<span class="spinner"></span>SENDING...';
+
+        const fd = new FormData();
+        fd.append('email', document.getElementById('testEmailAddress').value);
+
+        fetch('/test_email', { method: 'POST', body: fd })
+          .then(r => r.json())
+          .then(d => {
+            if (d.status === 'ok') toast('TEST_EMAIL_SENT');
+            else toast(d.error || 'EMAIL_FAILED', true);
+            btn.classList.remove('loading');
+            btn.innerHTML = '✉ TEST EMAIL';
+          })
+          .catch(() => { toast('EMAIL_FAILED', true); btn.classList.remove('loading'); btn.innerHTML = '✉ TEST EMAIL'; });
+      });
+
+      // Test telegram
+      document.getElementById('testTelegramBtn').addEventListener('click', function() {
+        const btn = this;
+        btn.classList.add('loading');
+        btn.innerHTML = '<span class="spinner"></span>SENDING...';
+
+        const fd = new FormData();
+        fd.append('chat_id', document.getElementById('testTelegramChatId').value);
+
+        fetch('/test_telegram', { method: 'POST', body: fd })
+          .then(r => r.json())
+          .then(d => {
+            if (d.status === 'ok') toast('TEST_MESSAGE_SENT');
+            else toast(d.error || 'TELEGRAM_FAILED', true);
+            btn.classList.remove('loading');
+            btn.innerHTML = '✈ TEST TELEGRAM';
+          })
+          .catch(() => { toast('TELEGRAM_FAILED', true); btn.classList.remove('loading'); btn.innerHTML = '✈ TEST TELEGRAM'; });
       });
     </script>
   </body>

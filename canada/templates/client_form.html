@@ -281,11 +281,14 @@
         color: var(--red);
       }
 
-      .hint {
-        font-size: 0.6rem;
-        color: var(--dimtext);
-        letter-spacing: 1px;
-        margin-top: 2px;
+.hint {
+        color: #666;
+        font-size: 0.62rem;
+        margin-top: 4px;
+      }
+      .hint span {
+        color: #888;
+        font-size: 0.58rem;
       }
 
       .reschedule-box {
@@ -354,8 +357,10 @@
         z-index: -1;
       }
       .btn-submit:hover {
-        color: #000;
-        box-shadow: 0 0 24px rgba(0, 255, 65, 0.4);
+        background: rgba(0,255,65,0.15);
+        color: var(--green);
+        border-color: var(--green);
+        box-shadow: 0 0 16px rgba(0,255,65,0.3);
       }
       .btn-submit:hover::before {
         transform: scaleX(1);
@@ -364,6 +369,9 @@
         opacity: 0.4;
         cursor: not-allowed;
       }
+      .btn-submit.loading { pointer-events: none; opacity: 0.7; }
+      .btn-submit.loading .spinner { display:inline-block;width:12px;height:12px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:6px; }
+      @keyframes spin { to { transform: rotate(360deg); } }
 
       /* ── MONITORING PANEL ───────────────────────────────────────── */
       #monitorPanel {
@@ -499,6 +507,60 @@
       }
 
       /* Log panel */
+      /* notifications */
+      .notif-section {
+        margin-top: 20px;
+        border: 1px solid var(--border);
+        background: var(--panel);
+        padding: 16px;
+      }
+      .notif-section-label {
+        font-size: 0.62rem;
+        letter-spacing: 3px;
+        color: var(--yellow);
+        margin-bottom: 12px;
+      }
+      .notif-grid {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .notif-card {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 14px;
+        border: 1px solid var(--border);
+        background: rgba(0,0,0,0.2);
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 0.62rem;
+        letter-spacing: 1px;
+      }
+      .notif-icon { font-size: 0.9rem; }
+      .notif-status { color: var(--green); }
+      .notif-status.disabled { color: var(--red); }
+      .notif-label { color: var(--dimtext); }
+      .notif-btn {
+        margin-left: 8px;
+        background: transparent;
+        border: 1px solid var(--cyan);
+        color: var(--cyan);
+        padding: 4px 10px;
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 0.58rem;
+        letter-spacing: 1px;
+        cursor: pointer;
+      }
+      .notif-btn:hover {
+        background: rgba(0,255,255,0.1);
+        box-shadow: 0 0 8px rgba(0,255,255,0.3);
+      }
+      .notif-btn.linked {
+        background: rgba(0,255,65,0.1);
+        border-color: var(--green);
+        color: var(--green);
+      }
+
       .log-section-label {
         font-size: 0.65rem;
         letter-spacing: 3px;
@@ -610,8 +672,7 @@
         <h1 class="page-title">APPOINTMENT<br />MONITOR</h1>
         <p class="page-desc">
           Submit your credentials below to initialize automated monitoring of your US visa appointment slot.<br /><br />
-          We'll scan all Canadian consulate locations and notify you
-          <span>via email</span> the moment an earlier date becomes available. This page will show your
+          We'll scan all consulate locations and notify you the moment an earlier date becomes available. You can enable notifications after approval.
           <span>live monitoring status</span> after submission.
         </p>
       </div>
@@ -660,14 +721,9 @@
 
             <p class="form-section-label">&gt; PERSONAL DETAILS</p>
             <div class="form-grid">
-              <div class="form-group">
+              <div class="form-group full">
                 <label>Your Name</label>
                 <input type="text" name="name" placeholder="Jane Smith" required />
-              </div>
-              <div class="form-group">
-                <label>Notification Email</label>
-                <input type="email" name="email" placeholder="jane@example.com" required />
-                <p class="hint">// Alerts will be sent here</p>
               </div>
             </div>
 
@@ -783,10 +839,6 @@
             This page will automatically update once approved — no need to refresh.
           </p>
 
-          <div style="display: flex; gap: 16px; font-size: 0.75rem; margin-bottom: 8px">
-            <span style="color: var(--dimtext); width: 80px; flex-shrink: 0">NOTIFY</span>
-            <span id="pEmail" style="color: var(--text)"></span>
-          </div>
           <div style="display: flex; gap: 16px; font-size: 0.75rem">
             <span style="color: var(--dimtext); width: 80px; flex-shrink: 0">STATUS</span>
             <span style="color: var(--yellow)">Pending admin approval <span class="blink">▮</span></span>
@@ -874,10 +926,6 @@
               <span class="meta-val" id="mUserId"></span>
             </div>
             <div class="meta-row">
-              <span class="meta-key">NOTIFY</span>
-              <span class="meta-val" id="mEmail"></span>
-            </div>
-            <div class="meta-row">
               <span class="meta-key">CURRENT_APT</span>
               <span class="meta-val" id="mCurrentApt">—</span>
             </div>
@@ -902,6 +950,24 @@
           <img id="screenshotImg" src="" alt="Appointment page" />
         </div>
 
+        <!-- Notifications -->
+        <div class="notif-section">
+          <p class="notif-section-label">&gt; NOTIFICATIONS</p>
+          <div class="notif-grid">
+            <div class="notif-card" id="emailNotifCard">
+              <span class="notif-icon">✉</span>
+              <span class="notif-status" id="mEmailStatus">ENABLED</span>
+              <span class="notif-label">EMAIL</span>
+            </div>
+            <div class="notif-card" id="telegramNotifCard">
+              <span class="notif-icon">✈</span>
+              <span class="notif-status" id="mTelegramStatus">DISABLED</span>
+              <span class="notif-label">TELEGRAM</span>
+              <button class="notif-btn" id="linkTelegramBtn2">LINK</button>
+            </div>
+          </div>
+        </div>
+
         <!-- Live log -->
         <div class="log-section-label">&gt; LIVE_LOG</div>
         <div class="log-panel" id="mLogPanel">
@@ -910,7 +976,7 @@
 
         <p style="margin-top: 20px; font-size: 0.68rem; color: var(--dimtext); letter-spacing: 1px; line-height: 1.8">
           Bookmark this page — you can return at any time to check your monitoring status.<br />
-          All Canadian consulate locations are being scanned. Email notification will be sent when an earlier date is
+          All Canadian consulate locations are being scanned. Notification will be sent when an earlier date is
           found.
         </p>
       </div>
@@ -963,7 +1029,7 @@
 
         if (!validateUrl()) return;
 
-        const required = ["name", "email", "username", "password", "appointment_url"];
+        const required = ["name", "username", "password", "appointment_url"];
         for (const field of required) {
           if (!form[field].value.trim()) {
             showValidationError(`Field "${field.toUpperCase().replace("_", " ")}" is required.`);
@@ -971,8 +1037,8 @@
           }
         }
 
-        submitBtn.disabled = true;
-        submitBtn.textContent = "⟳ TRANSMITTING...";
+        submitBtn.classList.add('loading');
+        submitBtn.innerHTML = '<span class="spinner"></span>TRANSMITTING...';
         document.getElementById("urlValidationError").style.display = "none";
 
         const fd = new FormData(form);
@@ -982,30 +1048,28 @@
           .then((r) => r.json())
           .then((data) => {
             if (data.status === "pending_approval") {
-              showPendingPanel(form.email.value);
+              showPendingPanel();
             } else if (data.status === "rejected") {
               showRejectedPanel(data.reason || "Your request was not approved.");
             } else {
               showValidationError(data.message || "Submission failed — please try again.");
-              submitBtn.disabled = false;
-              submitBtn.textContent = "▶ INITIATE";
+              submitBtn.classList.remove('loading');
+              submitBtn.innerHTML = "▶ INITIATE";
             }
           })
           .catch(() => {
             showValidationError("Connection error — could not reach the server.");
-            submitBtn.disabled = false;
-            submitBtn.textContent = "▶ INITIATE";
+            submitBtn.classList.remove('loading');
+            submitBtn.innerHTML = "▶ INITIATE";
           });
       });
 
       // ── State panels ───────────────────────────────────────────────────────
 
-      function showPendingPanel(email) {
+      function showPendingPanel() {
         document.getElementById("formSection").style.display = "none";
         document.getElementById("pendingPanel").style.display = "block";
-        document.getElementById("pEmail").textContent = email || "";
         document.getElementById("pendingPanel").scrollIntoView({ behavior: "smooth" });
-        // Start polling — when approved, auto-transition to monitor view
         startStatusPolling();
       }
 
@@ -1022,14 +1086,57 @@
         }
       }
 
-      function showMonitorPanel(email) {
+      function showMonitorPanel() {
         document.getElementById("formSection").style.display = "none";
         document.getElementById("pendingPanel").style.display = "none";
         document.getElementById("monitorPanel").style.display = "block";
-        if (email) document.getElementById("mEmail").textContent = email;
+        document.getElementById("mEmailStatus").textContent = "DISABLED";
+        document.getElementById("mEmailStatus").classList.add("disabled");
+        if (window.clientTelegramChatId) {
+          document.getElementById("mTelegramStatus").textContent = "ENABLED";
+          document.getElementById("linkTelegramBtn2").textContent = "LINKED";
+          document.getElementById("linkTelegramBtn2").classList.add("linked");
+        }
         document.getElementById("monitorPanel").scrollIntoView({ behavior: "smooth" });
-        // Screenshot polling uses token as user_id (approved clients)
         pollScreenshot(PAGE_TOKEN, 0);
+      }
+
+      window.clientTelegramChatId = null;
+      document.getElementById("linkTelegramBtn2").addEventListener("click", function() {
+        if (document.getElementById("linkTelegramBtn2").classList.contains("linked")) return;
+        fetch("/generate_telegram_link", { method: "POST" })
+          .then(r => r.json())
+          .then(d => {
+            const btn = document.getElementById("linkTelegramBtn2");
+            btn.textContent = "WAIT...";
+            window.telegramLinkToken = d.token;
+            window.open(`https://t.me/VisaCtrlBot?start=${d.token}`, "_blank");
+            pollMonitorTelegramLink();
+          });
+      });
+
+      function pollMonitorTelegramLink() {
+        if (!window.telegramLinkToken) return;
+        fetch("/check_telegram_linked", {
+          method: "POST",
+          body: JSON.stringify({ token: window.telegramLinkToken })
+        })
+          .then(r => r.json())
+          .then(d => {
+            if (d.linked && d.chat_id) {
+              window.clientTelegramChatId = d.chat_id;
+              document.getElementById("mTelegramStatus").textContent = "ENABLED";
+              const btn = document.getElementById("linkTelegramBtn2");
+              btn.textContent = "LINKED";
+              btn.classList.add("linked");
+              fetch("/client_link_telegram", {
+                method: "POST",
+                body: JSON.stringify({ user_id: PAGE_TOKEN, chat_id: d.chat_id })
+              });
+            } else {
+              setTimeout(pollMonitorTelegramLink, 2000);
+            }
+          });
       }
 
       // ── Status polling (handles all state transitions) ─────────────────────
@@ -1061,7 +1168,7 @@
         }
         if (d.status === "ok") {
           // Approved and automation is running — switch to monitor view
-          showMonitorPanel(document.getElementById("mEmail").textContent);
+          showMonitorPanel();
           updateMonitorUI(d);
           // Continue polling for live updates
         }
@@ -1130,7 +1237,7 @@
           .then((d) => {
             if (d.status === "ready") {
               const img = document.getElementById("screenshotImg");
-              img.src = "data:image/png;base64," + d.image;
+              img.src = d.image_url;
               img.style.display = "block";
               document.getElementById("screenshotSpinner").style.display = "none";
             } else {
@@ -1157,11 +1264,11 @@
           .then((d) => {
             if (d.status === "issued") return; // not yet submitted — show form
             if (d.status === "pending_approval") {
-              showPendingPanel("");
+              showPendingPanel();
             } else if (d.status === "rejected") {
               showRejectedPanel(d.reason || "Your request was not approved.");
             } else if (d.status === "ok" || d.status === "approved") {
-              showMonitorPanel("");
+              showMonitorPanel();
               if (d.status === "ok") updateMonitorUI(d);
               startStatusPolling();
             }

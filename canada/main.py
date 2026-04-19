@@ -38,6 +38,27 @@ def setup_logger(name, log_file, level=logging.INFO):
 MAX_POLLS = 30
 MIN_SLEEP_BEFORE_RETRY = 30
 MAX_SLEEP_BEFORE_RETRY = 60
+MIN_WAIT_BETWEEN_CHECKS = 30
+MAX_WAIT_BETWEEN_CHECKS = 60
+
+
+import json
+
+_STATE_DIR = "./canada/status"
+
+def _save_state(user_id, instance):
+    """Save instance state to JSON file for cross-process access."""
+    os.makedirs(_STATE_DIR, exist_ok=True)
+    state = {
+        "is_running": instance.is_running,
+        "current_action": instance.current_action,
+        "action_log": instance.action_log,
+        "current_appointment": str(instance.current_date) if instance.current_date else None,
+        "new_appointment": str(instance.new_date) if instance.new_date else None,
+        "last_checked_location": instance.last_checked_location,
+    }
+    with open(f"{_STATE_DIR}/{user_id}.json", "w") as f:
+        json.dump(state, f)
 
 
 def run_in_subprocess(user_id, username, password, appointment_id, appointment_url,
@@ -58,6 +79,7 @@ def run_in_subprocess(user_id, username, password, appointment_id, appointment_u
         telegram_chat_id=telegram_chat_id,
         send_telegram=send_telegram,
         logger=logger,
+        user_id=user_id,
     )
     instance.run()
 
@@ -76,6 +98,7 @@ class VisaAutomation:
         telegram_chat_id=None,
         send_telegram=False,
         logger=None,
+        user_id=None,
     ):
         self._logger = logger
         self.playwright = sync_playwright().start()
@@ -92,6 +115,8 @@ class VisaAutomation:
         self.last_checked_location = None
         self.action_log = []
         self.current_action = ""
+        self.appointments_page_screenshot = None
+        self.user_id = user_id
 
         self.username = username
         self.password = password
@@ -177,16 +202,19 @@ class VisaAutomation:
         self.action_log.append(entry)
         if len(self.action_log) > 100:
             self.action_log = self.action_log[-100:]
+        if self.user_id:
+            _save_state(self.user_id, self)
         if self._logger:
             getattr(self._logger, level)(msg)
         else:
             print(f"[{level.upper()}] {msg}")
 
     def capture_debug_screenshot(self, name: str):
-        self.debug_screenshot_counter += 1
-        screenshot_name = f"{self.debug_screenshot_counter:03d}_{name}"
-        self.capture_screenshot(screenshot_name)
-        self._log(f"Captured debug screenshot: {screenshot_name}", "debug")
+        if name == "appointments_page":
+            self.debug_screenshot_counter += 1
+            screenshot_name = f"{self.debug_screenshot_counter:03d}_{name}"
+            self.capture_screenshot(screenshot_name)
+            self.appointments_page_screenshot = f"./screenshots/{self.screenshots_folder}/{screenshot_name}.png"
 
     def month_to_number(self, month):
         return {
@@ -280,6 +308,33 @@ class VisaAutomation:
             self._log(f"Navigating to appointments page for ID: {appointment_id}")
             self.page.goto(self.appointment_link.format(appointment_id))
             self.page.wait_for_load_state("networkidle")
+
+            consent_checkbox = self.page.locator('label:has-text("I confirm that I have read")')
+            if consent_checkbox.count() > 0:
+                self._log("Found consent checkbox, clicking to confirm...")
+                consent_checkbox.click()
+                time.sleep(0.5)
+                self.page.get_by_role("button", name="Continue").click()
+                self.page.wait_for_load_state("networkidle")
+                self._log("Confirmed consent and continued")
+
+            understand_checkbox = self.page.locator('label:has-text("I understand")')
+            if understand_checkbox.count() > 0:
+                self._log("Found 'I understand' checkbox, clicking...")
+                understand_checkbox.click()
+                time.sleep(0.5)
+
+            limit_checkbox = self.page.locator('#confirmed_limit_message')
+            if limit_checkbox.count() > 0:
+                self._log("Found limit confirmation checkbox, clicking...")
+                limit_checkbox.check()
+                time.sleep(0.5)
+                continue_btn = self.page.get_by_text("Continue").first
+                if continue_btn.count() > 0:
+                    continue_btn.click()
+                    self.page.wait_for_load_state("networkidle")
+                    self._log("Clicked Continue after limit confirmation")
+
             self.capture_debug_screenshot("appointments_page")
             self._log("Successfully navigated to appointments page")
             self.current_action = "CHECKING"
@@ -291,7 +346,7 @@ class VisaAutomation:
 
     def check_availability(self):
         self._log("Checking availability")
-        self.capture_debug_screenshot("before_check_availability")
+        
 
         calendar_content = self.page.locator(self.calender_id).first.text_content()
         self._log(f"Calendar content: {calendar_content}", "debug")
@@ -358,15 +413,21 @@ class VisaAutomation:
     def select_location(self, location):
         if location in self.visa_locations:
             try:
+                self._log(f"Selecting location: {location}")
+
                 location_selector = self.page.locator(self.location_id)
+
+                current = location_selector.evaluate("el => el.value")
+                self._log(f"Current location: {current}", "debug")
+
                 location_selector.select_option(location)
                 self.page.wait_for_load_state("networkidle")
-                time.sleep(2)
+                time.sleep(0.5)
 
-            except TimeoutError:
-                self._log(
-                    f"Timeout occurred while selecting {location} location", "error"
-                )
+                self._log(f"Selected {location}")
+
+            except Exception as e:
+                self._log(f"Error selecting {location}: {str(e)}", "error")
 
     def is_date_available(self, wait_time: int = 100):
         try:
@@ -437,6 +498,8 @@ class VisaAutomation:
 
     def run(self):
         self.is_running = True
+        if self.user_id:
+            _save_state(self.user_id, self)
         self._log("Starting automation")
 
         for session_number in range(self.browsers):
@@ -476,6 +539,11 @@ class VisaAutomation:
                 if session_number == self.browsers - 1:
                     self._log("All browser sessions completed.")
                     self.close_browser()
+
+        if self.is_running:
+            wait_time = random.randint(MIN_WAIT_BETWEEN_CHECKS, MAX_WAIT_BETWEEN_CHECKS)
+            self._log(f"Waiting {wait_time}s before next check cycle")
+            time.sleep(wait_time)
 
         self.is_running = False
         self._log("Automation stopped")
