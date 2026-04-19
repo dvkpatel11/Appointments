@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: visa-ctrl-canada
+    region: Toronto
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: cd canada && waitress-serve --port=$PORT --host=0.0.0.0 app:app
+    envVars:
+      - key: FLASK_DEBUG
+        value: "false"
+      - key: PORT
+        value: "8080"
+      - key: SECRET_KEY
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false

@@ -338,33 +338,32 @@ class VisaAutomation:
         return False, True
 
     def get_appointment_date(self):
-        # try:
+        try:
             logger.info(f"Getting current appointment details...")
-            return datetime(2025, 6, 5, 8, 0, 0)
-        #     date_text = self.page.locator(self.appointment_date_selector).text_content()
-        # except Exception as e:
-        #     e_strings = str(e).split("get_by_text")
-        #     start_index = e_strings[1].index("(")
-        #     end_index = e_strings[1].index(")")
-        #     date_text = e_strings[1][start_index + 1 : end_index]
+            date_text = self.page.locator(self.appointment_date_selector).text_content()
+        except Exception as e:
+            e_strings = str(e).split("get_by_text")
+            start_index = e_strings[1].index("(")
+            end_index = e_strings[1].index(")")
+            date_text = e_strings[1][start_index + 1 : end_index]
 
-        # date_text = date_text.replace("\n", "")
-        # matches = re.search(self.appointment_date_regex, date_text)
+        date_text = date_text.replace("\n", "")
+        matches = re.search(self.appointment_date_regex, date_text)
 
-        # if matches:
-        #     date_text = matches.group(1).strip()
-        #     appointment_details = parser.parse(date_text)
-        #     formatted_appointment_date = appointment_details.strftime(
-        #         "%Y-%m-%d %H:%M:%S"
-        #     )
-        #     appointment_datetime = datetime.strptime(
-        #         formatted_appointment_date, "%Y-%m-%d %H:%M:%S"
-        #     )
-        #     logger.info(f"Current appointment details: {appointment_datetime}")
-        #     return appointment_datetime
-        # else:
-        #     logger.warning("No appointment date information found.")
-        #     return None
+        if matches:
+            date_text = matches.group(1).strip()
+            appointment_details = parser.parse(date_text)
+            formatted_appointment_date = appointment_details.strftime(
+                "%Y-%m-%d %H:%M:%S"
+            )
+            appointment_datetime = datetime.strptime(
+                formatted_appointment_date, "%Y-%m-%d %H:%M:%S"
+            )
+            logger.info(f"Current appointment details: {appointment_datetime}")
+            return appointment_datetime
+        else:
+            logger.warning("No appointment date information found.")
+            return None
 
     def select_location(self, location):
         if location in self.visa_locations:
@@ -559,7 +558,7 @@ class VisaAutomation:
             # logger.info("Successfully clicked the Continue button.")
 
         except Exception as e:
-            # logger.error("Failed to click on the Continue button", exc_info=True)
+            logger.error("Failed to click on the Continue button", exc_info=True)
             self.navigate_to_appointments()
 
 
