@@ -211,28 +211,23 @@ class VisaAutomation:
 
             self.page.get_by_label(self.username_input_id).fill(username)
             self.page.get_by_label(self.password_input_id).fill(password)
-            self.capture_debug_screenshot("credentials_filled")
 
             self.page.locator("label").filter(
                 has_text=self.terms_checkbox_label
             ).click()
-            self.capture_debug_screenshot("terms_checked")
 
             self.page.get_by_role("button", name=self.sign_in_button_label).click()
             self._log("Clicked sign in button", "debug")
 
             if press_ok:
-                self.capture_debug_screenshot("before_press_ok")
                 self.page.get_by_label("OK").click()
                 self._log("Pressed OK button", "debug")
-            self.capture_debug_screenshot("logged_in")
 
             if continue_login:
                 self.page.get_by_role(
                     "menuitem", name=self.continue_button_label
                 ).click()
                 self._log("Clicked continue button", "debug")
-                self.capture_debug_screenshot("after_continue")
 
             self._log("Login successful")
             self.current_action = "IDLE"
@@ -285,11 +280,9 @@ class VisaAutomation:
                 )
                 calendar_date = datetime(year, month_number, day)
                 self._log(f"Found potential date: {calendar_date}", "debug")
-                self.capture_debug_screenshot("date_found")
 
             except Exception:
                 self._log("Exception in check_availability()", "error")
-                self.capture_debug_screenshot("check_availability_error")
                 self._log("No match found, continuing checks...", "debug")
                 return False, True
 
@@ -359,7 +352,6 @@ class VisaAutomation:
             self.page.route(re.compile(self.network_request_regex), self.handle_request)
             self._log(f"Checking availability at {location}")
             self.select_location(location)
-            self.capture_debug_screenshot(f"location_{location}")
 
             if self.is_date_available():
                 availability_list.append(True)
@@ -367,7 +359,6 @@ class VisaAutomation:
 
                 continue_check = True
                 self.page.locator(self.calender_dropdown_date_selector).click()
-                self.capture_debug_screenshot(f"calendar_dropdown_{location}")
 
                 while continue_check:
                     result, continue_check = self.check_availability()
@@ -402,7 +393,6 @@ class VisaAutomation:
                     else:
                         self.page.get_by_text(self.next_button_label).click()
                         self._log("Clicked next button", "debug")
-                        self.capture_debug_screenshot(f"next_month_{location}")
                         time.sleep(0.2)
 
                 self.page.keyboard.press("Escape")
@@ -411,7 +401,6 @@ class VisaAutomation:
             else:
                 availability_list.append(False)
                 self._log(f"No dates available at {location}")
-                self.capture_debug_screenshot(f"no_dates_{location}")
 
         return any(availability_list)
 
@@ -509,22 +498,18 @@ class VisaAutomation:
 
             self.page.query_selector(self.match_id).click()
             self._log("Selected new date")
-            self.capture_debug_screenshot("date_selected")
             time.sleep(0.5)
 
             options = self.page.locator(self.time_appointment_selector).text_content()
             option = options.strip()[:5]
             self.page.locator(self.time_appointment_selector).select_option(option)
             self._log(f"Selected time slot: {option}")
-            self.capture_debug_screenshot("time_selected")
 
             self.page.get_by_text("Reschedule").last.click()
             self._log("Clicked Reschedule button")
-            self.capture_debug_screenshot("reschedule_clicked")
 
             self.page.get_by_text("Confirm").last.click()
             self._log("Clicked Confirm button")
-            self.capture_debug_screenshot("confirm_clicked")
 
             time.sleep(5)
 
@@ -535,6 +520,7 @@ class VisaAutomation:
             message = f"Rescheduled to a new earlier appointment date at {location}: \nDate: {self.current_date}\nLocation: {location_address}"
             self._log(message)
             self.send_email_notification(message)
+            self.send_telegram_notification(message)
             self.capture_debug_screenshot("reschedule_complete")
             self.current_action = "IDLE"
 

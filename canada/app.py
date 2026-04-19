@@ -377,6 +377,29 @@ def client_screenshot(user_id):
     return jsonify({"status": "ready", "image": data})
 
 
+@app.route("/view_log/<user_id>")
+@login_required
+def view_log(user_id):
+    """View log file for a specific user."""
+    log_path = f"canada/app.log"
+    if os.path.exists(log_path):
+        with open(log_path, "r") as f:
+            lines = f.readlines()
+        return jsonify({"status": "ready", "log": "".join(lines[-500:])})
+    return jsonify({"status": "not_found", "log": ""}), 404
+
+
+@app.route("/download_log")
+@login_required
+def download_log():
+    """Download the log file."""
+    log_path = "canada/app.log"
+    if not os.path.exists(log_path):
+        return "Log file not found", 404
+    from flask import send_file
+    return send_file(log_path, as_attachment=True, download_name="visa_automation.log")
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

@@ -28,6 +28,7 @@ def start_automation():
         send_telegram_notification = (
             request.form.get("send_telegram_notification") == "true"
         )
+        notification_email = request.form.get("notification_email")
 
         visa_automation = VisaAutomation(
             username=username,
@@ -40,6 +41,7 @@ def start_automation():
             check=check,
             reschedule=reschedule,
             telegram_noti_enabled=send_telegram_notification,
+            notification_email=notification_email,
         )
         visa_automation.run()
         # thread = threading.Thread(target=visa_automation.run)
