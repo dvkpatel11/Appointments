@@ -52,6 +52,8 @@ class VisaAutomation:
         browsers=1,
         check=12,
         reschedule=False,
+        telegram_chat_id=None,
+        send_telegram=False,
     ):
         self.playwright = sync_playwright().start()
         self.browser = self.playwright.chromium.launch(headless=True)
@@ -75,6 +77,9 @@ class VisaAutomation:
         self.notification_email = notification_email
         self.browsers = browsers
         self.check = check
+        self.reschedule = reschedule
+        self.telegram_chat_id = telegram_chat_id
+        self.send_telegram = send_telegram
         self.reschedule = reschedule
 
         self.login_url = "https://ais.usvisa-info.com/en-ca/niv/users/sign_in"
@@ -472,10 +477,13 @@ class VisaAutomation:
 
     def send_telegram_notification(self, message):
         bot_token = os.environ.get("TELEGRAM_BOT_TOKEN")
-        chat_id = os.environ.get("TELEGRAM_CHAT_ID")
+        chat_id = self.telegram_chat_id or os.environ.get("TELEGRAM_CHAT_ID")
 
         if not bot_token or not chat_id:
             self._log("Telegram not configured, skipping", "debug")
+            return
+
+        if not self.send_telegram:
             return
 
         url = f"https://api.telegram.org/bot{bot_token}/sendMessage"

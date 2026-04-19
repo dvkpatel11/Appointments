@@ -836,6 +836,10 @@
               <label>Notification Email</label>
               <input type="email" name="notification_email" placeholder="client@example.com" />
             </div>
+            <div class="form-group full">
+              <label>Telegram Chat ID (optional)</label>
+              <input type="text" name="telegram_chat_id" placeholder="123456789" />
+            </div>
             <div class="form-group">
               <label>Browser Sessions</label>
               <input type="number" name="browsers" value="1" min="1" max="20" />
@@ -849,6 +853,10 @@
                 <input type="checkbox" name="reschedule" id="reschedule_${agentCount}" />
                 <label for="reschedule_${agentCount}">AUTO-RESCHEDULE</label>
                 <span class="warn">⚠ RISKY — WILL BOOK WITHOUT CONFIRMATION</span>
+              </div>
+              <div class="checkbox-row">
+                <input type="checkbox" name="send_telegram" id="telegram_${agentCount}" />
+                <label for="telegram_${agentCount}">TELEGRAM NOTIFICATIONS</label>
               </div>
             </div>
           </div>`;
@@ -869,9 +877,11 @@
             appointment_id:     form.querySelector('[name="appointment_id"]').value.trim(),
             appointment_url:    form.querySelector('[name="appointment_url"]').value.trim(),
             notification_email: form.querySelector('[name="notification_email"]').value.trim(),
+            telegram_chat_id:  form.querySelector('[name="telegram_chat_id"]').value.trim(),
             browsers:           parseInt(form.querySelector('[name="browsers"]').value) || 1,
             check:              parseInt(form.querySelector('[name="check"]').value) || 12,
             reschedule:         form.querySelector('[name="reschedule"]').checked,
+            send_telegram:      form.querySelector('[name="send_telegram"]').checked,
           };
         });
 

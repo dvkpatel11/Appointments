@@ -222,6 +222,8 @@ def start_multi_automation():
                 browsers=int(data.get("browsers", 1)),
                 check=int(data.get("check", 12)),
                 reschedule=bool(data.get("reschedule", False)),
+                telegram_chat_id=data.get("telegram_chat_id"),
+                send_telegram=bool(data.get("send_telegram", False)),
             )
             automation_instances[user_id] = instance
             threading.Thread(target=instance.run, daemon=True).start()
@@ -421,6 +423,8 @@ def _build_instance_from_form(form):
         browsers=int(form.get("browsers", 1)),
         check=int(form.get("check", 12)),
         reschedule=form.get("reschedule") == "true",
+        telegram_chat_id=form.get("telegram_chat_id"),
+        send_telegram=form.get("send_telegram") == "true",
     )
 
 
