@@ -1,6 +1,15 @@
 # PII / secrets
-creds.py
 .env
+.env.local
+.env.*.local
+canada/creds.py
+canada/.env
+canada/app.log
+canada/status/
+canada/screenshots/
+canada/__pycache__/
+uk/creds.py
+uk/__pycache__/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -163,7 +172,3 @@ cython_debug/
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
-/code/creds.py
-/code/screenshots/
-/dev-configs/
-/screenshots/
