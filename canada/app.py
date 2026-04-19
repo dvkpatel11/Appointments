@@ -4,6 +4,7 @@ import os
 import re
 import threading
 import uuid
+from datetime import datetime
 from functools import wraps
 
 from dotenv import load_dotenv
@@ -71,6 +72,12 @@ def logout():
 # ---------------------------------------------------------------------------
 # Main pages
 # ---------------------------------------------------------------------------
+
+@app.route("/health")
+def health():
+    """Public health check for uptime monitors."""
+    return jsonify({"status": "ok", "timestamp": datetime.utcnow().isoformat()})
+
 
 @app.route("/")
 @login_required
