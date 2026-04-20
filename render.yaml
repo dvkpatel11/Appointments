@@ -2,12 +2,9 @@ services:
   - type: web
     name: visa-ctrl-canada
     region: Oregon
-    env: python
-    buildCommand: |
-      rm -rf /opt/render/.cache/ms-playwright
-      pip install --no-cache-dir greenlet playwright==1.49.1 flask certifi charset-normalizer idna "pyee>=13" python-dateutil python-dotenv requests six typing_extensions urllib3 waitress resend python-telegram-bot
-      python -m playwright install chromium && ls -la /opt/render/.cache/ms-playwright/ || echo "Install failed, checking pip..."
-      pip show playwright
+    env: docker
+    dockerfilePath: Dockerfile
+    buildCommand: docker build -t visa-ctrl-canada .
     startCommand: cd canada && python -m waitress --port=$PORT --host=0.0.0.0 app:app
     envVars:
       - key: FLASK_DEBUG
