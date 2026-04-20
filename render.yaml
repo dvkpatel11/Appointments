@@ -4,7 +4,6 @@ services:
     region: Oregon
     env: docker
     dockerfilePath: Dockerfile
-    buildCommand: docker build -t visa-ctrl-canada .
     startCommand: cd canada && python -m waitress --port=$PORT --host=0.0.0.0 app:app
     envVars:
       - key: FLASK_DEBUG
