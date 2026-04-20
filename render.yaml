@@ -3,11 +3,8 @@ services:
     name: visa-ctrl-canada
     region: Oregon
     env: python
-    buildCommand: |
-      pip install --only-binary=:all: greenlet playwright -r requirements.txt
-    startCommand: |
-      python -m playwright install --force chromium
-      cd canada && python -m waitress --port=$PORT --host=0.0.0.0 app:app
+    buildCommand: rm -rf /opt/render/.cache/ms-playwright && pip install --upgrade pip greenlet playwright flask certifi charset-normalizer idna pyee python-dateutil python-dotenv requests six typing_extensions urllib3 waitress resend python-telegram-bot && python -m playwright install chromium
+    startCommand: cd canada && python -m waitress --port=$PORT --host=0.0.0.0 app:app
     envVars:
       - key: FLASK_DEBUG
         value: "false"
