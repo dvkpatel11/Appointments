@@ -3,7 +3,8 @@ services:
     name: visa-ctrl-canada
     region: Toronto
     env: python
-    buildCommand: pip install -r requirements.txt
+    runtime: python311
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
     startCommand: cd canada && waitress-serve --port=$PORT --host=0.0.0.0 app:app
     envVars:
       - key: FLASK_DEBUG
