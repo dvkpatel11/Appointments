@@ -281,7 +281,7 @@
         color: var(--red);
       }
 
-.hint {
+      .hint {
         color: #666;
         font-size: 0.62rem;
         margin-top: 4px;
@@ -357,10 +357,10 @@
         z-index: -1;
       }
       .btn-submit:hover {
-        background: rgba(0,255,65,0.15);
+        background: rgba(0, 255, 65, 0.15);
         color: var(--green);
         border-color: var(--green);
-        box-shadow: 0 0 16px rgba(0,255,65,0.3);
+        box-shadow: 0 0 16px rgba(0, 255, 65, 0.3);
       }
       .btn-submit:hover::before {
         transform: scaleX(1);
@@ -369,9 +369,26 @@
         opacity: 0.4;
         cursor: not-allowed;
       }
-      .btn-submit.loading { pointer-events: none; opacity: 0.7; }
-      .btn-submit.loading .spinner { display:inline-block;width:12px;height:12px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:6px; }
-      @keyframes spin { to { transform: rotate(360deg); } }
+      .btn-submit.loading {
+        pointer-events: none;
+        opacity: 0.7;
+      }
+      .btn-submit.loading .spinner {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border: 2px solid currentColor;
+        border-top-color: transparent;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        vertical-align: middle;
+        margin-right: 6px;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
 
       /* ── MONITORING PANEL ───────────────────────────────────────── */
       #monitorPanel {
@@ -531,32 +548,40 @@
         gap: 8px;
         padding: 10px 14px;
         border: 1px solid var(--border);
-        background: rgba(0,0,0,0.2);
-        font-family: 'Share Tech Mono', monospace;
+        background: rgba(0, 0, 0, 0.2);
+        font-family: "Share Tech Mono", monospace;
         font-size: 0.62rem;
         letter-spacing: 1px;
       }
-      .notif-icon { font-size: 0.9rem; }
-      .notif-status { color: var(--green); }
-      .notif-status.disabled { color: var(--red); }
-      .notif-label { color: var(--dimtext); }
+      .notif-icon {
+        font-size: 0.9rem;
+      }
+      .notif-status {
+        color: var(--green);
+      }
+      .notif-status.disabled {
+        color: var(--red);
+      }
+      .notif-label {
+        color: var(--dimtext);
+      }
       .notif-btn {
         margin-left: 8px;
         background: transparent;
         border: 1px solid var(--cyan);
         color: var(--cyan);
         padding: 4px 10px;
-        font-family: 'Share Tech Mono', monospace;
+        font-family: "Share Tech Mono", monospace;
         font-size: 0.58rem;
         letter-spacing: 1px;
         cursor: pointer;
       }
       .notif-btn:hover {
-        background: rgba(0,255,255,0.1);
-        box-shadow: 0 0 8px rgba(0,255,255,0.3);
+        background: rgba(0, 255, 255, 0.1);
+        box-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
       }
       .notif-btn.linked {
-        background: rgba(0,255,65,0.1);
+        background: rgba(0, 255, 65, 0.1);
         border-color: var(--green);
         color: var(--green);
       }
@@ -672,7 +697,8 @@
         <h1 class="page-title">APPOINTMENT<br />MONITOR</h1>
         <p class="page-desc">
           Submit your credentials below to initialize automated monitoring of your US visa appointment slot.<br /><br />
-          We'll scan all consulate locations and notify you the moment an earlier date becomes available. You can enable notifications after approval.
+          We'll scan all consulate locations and notify you the moment an earlier date becomes available. You can enable
+          notifications after approval.
           <span>live monitoring status</span> after submission.
         </p>
       </div>
@@ -976,8 +1002,7 @@
 
         <p style="margin-top: 20px; font-size: 0.68rem; color: var(--dimtext); letter-spacing: 1px; line-height: 1.8">
           Bookmark this page — you can return at any time to check your monitoring status.<br />
-          All Canadian consulate locations are being scanned. Notification will be sent when an earlier date is
-          found.
+          All Canadian consulate locations are being scanned. Notification will be sent when an earlier date is found.
         </p>
       </div>
     </div>
@@ -1037,7 +1062,7 @@
           }
         }
 
-        submitBtn.classList.add('loading');
+        submitBtn.classList.add("loading");
         submitBtn.innerHTML = '<span class="spinner"></span>TRANSMITTING...';
         document.getElementById("urlValidationError").style.display = "none";
 
@@ -1053,13 +1078,13 @@
               showRejectedPanel(data.reason || "Your request was not approved.");
             } else {
               showValidationError(data.message || "Submission failed — please try again.");
-              submitBtn.classList.remove('loading');
+              submitBtn.classList.remove("loading");
               submitBtn.innerHTML = "▶ INITIATE";
             }
           })
           .catch(() => {
             showValidationError("Connection error — could not reach the server.");
-            submitBtn.classList.remove('loading');
+            submitBtn.classList.remove("loading");
             submitBtn.innerHTML = "▶ INITIATE";
           });
       });
@@ -1102,15 +1127,15 @@
       }
 
       window.clientTelegramChatId = null;
-      document.getElementById("linkTelegramBtn2").addEventListener("click", function() {
+      document.getElementById("linkTelegramBtn2").addEventListener("click", function () {
         if (document.getElementById("linkTelegramBtn2").classList.contains("linked")) return;
         fetch("/generate_telegram_link", { method: "POST" })
-          .then(r => r.json())
-          .then(d => {
+          .then((r) => r.json())
+          .then((d) => {
             const btn = document.getElementById("linkTelegramBtn2");
             btn.textContent = "WAIT...";
             window.telegramLinkToken = d.token;
-            window.open(`https://t.me/VisaCtrlBot?start=${d.token}`, "_blank");
+            window.open(`https://t.me/@us_x_visa_x_bot?start=${d.token}`, "_blank");
             pollMonitorTelegramLink();
           });
       });
@@ -1119,10 +1144,10 @@
         if (!window.telegramLinkToken) return;
         fetch("/check_telegram_linked", {
           method: "POST",
-          body: JSON.stringify({ token: window.telegramLinkToken })
+          body: JSON.stringify({ token: window.telegramLinkToken }),
         })
-          .then(r => r.json())
-          .then(d => {
+          .then((r) => r.json())
+          .then((d) => {
             if (d.linked && d.chat_id) {
               window.clientTelegramChatId = d.chat_id;
               document.getElementById("mTelegramStatus").textContent = "ENABLED";
@@ -1131,7 +1156,7 @@
               btn.classList.add("linked");
               fetch("/client_link_telegram", {
                 method: "POST",
-                body: JSON.stringify({ user_id: PAGE_TOKEN, chat_id: d.chat_id })
+                body: JSON.stringify({ user_id: PAGE_TOKEN, chat_id: d.chat_id }),
               });
             } else {
               setTimeout(pollMonitorTelegramLink, 2000);

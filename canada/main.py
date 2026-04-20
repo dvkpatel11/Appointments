@@ -501,6 +501,10 @@ class VisaAutomation:
         if self.user_id:
             _save_state(self.user_id, self)
         self._log("Starting automation")
+        start_msg = "Visa Automation started - monitoring for earlier dates..."
+        if self.notification_email:
+            self.send_email_notification(start_msg)
+        self.send_telegram_notification(start_msg)
 
         for session_number in range(self.browsers):
             if not self.is_running:
