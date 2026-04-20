@@ -4,7 +4,7 @@ services:
     region: Oregon
     env: docker
     dockerfilePath: Dockerfile
-    startCommand: cd canada && python -m waitress --port=$PORT --host=0.0.0.0 app:app
+    startCommand: cd canada && python -m playwright install chromium && python -m waitress --port=$PORT --host=0.0.0.0 app:app
     envVars:
       - key: FLASK_DEBUG
         value: "false"
