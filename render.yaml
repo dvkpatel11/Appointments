@@ -1,13 +1,15 @@
 services:
   - type: web
     name: visa-ctrl-canada
-    region: Toronto
+    region: Oregon
     env: python
-    buildCommand: pip install --prefer-binary greenlet -r requirements.txt
-    startCommand: cd canada && waitress-serve --port=$PORT --host=0.0.0.0 app:app
+    runtime: python-3.11
+    buildCommand: |
+      curl -sLo /tmp/greenlet.whl https://files.pythonhosted.org/packages/4c/a4/0e3c3f8d69168cb89e558c8bf78e8d3/greenlet-3.1.1-cp311-cp311-manylinux_2_17_x86_64.whl
+      pip install /tmp/greenlet.whl
+      pip install flask certifi charset-normalizer idna playwright pyee python-dateutil python-dotenv requests six typing_extensions urllib3 waitress resend python-telegram-bot
+    startCommand: cd canada && python -m waitress --port=$PORT --host=0.0.0.0 app:app
     envVars:
-      - key: PYTHON_VERSION
-        value: "3.11"
       - key: FLASK_DEBUG
         value: "false"
       - key: PORT
