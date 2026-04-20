@@ -5,8 +5,9 @@ services:
     env: python
     buildCommand: |
       pip install --only-binary=:all: greenlet playwright -r requirements.txt
-      python -m playwright install chromium
-    startCommand: cd canada && python -m waitress --port=$PORT --host=0.0.0.0 app:app
+    startCommand: |
+      python -m playwright install --force chromium
+      cd canada && python -m waitress --port=$PORT --host=0.0.0.0 app:app
     envVars:
       - key: FLASK_DEBUG
         value: "false"
