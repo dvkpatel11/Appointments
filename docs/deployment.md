@@ -40,7 +40,6 @@ cp .env.example .env
 
 ```bash
 make install
-make playwright
 make run
 ```
 
@@ -51,7 +50,7 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 playwright install --with-deps chromium
-cd canada && FLASK_DEBUG=true python -m flask --app app run --port 5000
+FLASK_DEBUG=true python -m flask --app canada.app run --port 5000
 ```
 
 ## Docker

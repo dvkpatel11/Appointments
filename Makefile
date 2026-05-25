@@ -25,6 +25,7 @@ install:
 	$(PYTHON) -m venv $(VENV)
 	$(VENV)/bin/pip install --upgrade pip
 	$(VENV)/bin/pip install -r requirements.txt
+	$(VENV)/bin/playwright install --with-deps chromium
 	@echo "Virtual environment ready: source $(VENV)/bin/activate"
 
 .PHONY: playwright
