@@ -1,0 +1,26 @@
+#!/bin/bash
+# Telegram Bot Setup Script
+# Run this to get your bot token and chat ID
+
+echo "=== Telegram Bot Setup ==="
+echo ""
+echo "Step 1: Create a bot"
+echo "  1. Open Telegram and search for @BotFather"
+echo "  2. Send /newbot command"
+echo "  3. Give your bot a name (e.g., VisaAlertBot)"
+echo "  4. Give it a username (must end in 'bot', e.g., MyVisaAlert_bot)"
+echo "  5. BotFather will give you a TOKEN like: 123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
+echo ""
+echo "Step 2: Start a chat with your bot"
+echo "  1. Search for your bot username"
+echo "  2. Click 'Start' or send /start"
+echo ""
+echo "Step 3: Get your chat ID"
+echo "  1. Go to https://api.telegram.org/bot<TOKEN>/getUpdates"
+echo "  2. Replace <TOKEN> with your actual token"
+echo "  3. Look for 'chat':{'id':YOUR_CHAT_ID}"
+echo "  4. Your chat ID is the number (e.g., 123456789)"
+echo ""
+echo "=== Add to .env ==="
+echo "TELEGRAM_BOT_TOKEN=your_token_here"
+echo "TELEGRAM_CHAT_ID=your_chat_id_here"

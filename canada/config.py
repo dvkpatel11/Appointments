@@ -1,0 +1,124 @@
+import os
+import random
+from dotenv import load_dotenv
+
+
+# ── Environment ───────────────────────────────────────────────────────────────
+
+def load_environment():
+    load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
+
+
+# ── Retry / Polling ───────────────────────────────────────────────────────────
+
+MAX_POLLS = 30
+MIN_SLEEP_BEFORE_RETRY = 30
+MAX_SLEEP_BEFORE_RETRY = 60
+MIN_WAIT_BETWEEN_CHECKS = 30
+MAX_WAIT_BETWEEN_CHECKS = 60
+
+
+# ── Paths ─────────────────────────────────────────────────────────────────────
+
+STATE_DIR = "canada/status"
+SETTINGS_FILE = "canada/settings.json"
+CLIENT_TOKENS_FILE = "canada/canada/client_tokens.json"
+
+
+# ── US Visa Portal — Canada ───────────────────────────────────────────────────
+
+LOGIN_URL = "https://ais.usvisa-info.com/en-ca/niv/users/sign_in"
+
+VISA_LOCATIONS = {
+    "Toronto": (
+        "Consular Address "
+        "225 Simcoe Street "
+        "Toronto, ON, Ontario, M5G 1S4 "
+        "Canada"
+    ),
+    "Vancouver": (
+        "Consular Address "
+        "1075 West Pender Street "
+        "Vancouver, BC, V6E 2M6 "
+        "Canada"
+    ),
+    "Calgary": (
+        "Consular Address "
+        "615 Macleod Trail, SE "
+        "Suite 1000 "
+        "Calgary, AB, T2G 4T8 "
+        "Canada"
+    ),
+    "Ottawa": (
+        "Consular Address "
+        "490 Sussex Drive "
+        "Ottawa, ON, Ontario, K1N 1G8 "
+        "Canada"
+    ),
+    "Halifax": (
+        "Consular Address "
+        "Suite 904, Purdy's Wharf Tower II "
+        "1969 Upper Water Street "
+        "Halifax, NS, Nova Scotia, B3J 3R7 "
+        "Canada"
+    ),
+    "Montreal": (
+        "Consular Address "
+        "1134 Saint-Catherine St. West "
+        "Montréal, QC, Québec, H3B 1H4 "
+        "Canada"
+    ),
+}
+
+USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.1 Safari/605.1.15",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.114 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36 Edg/91.0.864.59",
+]
+
+# ── DOM Selectors (Canada) ────────────────────────────────────────────────────
+
+SELECTORS = {
+    "username": "Email",
+    "password": "Password",
+    "terms_label": "I have read and understood the Privacy Policy and the Terms of Use",
+    "sign_in_button": "Sign In",
+    "continue_button": "Continue",
+    "not_available": "#consulate_date_time_not_available",
+    "location": "#appointments_consulate_appointment_facility_id",
+    "date_dropdown": "#appointments_consulate_appointment_date",
+    "calendar_title": ".ui-datepicker-title",
+    "calendar_month": ".ui-datepicker-month",
+    "calendar_year": ".ui-datepicker-year",
+    "match_date": ".ui-datepicker-group-first  td.undefined > a.ui-state-default",
+    "appointment_date": ".consular-appt",
+    "time_slot": "#appointments_consulate_appointment_time",
+    "next_button": "Next",
+}
+
+APPOINTMENT_DATE_REGEX = r".*Appointment:(.*)(?:Vancouver|Toronto|Calgary|Ottawa|Halifax|Montreal) local time.*$"
+NETWORK_REQUEST_REGEX = r"^[0-9]{2}\.json\?appointments\[expedite\]=false$"
+
+
+# ── SMS / Month helpers ───────────────────────────────────────────────────────
+
+MONTH_MAP = {
+    "jan": 1, "feb": 2, "mar": 3, "apr": 4,
+    "may": 5, "jun": 6, "jul": 7, "aug": 8,
+    "sep": 9, "oct": 10, "nov": 11, "dec": 12,
+}
+
+
+# ── Flask app defaults ────────────────────────────────────────────────────────
+
+DEFAULT_SETTINGS = {
+    "default_notif_email": "",
+    "default_telegram_chat_id": "",
+    "email_enabled": True,
+    "telegram_enabled": False,
+}
+
+MAX_ACTION_LOG_ENTRIES = 100
+PENDING_LINK_TTL_SECONDS = 600  # 10 minutes

@@ -100,9 +100,15 @@
       }
 
       button:hover {
-        background-color: #00cc7d;
+        background-color: rgba(0,204,125,0.15);
+        border-color: #00cc7d;
+        box-shadow: 0 4px 12px rgba(0,204,125,0.3);
         transform: translateY(-2px);
       }
+
+      button.loading { pointer-events: none; opacity: 0.7; }
+      button.loading .spinner { display:inline-block;width:12px;height:12px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:6px; }
+      @keyframes spin { to { transform: rotate(360deg); } }
 
       #status {
         margin-top: 30px;
@@ -170,10 +176,6 @@
           <input type="text" id="token" name="token" />
         </div>
         <div class="form-group">
-          <label for="chat_id">Telegram Chat ID</label>
-          <input type="text" id="chat_id" name="chat_id" />
-        </div>
-        <div class="form-group">
           <label for="browsers">Number of Browsers</label>
           <input type="number" id="browsers" name="browsers" value="1" min="1" />
         </div>
@@ -184,6 +186,10 @@
         <div class="form-group checkbox-group">
           <input type="checkbox" id="reschedule" name="reschedule" />
           <label for="reschedule">Reschedule</label>
+        </div>
+        <div class="form-group">
+          <label for="telegram_chat_id">Telegram Chat ID (optional)</label>
+          <input type="text" id="telegram_chat_id" name="telegram_chat_id" placeholder="123456789" />
         </div>
         <div class="form-group checkbox-group">
           <input type="checkbox" id="send_telegram_notification" name="send_telegram_notification" />

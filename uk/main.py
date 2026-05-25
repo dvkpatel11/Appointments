@@ -1,7 +1,9 @@
 import re
 import random
 import time
+import os
 import requests
+import smtplib
 
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -64,6 +66,7 @@ class VisaAutomation:
         check=1,
         reschedule=False,
         telegram_noti_enabled=False,
+        notification_email=None,
     ):
         self.playwright = sync_playwright().start()
         self.browser = self.playwright.chromium.launch(headless=True)
@@ -88,8 +91,9 @@ class VisaAutomation:
         self.check = check
         self.reschedule = reschedule
         self.telegram_noti_enabled = telegram_noti_enabled
+        self.notification_email = notification_email
 
-        self.login_url = "https://ais.usvisa-info.com/en-ca/niv/users/sign_in"
+        self.login_url = "https://ais.usvisa-info.com/en-gb/niv/users/sign_in"
         self.username_input_id = "Email"
         self.password_input_id = "Password"
         self.terms_checkbox_label = (
@@ -134,14 +138,14 @@ class VisaAutomation:
             #                 1075 West Pender Street \
             #                 Vancouver, BC, V6E 2M6 \
             #                 Canada",
-            "London": "Consular Address \
-                            1075 West Pender Street \
-                            Vancouver, BC, V6E 2M6 \
-                            Canada",
-            "Belfast": "Consular Address \
-                            1075 West Pender Street \
-                            Vancouver, BC, V6E 2M6 \
-                            Canada",
+            "London": "US Embassy London \
+                            33 Nine Elms Lane \
+                            London, SW11 7US \
+                            United Kingdom",
+            "Belfast": "US Consulate Belfast \
+                            Danesfort, 4 Queens Road \
+                            Belfast, BT3 9JL \
+                            United Kingdom",
         }
         self.location_id = "#appointments_consulate_appointment_facility_id"
         self.calender_dropdown_date_selector = (
@@ -150,7 +154,7 @@ class VisaAutomation:
         self.calender_id = ".ui-datepicker-title"
         self.next_button_label = "Next"
         self.appointment_date_selector = ".consular-appt"
-        self.appointment_date_regex = r".*Appointment:(.*)(?:Vancouver|Toronto|Calgary|Ottawa|Halifax|Montreal|Quebec City) local time.*$"
+        self.appointment_date_regex = r".*Appointment:(.*)(?:London|Belfast) local time.*$"
         self.calender_month_selector = ".ui-datepicker-month"
         self.calender_year_selector = ".ui-datepicker-year"
         # self.datepicker_calendar_id = "#ui-datepicker-calendar"
@@ -249,28 +253,23 @@ class VisaAutomation:
 
             self.page.get_by_label(self.username_input_id).fill(username)
             self.page.get_by_label(self.password_input_id).fill(password)
-            self.capture_debug_screenshot("credentials_filled")
 
             self.page.locator("label").filter(
                 has_text=self.terms_checkbox_label
             ).click()
-            self.capture_debug_screenshot("terms_checked")
 
             self.page.get_by_role("button", name=self.sign_in_button_label).click()
             logger.debug("Clicked sign in button")
 
             if press_ok:
-                self.capture_debug_screenshot("before_press_ok")
                 self.page.get_by_label("OK").click()
                 logger.debug("Pressed OK button")
-            self.capture_debug_screenshot("logged_in")
 
             if continue_login:
                 self.page.get_by_role(
                     "menuitem", name=self.continue_button_label
                 ).click()
                 logger.debug("Clicked continue button")
-                self.capture_debug_screenshot("after_continue")
 
             logger.info("Login successful")
         except Exception as e:
@@ -289,7 +288,6 @@ class VisaAutomation:
             logger.debug(f"Navigating to appointments page for ID: {appointment_id}")
             self.page.goto(self.appointment_link.format(appointment_id))
             self.page.wait_for_load_state("networkidle")
-            self.capture_debug_screenshot("appointments_page")
             logger.info("Successfully navigated to appointments page")
         except Exception as e:
             logger.error(f"Failed to navigate to appointments: {str(e)}", exc_info=True)
@@ -338,33 +336,32 @@ class VisaAutomation:
         return False, True
 
     def get_appointment_date(self):
-        # try:
+        try:
             logger.info(f"Getting current appointment details...")
-            return datetime(2025, 6, 5, 8, 0, 0)
-        #     date_text = self.page.locator(self.appointment_date_selector).text_content()
-        # except Exception as e:
-        #     e_strings = str(e).split("get_by_text")
-        #     start_index = e_strings[1].index("(")
-        #     end_index = e_strings[1].index(")")
-        #     date_text = e_strings[1][start_index + 1 : end_index]
+            date_text = self.page.locator(self.appointment_date_selector).text_content()
+        except Exception as e:
+            e_strings = str(e).split("get_by_text")
+            start_index = e_strings[1].index("(")
+            end_index = e_strings[1].index(")")
+            date_text = e_strings[1][start_index + 1 : end_index]
 
-        # date_text = date_text.replace("\n", "")
-        # matches = re.search(self.appointment_date_regex, date_text)
+        date_text = date_text.replace("\n", "")
+        matches = re.search(self.appointment_date_regex, date_text)
 
-        # if matches:
-        #     date_text = matches.group(1).strip()
-        #     appointment_details = parser.parse(date_text)
-        #     formatted_appointment_date = appointment_details.strftime(
-        #         "%Y-%m-%d %H:%M:%S"
-        #     )
-        #     appointment_datetime = datetime.strptime(
-        #         formatted_appointment_date, "%Y-%m-%d %H:%M:%S"
-        #     )
-        #     logger.info(f"Current appointment details: {appointment_datetime}")
-        #     return appointment_datetime
-        # else:
-        #     logger.warning("No appointment date information found.")
-        #     return None
+        if matches:
+            date_text = matches.group(1).strip()
+            appointment_details = parser.parse(date_text)
+            formatted_appointment_date = appointment_details.strftime(
+                "%Y-%m-%d %H:%M:%S"
+            )
+            appointment_datetime = datetime.strptime(
+                formatted_appointment_date, "%Y-%m-%d %H:%M:%S"
+            )
+            logger.info(f"Current appointment details: {appointment_datetime}")
+            return appointment_datetime
+        else:
+            logger.warning("No appointment date information found.")
+            return None
 
     def select_location(self, location):
         if location in self.visa_locations:
@@ -392,7 +389,6 @@ class VisaAutomation:
             self.page.route(re.compile(self.network_request_regex), self.handle_request)
             logger.info(f"Checking availability at {location}")
             self.select_location(location)
-            self.capture_debug_screenshot(f"location_{location}")
 
             if self.is_date_available():
                 availability_list.append(True)
@@ -400,7 +396,6 @@ class VisaAutomation:
 
                 continue_check = True
                 self.page.locator(self.calender_dropdown_date_selector).click()
-                self.capture_debug_screenshot(f"calendar_dropdown_{location}")
 
                 while continue_check:
                     result, continue_check = self.check_availability()
@@ -419,6 +414,9 @@ class VisaAutomation:
                         ):
                             self.send_telegram_notification(message)
 
+                        if self.notification_email and self.new_date < self.current_date:
+                            self.send_email_notification(message)
+
                         if self.reschedule:
                             if self.new_date < self.current_date:
                                 self.reschedule_appointment(location)
@@ -428,7 +426,6 @@ class VisaAutomation:
                     else:
                         self.page.get_by_text(self.next_button_label).click()
                         logger.debug("Clicked next button")
-                        self.capture_debug_screenshot(f"next_month_{location}")
                         time.sleep(0.2)
 
                 self.page.keyboard.press("Escape")
@@ -437,7 +434,6 @@ class VisaAutomation:
             else:
                 availability_list.append(False)
                 logger.info(f"No dates available at {location}")
-                self.capture_debug_screenshot(f"no_dates_{location}")
 
         return any(availability_list)
 
@@ -493,6 +489,32 @@ class VisaAutomation:
         except Exception as e:
             print(f"Error sending message: {e}")
 
+    def send_email_notification(self, message):
+        if not self.notification_email:
+            return
+
+        smtp_host = os.environ.get("SMTP_HOST")
+        smtp_port = int(os.environ.get("SMTP_PORT", 587))
+        smtp_user = os.environ.get("SMTP_USER")
+        smtp_password = os.environ.get("SMTP_PASSWORD")
+        if not smtp_host or not smtp_user or not smtp_password:
+            logger.warning("SMTP not configured, skipping email")
+            return
+
+        try:
+            from email.mime.text import MIMEText
+            msg = MIMEText(message)
+            msg["Subject"] = f"UK VISA UPDATE: {message[:50]}..."
+            msg["From"] = smtp_user
+            msg["To"] = self.notification_email
+            with smtplib.SMTP(smtp_host, smtp_port) as server:
+                server.starttls()
+                server.login(smtp_user, smtp_password)
+                server.sendmail(smtp_user, [self.notification_email], msg.as_string())
+            logger.info(f"Email sent to {self.notification_email}")
+        except Exception as e:
+            logger.error(f"Email send failed: {e}")
+
     def reschedule_appointment(self, location):
         try:
             logger.debug(f"Attempting to reschedule appointment at {location}")
@@ -500,22 +522,18 @@ class VisaAutomation:
 
             self.page.query_selector(self.match_id).click()
             logger.debug("Selected new date")
-            self.capture_debug_screenshot("date_selected")
             time.sleep(0.5)
 
             options = self.page.locator(self.time_appointment_selector).text_content()
             option = options.strip()[:5]
             self.page.locator(self.time_appointment_selector).select_option(option)
             logger.debug(f"Selected time slot: {option}")
-            self.capture_debug_screenshot("time_selected")
 
             self.page.get_by_text("Reschedule").last.click()
             logger.debug("Clicked Reschedule button")
-            self.capture_debug_screenshot("reschedule_clicked")
 
             self.page.get_by_text("Confirm").last.click()
             logger.debug("Clicked Confirm button")
-            self.capture_debug_screenshot("confirm_clicked")
 
             time.sleep(5)
 
@@ -526,11 +544,11 @@ class VisaAutomation:
             message = f"Rescheduled to a new earlier appointment date at {location}: \nDate: {self.current_date}\nLocation: {location_address}"
             logger.info(message)
             self.send_telegram_notification(message)
+            self.send_email_notification(message)
             self.capture_debug_screenshot("reschedule_complete")
 
         except Exception as e:
-            message = f"Error while booking new date for {location}"
-            logger.error(message, exc_info=True)
+            logger.error(f"Error while booking new date for {location}: {e}", exc_info=True)
             self.capture_debug_screenshot("reschedule_error")
 
     def handle_soft_ban(self):
@@ -559,7 +577,7 @@ class VisaAutomation:
             # logger.info("Successfully clicked the Continue button.")
 
         except Exception as e:
-            # logger.error("Failed to click on the Continue button", exc_info=True)
+            logger.error("Failed to click on the Continue button", exc_info=True)
             self.navigate_to_appointments()
 
 

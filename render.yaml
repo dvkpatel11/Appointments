@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: visa-ctrl-canada
+    region: oregon
+    env: docker
+    dockerfilePath: Dockerfile
+    envVars:
+      - key: FLASK_DEBUG
+        value: "false"
+      - key: PORT
+        value: "8080"
+      - key: SECRET_KEY
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: SMTP_HOST
+        value: "smtp.gmail.com"
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
