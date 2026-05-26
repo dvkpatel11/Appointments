@@ -13,7 +13,6 @@ from functools import wraps
 from flask import (
     Flask, jsonify, redirect, render_template,
     request, session, url_for, send_from_directory,
-    request, session, url_for, send_from_directory,
 )
 import requests
 
@@ -25,7 +24,6 @@ from canada.main import VisaAutomation, run_in_subprocess
 
 config.load_environment()
 db.init_db()
-db.migrate_from_json()
 db.load_settings_into_cache()
 
 app = Flask(__name__)
@@ -88,23 +86,28 @@ def logout():
 
 # ── Static pages ──────────────────────────────────────────────────────────────
 
+_keepalive_started = False
+
 @app.route("/health")
 def health():
+    global _keepalive_started
+    if not _keepalive_started:
+        _keepalive_started = True
+        _start_keepalive()
     return jsonify({"status": "ok", "timestamp": datetime.utcnow().isoformat()})
 
 
-def _ping_self():
+def _start_keepalive():
     import urllib.request
     port = os.environ.get("PORT", 8080)
-    while True:
-        time.sleep(300)
-        try:
-            urllib.request.urlopen(f"http://localhost:{port}/health", timeout=10)
-        except Exception:
-            pass
-
-
-threading.Thread(target=_ping_self, daemon=True).start()
+    def _ping():
+        while True:
+            time.sleep(300)
+            try:
+                urllib.request.urlopen(f"http://localhost:{port}/health", timeout=10)
+            except Exception:
+                pass
+    threading.Thread(target=_ping, daemon=True).start()
 
 
 @app.route("/")
@@ -766,78 +769,6 @@ def _cleanup_pending_links():
     stale = [k for k, v in pending_links.items() if now - v["created"] > 600]
     for k in stale:
         del pending_links[k]
-
-@app.route("/set_telegram_webhook", methods=["GET"])
-def set_telegram_webhook():
-    """Helper to configure the Telegram bot webhook - visit this to set it up."""
-    bot_token = os.environ.get("TELEGRAM_BOT_TOKEN")
-    if not bot_token:
-        return "TELEGRAM_BOT_TOKEN not set"
-    webhook_url = url_for("telegram_webhook", _external=True)
-    r = requests.post(f"https://api.telegram.org/bot{bot_token}/setWebhook", json={"url": webhook_url})
-    return f"Webhook set: {r.json()}"
-
-@app.route("/telegram_webhook", methods=["POST"])
-def telegram_webhook():
-    """Handle incoming Telegram updates - register chat_id when user starts bot."""
-    bot_token = os.environ.get("TELEGRAM_BOT_TOKEN")
-    if not bot_token:
-        return jsonify({"ok": True})
-
-    try:
-        data = request.get_json() or {}
-        message = data.get("message", {})
-        chat = message.get("chat", {})
-        chat_id = chat.get("id")
-        text = message.get("text", "")
-
-        if text.startswith("/start ") or text.startswith("/start"):
-            token = text.replace("/start ", "").strip()
-            if token and token in pending_links:
-                pending_links[token]["chat_id"] = str(chat_id)
-                pending_links[token]["linked_at"] = time.time()
-                requests.post(
-                    f"https://api.telegram.org/bot{bot_token}/sendMessage",
-                    json={"chat_id": chat_id, "text": "✓ VisaCtrl Notifications linked! You'll receive alerts when earlier visa appointment dates become available."}
-                )
-    except:
-        pass
-    return jsonify({"ok": True})
-
-@app.route("/generate_telegram_link", methods=["POST"])
-def generate_telegram_link():
-    """Generate a unique token for linking Telegram."""
-    token = str(uuid.uuid4())
-    pending_links[token] = {"created": time.time(), "chat_id": None}
-    return jsonify({"token": token})
-
-@app.route("/check_telegram_linked", methods=["POST"])
-def check_telegram_linked():
-    """Check if a Telegram token has been linked."""
-    data = request.get_json() or {}
-    token = data.get("token")
-    if token in pending_links:
-        link_data = pending_links[token]
-        if link_data["chat_id"]:
-            return jsonify({"linked": True, "chat_id": link_data["chat_id"]})
-    return jsonify({"linked": False})
-
-@app.route("/client_link_telegram", methods=["POST"])
-def client_link_telegram():
-    """Link Telegram chat_id to an existing client."""
-    data = request.get_json() or {}
-    user_id = data.get("user_id")
-    chat_id = data.get("chat_id")
-    if not user_id or not chat_id:
-        return jsonify({"status": "error", "message": "Missing user_id or chat_id"})
-    user_id = user_id.strip()
-    if user_id in client_tokens:
-        client_tokens[user_id]["telegram_chat_id"] = chat_id
-    inst = automation_instances.get(user_id)
-    if inst:
-        inst.telegram_chat_id = chat_id
-        inst.send_telegram = True
-    return jsonify({"status": "ok"})
 
 if __name__ == "__main__":
     debug = os.environ.get("FLASK_DEBUG", "false").lower() == "true"
