@@ -1,1220 +1,1675 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>VISA_CTRL // NEXUS</title>
-    <link
-      href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap"
-      rel="stylesheet"
-    />
-    <style>
-      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>VISA_CTRL // NEXUS</title>
+        <link
+            href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap"
+            rel="stylesheet"
+        />
+        <style>
+            *,
+            *::before,
+            *::after {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
 
-      :root {
-        --green:   #00ff41;
-        --magenta: #ff00ff;
-        --cyan:    #00ffff;
-        --red:     #ff0044;
-        --yellow:  #ffe600;
-        --bg:      #000;
-        --surface: #050505;
-        --panel:   #080808;
-        --border:  #1c1c1c;
-        --text:    #777;
-        --dimtext: #333;
-      }
+            :root {
+                --green: #00ff41;
+                --magenta: #ff00ff;
+                --cyan: #00ffff;
+                --red: #ff0044;
+                --yellow: #ffe600;
+                --bg: #000;
+                --surface: #050505;
+                --panel: #080808;
+                --border: #1c1c1c;
+                --text: #777;
+                --dimtext: #333;
+            }
 
-      body {
-        background: var(--bg);
-        color: var(--green);
-        font-family: 'Share Tech Mono', monospace;
-        min-height: 100vh;
-        overflow-x: hidden;
-      }
+            body {
+                background: var(--bg);
+                color: var(--green);
+                font-family: "Share Tech Mono", monospace;
+                min-height: 100vh;
+                overflow-x: hidden;
+            }
 
-      /* Scanlines overlay */
-      body::after {
-        content: '';
-        position: fixed;
-        inset: 0;
-        background: repeating-linear-gradient(
-          0deg, transparent, transparent 2px,
-          rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.15) 4px
-        );
-        pointer-events: none;
-        z-index: 9999;
-      }
+            /* Scanlines overlay */
+            body::after {
+                content: "";
+                position: fixed;
+                inset: 0;
+                background: repeating-linear-gradient(
+                    0deg,
+                    transparent,
+                    transparent 2px,
+                    rgba(0, 0, 0, 0.15) 2px,
+                    rgba(0, 0, 0, 0.15) 4px
+                );
+                pointer-events: none;
+                z-index: 9999;
+            }
 
-      /* ── HEADER ─────────────────────────────────────────────────────── */
-      header {
-        border-bottom: 1px solid var(--border);
-        padding: 16px 28px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        flex-wrap: wrap;
-        gap: 12px;
-        background: var(--surface);
-        position: sticky;
-        top: 0;
-        z-index: 100;
-        box-shadow: 0 1px 0 #000, 0 2px 20px rgba(0,255,65,0.04);
-      }
+            /* ── HEADER ─────────────────────────────────────────────────────── */
+            header {
+                border-bottom: 1px solid var(--border);
+                padding: 16px 28px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                flex-wrap: wrap;
+                gap: 12px;
+                background: var(--surface);
+                position: sticky;
+                top: 0;
+                z-index: 100;
+                box-shadow:
+                    0 1px 0 #000,
+                    0 2px 20px rgba(0, 255, 65, 0.04);
+            }
 
-      .brand {
-        display: flex;
-        flex-direction: column;
-      }
+            .brand {
+                display: flex;
+                flex-direction: column;
+            }
 
-      .brand-title {
-        font-size: 1.4rem;
-        letter-spacing: 6px;
-        color: var(--green);
-        text-shadow: 0 0 8px rgba(0,255,65,0.5),
-                     0.04em 0 0 var(--magenta),
+            .brand-title {
+                font-size: 1.4rem;
+                letter-spacing: 6px;
+                color: var(--green);
+                text-shadow:
+                    0 0 8px rgba(0, 255, 65, 0.5),
+                    0.04em 0 0 var(--magenta),
                     -0.04em 0 0 var(--cyan);
-        animation: glitch 5s infinite;
-      }
-
-      @keyframes glitch {
-        0%,74%,76%,78%,100% {
-          text-shadow: 0 0 8px rgba(0,255,65,0.5),
-                       0.04em 0 0 var(--magenta), -0.04em 0 0 var(--cyan);
-        }
-        75% { text-shadow: -0.04em 0 0 var(--magenta), 0.04em 0 0 var(--cyan); transform: translate(-1px); }
-        77% { text-shadow:  0.04em 0 0 var(--magenta), -0.04em 0 0 var(--cyan); transform: translate(1px); }
-      }
-
-      .brand-sub {
-        font-size: 0.6rem;
-        color: var(--text);
-        letter-spacing: 3px;
-        margin-top: 2px;
-      }
-
-      .header-nav {
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-        align-items: center;
-      }
-
-      /* ── BUTTONS ─────────────────────────────────────────────────────── */
-      .btn {
-        background: transparent;
-        border: 1px solid currentColor;
-        font-family: 'Share Tech Mono', monospace;
-        font-size: 0.72rem;
-        letter-spacing: 2px;
-        padding: 7px 14px;
-        cursor: pointer;
-        text-transform: uppercase;
-        text-decoration: none;
-        display: inline-block;
-        transition: all 0.15s;
-      }
-      .btn-green  { color: var(--green);   }
-      .btn-cyan   { color: var(--cyan);    }
-      .btn-red    { color: var(--red);     }
-      .btn-yellow { color: var(--yellow);  }
-      .btn-magenta { color: var(--magenta); }
-      .btn-magenta { color: var(--magenta); }
-
-      .btn:hover { background: rgba(128,128,128,0.15); border-color: currentColor; color: currentColor; box-shadow: 0 0 12px rgba(128,128,128,0.3); }
-      .btn.loading { pointer-events: none; opacity: 0.7; }
-      .btn.loading .spinner { display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:6px; }
-      .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-      @keyframes spin { to { transform: rotate(360deg); } }
-      .btn:hover { background: rgba(128,128,128,0.15); border-color: currentColor; color: currentColor; box-shadow: 0 0 12px rgba(128,128,128,0.3); }
-      .btn.loading { pointer-events: none; opacity: 0.7; }
-      .btn.loading .spinner { display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:6px; }
-      .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-      @keyframes spin { to { transform: rotate(360deg); } }
-
-      /* ── LAYOUT ──────────────────────────────────────────────────────── */
-      .main {
-        max-width: 1280px;
-        margin: 0 auto;
-        padding: 24px 20px 60px;
-      }
-
-      .section-header {
-        display: flex;
-        align-items: center;
-        gap: 14px;
-        margin: 32px 0 16px;
-      }
-
-      .section-title {
-        font-size: 0.75rem;
-        letter-spacing: 4px;
-        color: var(--text);
-      }
-
-      .section-line {
-        flex: 1;
-        height: 1px;
-        background: var(--border);
-      }
-
-      /* ── CLIENT LINK BANNER ──────────────────────────────────────────── */
-      #linkBanner {
-        display: none;
-        border: 1px solid var(--cyan);
-        background: rgba(0,255,255,0.04);
-        box-shadow: 0 0 16px rgba(0,255,255,0.1);
-        padding: 14px 20px;
-        margin-bottom: 8px;
-        align-items: center;
-        gap: 14px;
-        flex-wrap: wrap;
-      }
-      #linkBanner.visible { display: flex; }
-      #linkBanner .label { color: var(--text); font-size: 0.75rem; letter-spacing: 2px; flex-shrink: 0; }
-      #clientLinkText {
-        color: var(--cyan);
-        flex: 1;
-        font-size: 0.85rem;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      /* ── PENDING REQUEST CARDS ───────────────────────────────────────── */
-      #pendingGrid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        gap: 14px;
-        margin-bottom: 8px;
-      }
-
-      .pending-card {
-        border: 1px solid rgba(255,230,0,0.3);
-        background: rgba(255,230,0,0.02);
-        padding: 18px 20px;
-        position: relative;
-      }
-      .pending-card::before {
-        content: '';
-        position: absolute;
-        top: 0; left: 0; right: 0;
-        height: 1px;
-        background: linear-gradient(90deg, transparent, var(--yellow), transparent);
-        animation: scanline-y 2.5s linear infinite;
-      }
-      @keyframes scanline-y {
-        0%   { opacity: 0; transform: scaleX(0.2) translateX(-250%); }
-        50%  { opacity: 1; }
-        100% { opacity: 0; transform: scaleX(0.2) translateX(250%); }
-      }
-
-      .pending-name {
-        font-size: 0.9rem;
-        color: var(--yellow);
-        letter-spacing: 2px;
-        margin-bottom: 12px;
-      }
-
-      .pending-action-row {
-        display: flex;
-        gap: 8px;
-        margin-top: 14px;
-      }
-
-      /* ── AGENT CARDS ─────────────────────────────────────────────────── */
-      #agentGrid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 14px;
-      }
-
-      .agent-card {
-        border: 1px solid var(--border);
-        background: var(--panel);
-        padding: 18px 20px;
-        position: relative;
-        transition: border-color 0.2s;
-      }
-      .agent-card.running { border-color: rgba(0,255,65,0.4); }
-      .agent-card.running::before {
-        content: '';
-        position: absolute;
-        top: 0; left: 0; right: 0;
-        height: 1px;
-        background: linear-gradient(90deg, transparent, var(--green), transparent);
-        animation: scanline 2s linear infinite;
-      }
-      @keyframes scanline {
-        0%   { opacity: 0; transform: scaleX(0.2) translateX(-250%); }
-        50%  { opacity: 1; }
-        100% { opacity: 0; transform: scaleX(0.2) translateX(250%); }
-      }
-
-      .agent-id {
-        font-size: 0.7rem;
-        letter-spacing: 3px;
-        color: var(--text);
-        margin-bottom: 10px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      .status-row {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 12px;
-      }
-
-      .status-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: var(--border);
-        flex-shrink: 0;
-      }
-      .status-dot.on {
-        background: var(--green);
-        box-shadow: 0 0 6px var(--green), 0 0 12px var(--green);
-        animation: pulse 2s ease-in-out infinite;
-      }
-      @keyframes pulse {
-        0%,100% { box-shadow: 0 0 4px var(--green), 0 0 8px var(--green); }
-        50%      { box-shadow: 0 0 10px var(--green), 0 0 24px var(--green); }
-      }
-
-      .status-text {
-        font-size: 0.75rem;
-        letter-spacing: 2px;
-        color: var(--green);
-      }
-      .status-text.off { color: var(--text); }
-
-      .data-row {
-        display: flex;
-        justify-content: space-between;
-        font-size: 0.7rem;
-        margin-bottom: 5px;
-        gap: 8px;
-      }
-      .data-key  { color: var(--dimtext); flex-shrink: 0; }
-      .data-val  { color: var(--text); text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-      .data-val.found { color: var(--cyan); text-shadow: 0 0 8px var(--cyan); }
-
-      .card-footer {
-        margin-top: 14px;
-        display: flex;
-        justify-content: flex-end;
-      }
-
-      .no-agents {
-        color: var(--dimtext);
-        font-size: 0.75rem;
-        letter-spacing: 2px;
-        padding: 20px 0;
-      }
-
-      /* ── DEPLOY FORM ─────────────────────────────────────────────────── */
-      .deploy-controls {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 16px;
-        flex-wrap: wrap;
-      }
-
-      #userForms { display: flex; flex-direction: column; gap: 12px; }
-
-      .user-form {
-        border: 1px solid var(--border);
-        background: var(--panel);
-        padding: 20px;
-        position: relative;
-      }
-
-      .form-agent-title {
-        font-size: 0.7rem;
-        letter-spacing: 3px;
-        color: var(--cyan);
-        margin-bottom: 16px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-
-      .form-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-        gap: 12px;
-      }
-
-      .form-group { display: flex; flex-direction: column; gap: 5px; }
-      .form-group.full { grid-column: 1 / -1; }
-
-      label {
-        font-size: 0.65rem;
-        color: var(--text);
-        letter-spacing: 2px;
-        text-transform: uppercase;
-      }
-
-      input[type="text"],
-      input[type="password"],
-      input[type="email"],
-      input[type="number"] {
-        background: #000;
-        border: 1px solid var(--border);
-        border-bottom-color: #333;
-        color: var(--green);
-        font-family: 'Share Tech Mono', monospace;
-        font-size: 0.85rem;
-        padding: 7px 10px;
-        outline: none;
-        width: 100%;
-        transition: border-color 0.15s, box-shadow 0.15s;
-      }
-      input:focus {
-        border-color: var(--green);
-        box-shadow: 0 0 8px rgba(0,255,65,0.2);
-      }
-
-      .checkbox-row {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        margin-top: 4px;
-      }
-      .checkbox-row input[type="checkbox"] { accent-color: var(--green); width: 14px; height: 14px; }
-      .checkbox-row label { margin: 0; }
-      .warn { color: var(--red); font-size: 0.6rem; letter-spacing: 1px; }
-
-      /* ── ACTION LINE ────────────────────────────────────────────────── */
-      .action-line {
-        font-size: 0.68rem;
-        color: var(--cyan);
-        letter-spacing: 1px;
-        margin: 8px 0 12px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        min-height: 1em;
-      }
-
-      /* ── LOG PANEL ───────────────────────────────────────────────────── */
-      .log-panel {
-        display: none;
-        margin-top: 12px;
-        border-top: 1px solid var(--border);
-        padding-top: 10px;
-        max-height: 200px;
-        overflow-y: auto;
-        scrollbar-width: thin;
-        scrollbar-color: var(--border) transparent;
-      }
-      .log-entry {
-        font-size: 0.64rem;
-        line-height: 1.8;
-        color: var(--text);
-        display: flex;
-        gap: 8px;
-      }
-      .log-ts { color: var(--dimtext); flex-shrink: 0; }
-      .log-entry.highlight { color: var(--green); }
-      .log-entry.warn  { color: var(--yellow); }
-      .log-entry.error { color: var(--red); }
-
-      /* ── NOTIFICATION TOAST ──────────────────────────────────────────── */
-      #toast {
-        position: fixed;
-        bottom: 24px;
-        right: 24px;
-        background: var(--surface);
-        border: 1px solid var(--green);
-        color: var(--green);
-        font-size: 0.75rem;
-        letter-spacing: 2px;
-        padding: 12px 20px;
-        z-index: 10000;
-        box-shadow: 0 0 20px rgba(0,255,65,0.2);
-        opacity: 0;
-        transform: translateY(10px);
-        transition: all 0.2s;
-        pointer-events: none;
-        max-width: 360px;
-      }
-      #toast.show { opacity: 1; transform: translateY(0); }
-      #toast.error { border-color: var(--red); color: var(--red); }
-
-      /* ── SETTINGS MODAL ─────────────────────────────────────────────── */
-      .modal { display:none;position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:10000;align-items:center;justify-content:center; }
-      .modal.visible { display:flex; }
-      .modal-content { background:var(--panel);border:1px solid var(--border);width:90%;max-width:480px;max-height:90vh;overflow:hidden;display:flex;flex-direction:column; }
-      .modal-header { padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center; }
-      .modal-title { color:var(--magenta);font-size:0.8rem;letter-spacing:2px; }
-      .modal-close { padding:4px 10px;font-size:0.7rem; }
-      .modal-tabs { display:flex;border-bottom:1px solid var(--border); }
-      .modal-tab { flex:1;background:transparent;border:none;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:0.7rem;letter-spacing:2px;padding:12px;cursor:pointer;transition:all 0.15s;border-bottom:2px solid transparent; }
-      .modal-tab:hover { color:var(--green); }
-      .modal-tab.active { color:var(--magenta);border-bottom-color:var(--magenta); }
-      .modal-body { padding:20px;overflow-y:auto;flex:1; }
-      .tab-content { display:none; }
-      .tab-content.active { display:block; }
-
-      /* ── SETTINGS MODAL ─────────────────────────────────────────────── */
-      .modal { display:none;position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:10000;align-items:center;justify-content:center; }
-      .modal.visible { display:flex; }
-      .modal-content { background:var(--panel);border:1px solid var(--border);width:90%;max-width:480px;max-height:90vh;overflow:hidden;display:flex;flex-direction:column; }
-      .modal-header { padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center; }
-      .modal-title { color:var(--magenta);font-size:0.8rem;letter-spacing:2px; }
-      .modal-close { padding:4px 10px;font-size:0.7rem; }
-      .modal-tabs { display:flex;border-bottom:1px solid var(--border); }
-      .modal-tab { flex:1;background:transparent;border:none;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:0.7rem;letter-spacing:2px;padding:12px;cursor:pointer;transition:all 0.15s;border-bottom:2px solid transparent; }
-      .modal-tab:hover { color:var(--green); }
-      .modal-tab.active { color:var(--magenta);border-bottom-color:var(--magenta); }
-      .modal-body { padding:20px;overflow-y:auto;flex:1; }
-      .tab-content { display:none; }
-      .tab-content.active { display:block; }
-    </style>
-  </head>
-  <body>
-    <!-- ── HEADER ─────────────────────────────────────────────────────── -->
-    <header>
-      <div class="brand">
-        <div class="brand-title">VISA_CTRL</div>
-        <div class="brand-sub">// MULTI-AGENT APPOINTMENT MONITOR //</div>
-      </div>
-      <nav class="header-nav">
-        <button class="btn btn-cyan" id="genLinkBtn">⬡ CLIENT LINK</button>
-        <button class="btn btn-yellow" id="viewLogBtn">◰ LOGS</button>
-        <button class="btn btn-magenta" id="settingsBtn">⚙ SETTINGS</button>
-        <button class="btn btn-yellow" id="viewLogBtn">◰ LOGS</button>
-        <button class="btn btn-magenta" id="settingsBtn">⚙ SETTINGS</button>
-        <button class="btn btn-red"  id="killAllBtn">✕ KILL ALL</button>
-        <a class="btn btn-green" href="/logout">⏻ LOGOUT</a>
-      </nav>
-    </header>
-
-    <div class="main">
-
-      <!-- Client link banner -->
-      <div id="linkBanner">
-        <span class="label">CLIENT LINK:</span>
-        <span id="clientLinkText"></span>
-        <button class="btn btn-cyan" id="copyLinkBtn">COPY</button>
-      </div>
-
-      <!-- ── PENDING REQUESTS ───────────────────────────────────────────── -->
-      <div class="section-header">
-        <span class="section-title">PENDING_REQUESTS</span>
-        <div class="section-line"></div>
-        <span class="section-title" id="pendingCount" style="color:var(--yellow);">0 PENDING</span>
-      </div>
-
-      <div id="pendingGrid">
-        <p class="no-agents" style="color:var(--dimtext);">&gt; NO PENDING REQUESTS</p>
-      </div>
-
-      <!-- ── ACTIVE AGENTS ─────────────────────────────────────────────── -->
-      <div class="section-header">
-        <span class="section-title">ACTIVE_AGENTS</span>
-        <div class="section-line"></div>
-        <span class="section-title" id="agentCount">0 ONLINE</span>
-      </div>
-
-      <div id="agentGrid">
-        <p class="no-agents">&gt; NO AGENTS DEPLOYED</p>
-      </div>
-
-      <!-- ── DEPLOY AGENTS ─────────────────────────────────────────────── -->
-      <div class="section-header" style="margin-top:40px;">
-        <span class="section-title">DEPLOY_AGENTS</span>
-        <div class="section-line"></div>
-      </div>
-
-      <div class="deploy-controls">
-        <button class="btn btn-green" id="addAgentBtn">+ ADD AGENT</button>
-      </div>
-
-      <div id="userForms"></div>
-
-      <div style="margin-top:16px; display:flex; justify-content:flex-end;">
-        <button class="btn btn-green" id="executeAllBtn">▶ EXECUTE ALL</button>
-      </div>
-
-    </div>
-
-    <!-- Toast -->
-    <div id="toast"></div>
-
-    <!-- Settings Modal -->
-    <div id="settingsModal" class="modal">
-      <div class="modal-content">
-        <div class="modal-header">
-          <span class="modal-title">// SETTINGS</span>
-          <button class="btn btn-red modal-close" id="closeSettingsModal">✕</button>
-        </div>
-        <div class="modal-tabs">
-          <button class="modal-tab active" data-tab="notifications">NOTIFICATIONS</button>
-          <button class="modal-tab" data-tab="test">TEST</button>
-        </div>
-        <div class="modal-body">
-          <!-- Notifications Tab -->
-          <div class="tab-content active" id="tab-notifications">
-            <div class="form-grid">
-              <div class="form-group full">
-                <label>Default Notification Email</label>
-                <input type="email" id="defaultNotifEmail" placeholder="admin@example.com" />
-              </div>
-              <div class="form-group full">
-                <label>Default Telegram Chat ID</label>
-                <input type="text" id="defaultTelegramChatId" placeholder="123456789" />
-              </div>
-              <div class="form-group full">
-                <div class="checkbox-row">
-                  <input type="checkbox" id="enableEmailNotif" />
-                  <label for="enableEmailNotif">Enable Email Notifications</label>
-                </div>
-                <div class="checkbox-row">
-                  <input type="checkbox" id="enableTelegramNotif" />
-                  <label for="enableTelegramNotif">Enable Telegram Notifications</label>
-                </div>
-                <div class="checkbox-row">
-                  <input type="checkbox" id="enableSmsNotif" />
-                  <label for="enableSmsNotif">Enable SMS Notifications (Twilio)</label>
-                </div>
-              </div>
-              <div class="form-group full" style="margin-top:16px;">
-                <button class="btn btn-green" id="saveSettingsBtn">◼ SAVE SETTINGS</button>
-              </div>
-            </div>
-          </div>
-          <!-- Test Tab -->
-          <div class="tab-content" id="tab-test">
-            <div class="form-grid">
-              <div class="form-group full">
-                <label>Test Email Address</label>
-                <input type="email" id="testEmailAddress" placeholder="test@example.com" />
-              </div>
-              <div class="form-group full">
-                <button class="btn btn-cyan" id="testEmailBtn" style="width:100%;">✉ TEST EMAIL</button>
-              </div>
-              <div class="form-group full" style="margin-top:24px;">
-                <label>Test Telegram Chat ID</label>
-                <input type="text" id="testTelegramChatId" placeholder="123456789" />
-              </div>
-              <div class="form-group full">
-                <button class="btn btn-yellow" id="testTelegramBtn" style="width:100%;">✈ TEST TELEGRAM</button>
-              </div>
-              <div class="form-group full" style="margin-top:24px;">
-                <label>Test SMS Phone Number</label>
-                <input type="text" id="testSmsPhone" placeholder="+14155552671" />
-              </div>
-              <div class="form-group full">
-                <button class="btn btn-cyan" id="testSmsBtn" style="width:100%;">📱 TEST SMS</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <script>
-      let agentCount = 0;
-      const openLogPanels = new Set();   // track which log panels are expanded
-
-      // ── Toast ──────────────────────────────────────────────────────────
-      function toast(msg, isError = false) {
-        const el = document.getElementById('toast');
-        el.textContent = msg;
-        el.className = 'show' + (isError ? ' error' : '');
-        clearTimeout(el._t);
-        el._t = setTimeout(() => { el.className = ''; }, 3000);
-      }
-
-      // ── Log panel toggle ───────────────────────────────────────────────
-      function toggleLog(uid) {
-        const panel = document.getElementById('log-' + uid);
-        if (!panel) return;
-        if (openLogPanels.has(uid)) {
-          openLogPanels.delete(uid);
-          panel.style.display = 'none';
-        } else {
-          openLogPanels.add(uid);
-          panel.style.display = 'block';
-          panel.scrollTop = panel.scrollHeight;
-        }
-      }
-
-      // ── Classify log entry for colour coding ───────────────────────────
-      function logClass(msg) {
-        if (/DATE FOUND|SUCCESS|DISMISSED|RESCHEDULED/i.test(msg)) return 'highlight';
-        if (/WARNING|ATTEMPT|COOL|SLEEPING|SOFT BAN/i.test(msg))  return 'warn';
-        if (/FAILED|ERROR|CRITICAL/i.test(msg))                    return 'error';
-        return '';
-      }
-
-      // ── Status polling ─────────────────────────────────────────────────
-      function renderAgents(data) {
-        const grid = document.getElementById('agentGrid');
-        const keys = Object.keys(data);
-        document.getElementById('agentCount').textContent =
-          keys.filter(k => data[k].is_running).length + ' ONLINE';
-
-        if (keys.length === 0) {
-          grid.innerHTML = '<p class="no-agents">&gt; NO AGENTS DEPLOYED</p>';
-          return;
-        }
-
-        grid.innerHTML = keys.map(uid => {
-          const s = data[uid];
-          const running = s.is_running;
-          const logEntries = (s.action_log || []).map(e =>
-            `<div class="log-entry ${logClass(e.msg)}">
-               <span class="log-ts">${e.ts}</span><span>${e.msg}</span>
-             </div>`
-          ).join('');
-
-          return `
-            <div class="agent-card ${running ? 'running' : ''}">
-              <div class="agent-id">&gt; ${uid}</div>
-
-              <div class="status-row">
-                <div class="status-dot ${running ? 'on' : ''}"></div>
-                <div class="status-text ${running ? '' : 'off'}">${running ? 'RUNNING' : 'IDLE'}</div>
-              </div>
-
-              <div class="action-line">${s.current_action || '—'}</div>
-
-              <div class="data-row">
-                <span class="data-key">CURRENT</span>
-                <span class="data-val">${s.current_appointment || '—'}</span>
-              </div>
-              <div class="data-row">
-                <span class="data-key">FOUND</span>
-                <span class="data-val ${s.new_appointment ? 'found' : ''}">${s.new_appointment || '—'}</span>
-              </div>
-              <div class="data-row">
-                <span class="data-key">LOCATION</span>
-                <span class="data-val">${s.last_checked_location || '—'}</span>
-              </div>
-
-              <div class="card-footer" style="gap:8px;">
-                <button class="btn btn-yellow" onclick="toggleLog('${uid}')"
-                  style="font-size:0.62rem;padding:5px 10px;">▤ LOGS</button>
-                <button class="btn btn-red" onclick="stopAgent(this, '${uid}')"
-                <button class="btn btn-red" onclick="stopAgent(this, '${uid}')"
-                  style="font-size:0.65rem;padding:5px 12px;">✕ STOP</button>
-              </div>
-
-              <div class="log-panel" id="log-${uid}">
-                ${logEntries || '<div class="log-entry" style="color:var(--dimtext);">No log entries yet.</div>'}
-              </div>
-            </div>`;
-        }).join('');
-
-        // Re-open any log panels that were expanded before the re-render
-        openLogPanels.forEach(uid => {
-          const panel = document.getElementById('log-' + uid);
-          if (panel) {
-            panel.style.display = 'block';
-            panel.scrollTop = panel.scrollHeight;   // keep scrolled to latest entry
-          }
-        });
-      }
-
-      function pollStatus() {
-        fetch('/get_all_status')
-          .then(r => {
-            if (r.status === 401 || r.redirected) {
-              // Session expired — redirect to login
-              window.location.href = '/login';
-              return null;
+                animation: gglitch 5s infinite;
             }
-            return r.json();
-          })
-          .then(d => { if (d) renderAgents(d); })
-          .catch(() => {});
-      }
 
-      pollStatus();
-      pollPending();
-      setInterval(pollStatus, 5000);
-      setInterval(pollPending, 6000);
+            @keyframes glitch {
+                0%,
+                74%,
+                76%,
+                78%,
+                100% {
+                    text-shadow:
+                        0 0 8px rgba(0, 255, 65, 0.5),
+                        0.04em 0 0 var(--magenta),
+                        -0.04em 0 0 var(--cyan);
+                }
+                75% {
+                    text-shadow:
+                        -0.04em 0 0 var(--magenta),
+                        0.04em 0 0 var(--cyan);
+                    transform: translate(-1px);
+                }
+                77% {
+                    text-shadow:
+                        0.04em 0 0 var(--magenta),
+                        -0.04em 0 0 var(--cyan);
+                    transform: translate(1px);
+                }
+            }
 
-      // ── Pending requests ───────────────────────────────────────────────
-      function pollPending() {
-        fetch('/admin/pending_requests')
-          .then(r => {
-            if (r.status === 401 || r.redirected) { window.location.href = '/login'; return null; }
-            return r.json();
-          })
-          .then(d => { if (d) renderPending(d); })
-          .catch(() => {});
-      }
+            .brand-sub {
+                font-size: 0.6rem;
+                color: var(--text);
+                letter-spacing: 3px;
+                margin-top: 2px;
+            }
 
-      function renderPending(data) {
-        const grid = document.getElementById('pendingGrid');
-        const keys = Object.keys(data);
-        document.getElementById('pendingCount').textContent = keys.length + ' PENDING';
+            .header-nav {
+                display: flex;
+                gap: 10px;
+                flex-wrap: wrap;
+                align-items: center;
+            }
 
-        if (keys.length === 0) {
-          grid.innerHTML = '<p class="no-agents" style="color:var(--dimtext);">&gt; NO PENDING REQUESTS</p>';
-          return;
-        }
+            /* ── BUTTONS ─────────────────────────────────────────────────────── */
+            .btn {
+                background: transparent;
+                border: 1px solid currentColor;
+                font-family: "Share Tech Mono", monospace;
+                font-size: 0.72rem;
+                letter-spacing: 2px;
+                padding: 7px 14px;
+                cursor: pointer;
+                text-transform: uppercase;
+                text-decoration: none;
+                display: inline-block;
+                transition: all 0.15s;
+            }
+            .btn-green {
+                color: var(--green);
+            }
+            .btn-cyan {
+                color: var(--cyan);
+            }
+            .btn-red {
+                color: var(--red);
+            }
+            .btn-yellow {
+                color: var(--yellow);
+            }
+            .btn-magenta {
+                color: var(--magenta);
+            }
 
-        grid.innerHTML = keys.map(token => {
-          const r = data[token];
-          const short = token.slice(0, 12) + '…';
-          return `
-            <div class="pending-card">
-              <div class="pending-name">${escHtml(r.name)}</div>
-              <div class="data-row">
-                <span class="data-key">TOKEN</span>
-                <span class="data-val" style="color:var(--dimtext);font-size:0.65rem;">${short}</span>
-              </div>
-              <div class="data-row">
-                <span class="data-key">EMAIL</span>
-                <span class="data-val">${escHtml(r.email)}</span>
-              </div>
-              <div class="data-row">
-                <span class="data-key">APT_ID</span>
-                <span class="data-val">${escHtml(r.appointment_id)}</span>
-              </div>
-              <div class="data-row">
-                <span class="data-key">RESCHEDULE</span>
-                <span class="data-val" style="color:${r.reschedule ? 'var(--red)' : 'var(--text)'};">
-                  ${r.reschedule ? '⚠ YES' : 'NO'}
-                </span>
-              </div>
-              <div class="data-row">
-                <span class="data-key">URL</span>
-                <span class="data-val" style="font-size:0.62rem;" title="${escHtml(r.appointment_url_full)}">
-                  ${escHtml(r.appointment_url_full.slice(0, 40))}…
-                </span>
-              </div>
-              <div class="pending-action-row">
-                <button class="btn btn-green" style="font-size:0.65rem;padding:6px 14px;"
-                  onclick="approveClient(this, '${token}')">✓ APPROVE</button>
-                  onclick="approveClient(this, '${token}')">✓ APPROVE</button>
-                <button class="btn btn-red" style="font-size:0.65rem;padding:6px 14px;"
-                  onclick="rejectClient(this, '${token}')">✕ REJECT</button>
-                  onclick="rejectClient(this, '${token}')">✕ REJECT</button>
-              </div>
-            </div>`;
-        }).join('');
-      }
+            .btn:hover {
+                background: rgba(128, 128, 128, 0.15);
+                border-color: currentColor;
+                color: currentColor;
+                box-shadow: 0 0 12px rgba(128, 128, 128, 0.3);
+            }
+            .btn.loading {
+                pointer-events: none;
+                opacity: 0.7;
+            }
+            .btn.loading .spinner {
+                display: inline-block;
+                width: 14px;
+                height: 14px;
+                border: 2px solid currentColor;
+                border-top-color: transparent;
+                border-radius: 50%;
+                animation: spin 0.8s linear infinite;
+                vertical-align: middle;
+                margin-right: 6px;
+            }
+            .btn:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+            @keyframes spin {
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+            .btn:hover {
+                background: rgba(128, 128, 128, 0.15);
+                border-color: currentColor;
+                color: currentColor;
+                box-shadow: 0 0 12px rgba(128, 128, 128, 0.3);
+            }
+            .btn.loading {
+                pointer-events: none;
+                opacity: 0.7;
+            }
+            .btn.loading .spinner {
+                display: inline-block;
+                width: 14px;
+                height: 14px;
+                border: 2px solid currentColor;
+                border-top-color: transparent;
+                border-radius: 50%;
+                animation: spin 0.8s linear infinite;
+                vertical-align: middle;
+                margin-right: 6px;
+            }
+            .btn:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+            @keyframes spin {
+                to {
+                    transform: rotate(360deg);
+                }
+            }
 
-      function approveClient(btn, token) {
-        btn.disabled = true;
-        btn.classList.add('loading');
-        btn.innerHTML = '<span class="spinner"></span>APPROVING...';
-        fetch(`/admin/approve_client/${encodeURIComponent(token)}`, { method: 'POST' })
-      function approveClient(btn, token) {
-        btn.disabled = true;
-        btn.classList.add('loading');
-        btn.innerHTML = '<span class="spinner"></span>APPROVING...';
-        fetch(`/admin/approve_client/${encodeURIComponent(token)}`, { method: 'POST' })
-          .then(r => r.json())
-          .then(d => {
-            toast('APPROVED // AGENT LAUNCHED');
+            /* ── LAYOUT ──────────────────────────────────────────────────────── */
+            .main {
+                max-width: 1280px;
+                margin: 0 auto;
+                padding: 24px 20px 60px;
+            }
+
+            .section-header {
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                margin: 32px 0 16px;
+            }
+
+            .section-title {
+                font-size: 0.75rem;
+                letter-spacing: 4px;
+                color: var(--text);
+            }
+
+            .section-line {
+                flex: 1;
+                height: 1px;
+                background: var(--border);
+            }
+
+            /* ── CLIENT LINK BANNER ──────────────────────────────────────────── */
+            #linkBanner {
+                display: none;
+                border: 1px solid var(--cyan);
+                background: rgba(0, 255, 255, 0.04);
+                box-shadow: 0 0 16px rgba(0, 255, 255, 0.1);
+                padding: 14px 20px;
+                margin-bottom: 8px;
+                align-items: center;
+                gap: 14px;
+                flex-wrap: wrap;
+            }
+            #linkBanner.visible {
+                display: flex;
+            }
+            #linkBanner .label {
+                color: var(--text);
+                font-size: 0.75rem;
+                letter-spacing: 2px;
+                flex-shrink: 0;
+            }
+            #clientLinkText {
+                color: var(--cyan);
+                flex: 1;
+                font-size: 0.85rem;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            /* ── PENDING REQUEST CARDS ───────────────────────────────────────── */
+            #pendingGrid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+                gap: 14px;
+                margin-bottom: 8px;
+            }
+
+            .pending-card {
+                border: 1px solid rgba(255, 230, 0, 0.3);
+                background: rgba(255, 230, 0, 0.02);
+                padding: 18px 20px;
+                position: relative;
+            }
+            .pending-card::before {
+                content: "";
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 1px;
+                background: linear-gradient(
+                    90deg,
+                    transparent,
+                    var(--yellow),
+                    transparent
+                );
+                animation: scanline-y 2.5s linear infinite;
+            }
+            @keyframes scanline-y {
+                0% {
+                    opacity: 0;
+                    transform: scaleX(0.2) translateX(-250%);
+                }
+                50% {
+                    opacity: 1;
+                }
+                100% {
+                    opacity: 0;
+                    transform: scaleX(0.2) translateX(250%);
+                }
+            }
+
+            .pending-name {
+                font-size: 0.9rem;
+                color: var(--yellow);
+                letter-spacing: 2px;
+                margin-bottom: 12px;
+            }
+
+            .pending-action-row {
+                display: flex;
+                gap: 8px;
+                margin-top: 14px;
+            }
+
+            /* ── AGENT CARDS ─────────────────────────────────────────────────── */
+            #agentGrid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+                gap: 14px;
+            }
+
+            .agent-card {
+                border: 1px solid var(--border);
+                background: var(--panel);
+                padding: 18px 20px;
+                position: relative;
+                transition: border-color 0.2s;
+            }
+            .agent-card.running {
+                border-color: rgba(0, 255, 65, 0.4);
+            }
+            .agent-card.running::before {
+                content: "";
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 1px;
+                background: linear-gradient(
+                    90deg,
+                    transparent,
+                    var(--green),
+                    transparent
+                );
+                animation: scanline 2s linear infinite;
+            }
+            @keyframes scanline {
+                0% {
+                    opacity: 0;
+                    transform: scaleX(0.2) translateX(-250%);
+                }
+                50% {
+                    opacity: 1;
+                }
+                100% {
+                    opacity: 0;
+                    transform: scaleX(0.2) translateX(250%);
+                }
+            }
+
+            .agent-id {
+                font-size: 0.7rem;
+                letter-spacing: 3px;
+                color: var(--text);
+                margin-bottom: 10px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            .status-row {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-bottom: 12px;
+            }
+
+            .status-dot {
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background: var(--border);
+                flex-shrink: 0;
+            }
+            .status-dot.on {
+                background: var(--green);
+                box-shadow:
+                    0 0 6px var(--green),
+                    0 0 12px var(--green);
+                animation: pulse 2s ease-in-out infinite;
+            }
+            @keyframes pulse {
+                0%,
+                100% {
+                    box-shadow:
+                        0 0 4px var(--green),
+                        0 0 8px var(--green);
+                }
+                50% {
+                    box-shadow:
+                        0 0 10px var(--green),
+                        0 0 24px var(--green);
+                }
+            }
+
+            .status-text {
+                font-size: 0.75rem;
+                letter-spacing: 2px;
+                color: var(--green);
+            }
+            .status-text.off {
+                color: var(--text);
+            }
+
+            .data-row {
+                display: flex;
+                justify-content: space-between;
+                font-size: 0.7rem;
+                margin-bottom: 5px;
+                gap: 8px;
+            }
+            .data-key {
+                color: var(--dimtext);
+                flex-shrink: 0;
+            }
+            .data-val {
+                color: var(--text);
+                text-align: right;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .data-val.found {
+                color: var(--cyan);
+                text-shadow: 0 0 8px var(--cyan);
+            }
+
+            .card-footer {
+                margin-top: 14px;
+                display: flex;
+                justify-content: flex-end;
+            }
+
+            .no-agents {
+                color: var(--dimtext);
+                font-size: 0.75rem;
+                letter-spacing: 2px;
+                padding: 20px 0;
+            }
+
+            /* ── DEPLOY FORM ─────────────────────────────────────────────────── */
+            .deploy-controls {
+                display: flex;
+                gap: 10px;
+                margin-bottom: 16px;
+                flex-wrap: wrap;
+            }
+
+            #userForms {
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .user-form {
+                border: 1px solid var(--border);
+                background: var(--panel);
+                padding: 20px;
+                position: relative;
+            }
+
+            .form-agent-title {
+                font-size: 0.7rem;
+                letter-spacing: 3px;
+                color: var(--cyan);
+                margin-bottom: 16px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .form-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+                gap: 12px;
+            }
+
+            .form-group {
+                display: flex;
+                flex-direction: column;
+                gap: 5px;
+            }
+            .form-group.full {
+                grid-column: 1 / -1;
+            }
+
+            label {
+                font-size: 0.65rem;
+                color: var(--text);
+                letter-spacing: 2px;
+                text-transform: uppercase;
+            }
+
+            input[type="text"],
+            input[type="password"],
+            input[type="email"],
+            input[type="number"] {
+                background: #000;
+                border: 1px solid var(--border);
+                border-bottom-color: #333;
+                color: var(--green);
+                font-family: "Share Tech Mono", monospace;
+                font-size: 0.85rem;
+                padding: 7px 10px;
+                outline: none;
+                width: 100%;
+                transition:
+                    border-color 0.15s,
+                    box-shadow 0.15s;
+            }
+            input:focus {
+                border-color: var(--green);
+                box-shadow: 0 0 8px rgba(0, 255, 65, 0.2);
+            }
+
+            .checkbox-row {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                margin-top: 4px;
+            }
+            .checkbox-row input[type="checkbox"] {
+                accent-color: var(--green);
+                width: 14px;
+                height: 14px;
+            }
+            .checkbox-row label {
+                margin: 0;
+            }
+            .warn {
+                color: var(--red);
+                font-size: 0.6rem;
+                letter-spacing: 1px;
+            }
+
+            /* ── ACTION LINE ────────────────────────────────────────────────── */
+            .action-line {
+                font-size: 0.68rem;
+                color: var(--cyan);
+                letter-spacing: 1px;
+                margin: 8px 0 12px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                min-height: 1em;
+            }
+
+            /* ── LOG PANEL ───────────────────────────────────────────────────── */
+            .log-panel {
+                display: none;
+                margin-top: 12px;
+                border-top: 1px solid var(--border);
+                padding-top: 10px;
+                max-height: 200px;
+                overflow-y: auto;
+                scrollbar-width: thin;
+                scrollbar-color: var(--border) transparent;
+            }
+            .log-entry {
+                font-size: 0.64rem;
+                line-height: 1.8;
+                color: var(--text);
+                display: flex;
+                gap: 8px;
+            }
+            .log-ts {
+                color: var(--dimtext);
+                flex-shrink: 0;
+            }
+            .log-entry.highlight {
+                color: var(--green);
+            }
+            .log-entry.warn {
+                color: var(--yellow);
+            }
+            .log-entry.error {
+                color: var(--red);
+            }
+
+            /* ── NOTIFICATION TOAST ──────────────────────────────────────────── */
+            #toast {
+                position: fixed;
+                bottom: 24px;
+                right: 24px;
+                background: var(--surface);
+                border: 1px solid var(--green);
+                color: var(--green);
+                font-size: 0.75rem;
+                letter-spacing: 2px;
+                padding: 12px 20px;
+                z-index: 10000;
+                box-shadow: 0 0 20px rgba(0, 255, 65, 0.2);
+                opacity: 0;
+                transform: translateY(10px);
+                transition: all 0.2s;
+                pointer-events: none;
+                max-width: 360px;
+            }
+            #toast.show {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            #toast.error {
+                border-color: var(--red);
+                color: var(--red);
+            }
+
+            /* ── SETTINGS MODAL ─────────────────────────────────────────────── */
+            .modal {
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.9);
+                z-index: 10000;
+                align-items: center;
+                justify-content: center;
+            }
+            .modal.visible {
+                display: flex;
+            }
+            .modal-content {
+                background: var(--panel);
+                border: 1px solid var(--border);
+                width: 90%;
+                max-width: 480px;
+                max-height: 90vh;
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+            }
+            .modal-header {
+                padding: 14px 18px;
+                border-bottom: 1px solid var(--border);
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .modal-title {
+                color: var(--magenta);
+                font-size: 0.8rem;
+                letter-spacing: 2px;
+            }
+            .modal-close {
+                padding: 4px 10px;
+                font-size: 0.7rem;
+            }
+            .modal-tabs {
+                display: flex;
+                border-bottom: 1px solid var(--border);
+            }
+            .modal-tab {
+                flex: 1;
+                background: transparent;
+                border: none;
+                color: var(--text);
+                font-family: "Share Tech Mono", monospace;
+                font-size: 0.7rem;
+                letter-spacing: 2px;
+                padding: 12px;
+                cursor: pointer;
+                transition: all 0.15s;
+                border-bottom: 2px solid transparent;
+            }
+            .modal-tab:hover {
+                color: var(--green);
+            }
+            .modal-tab.active {
+                color: var(--magenta);
+                border-bottom-color: var(--magenta);
+            }
+            .modal-body {
+                padding: 20px;
+                overflow-y: auto;
+                flex: 1;
+            }
+            .tab-content {
+                display: none;
+            }
+            .tab-content.active {
+                display: block;
+            }
+        </style>
+    </head>
+    <body>
+        <!-- ── HEADER ─────────────────────────────────────────────────────── -->
+        <header>
+            <div class="brand">
+                <div class="brand-title">VISA_CTRL</div>
+                <div class="brand-sub">
+                    // MULTI-AGENT APPOINTMENT MONITOR //
+                </div>
+            </div>
+            <nav class="header-nav">
+                <button class="btn btn-cyan" id="genLinkBtn">
+                    ⬡ CLIENT LINK
+                </button>
+                <button class="btn btn-yellow" id="viewLogBtn">◰ LOGS</button>
+                <button class="btn btn-magenta" id="settingsBtn">
+                    ⚙ SETTINGS
+                </button>
+                <button class="btn btn-red" id="killAllBtn">✕ KILL ALL</button>
+                <a class="btn btn-green" href="/logout">⏻ LOGOUT</a>
+            </nav>
+        </header>
+
+        <div class="main">
+            <!-- Client link banner -->
+            <div id="linkBanner">
+                <span class="label">CLIENT LINK:</span>
+                <span id="clientLinkText"></span>
+                <button class="btn btn-cyan" id="copyLinkBtn">COPY</button>
+            </div>
+
+            <!-- ── PENDING REQUESTS ───────────────────────────────────────────── -->
+            <div class="section-header">
+                <span class="section-title">PENDING_REQUESTS</span>
+                <div class="section-line"></div>
+                <span
+                    class="section-title"
+                    id="pendingCount"
+                    style="color: var(--yellow)"
+                    >0 PENDING</span
+                >
+            </div>
+
+            <div id="pendingGrid">
+                <p class="no-agents" style="color: var(--dimtext)">
+                    &gt; NO PENDING REQUESTS
+                </p>
+            </div>
+
+            <!-- ── ACTIVE AGENTS ─────────────────────────────────────────────── -->
+            <div class="section-header">
+                <span class="section-title">ACTIVE_AGENTS</span>
+                <div class="section-line"></div>
+                <span class="section-title" id="agentCount">0 ONLINE</span>
+            </div>
+
+            <div id="agentGrid">
+                <p class="no-agents">&gt; NO AGENTS DEPLOYED</p>
+            </div>
+
+            <!-- ── DEPLOY AGENTS ─────────────────────────────────────────────── -->
+            <div class="section-header" style="margin-top: 40px">
+                <span class="section-title">DEPLOY_AGENTS</span>
+                <div class="section-line"></div>
+            </div>
+
+            <div class="deploy-controls">
+                <button class="btn btn-green" id="addAgentBtn">
+                    + ADD AGENT
+                </button>
+            </div>
+
+            <div id="userForms"></div>
+
+            <div
+                style="
+                    margin-top: 16px;
+                    display: flex;
+                    justify-content: flex-end;
+                "
+            >
+                <button class="btn btn-green" id="executeAllBtn">
+                    ▶ EXECUTE ALL
+                </button>
+            </div>
+        </div>
+
+        <!-- Toast -->
+        <div id="toast"></div>
+
+        <!-- Settings Modal -->
+        <div id="settingsModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <span class="modal-title">// SETTINGS</span>
+                    <button
+                        class="btn btn-red modal-close"
+                        id="closeSettingsModal"
+                    >
+                        ✕
+                    </button>
+                </div>
+                <div class="modal-tabs">
+                    <button class="modal-tab active" data-tab="notifications">
+                        NOTIFICATIONS
+                    </button>
+                    <button class="modal-tab" data-tab="test">TEST</button>
+                </div>
+                <div class="modal-body">
+                    <!-- Notifications Tab -->
+                    <div class="tab-content active" id="tab-notifications">
+                        <div class="form-grid">
+                            <div class="form-group full">
+                                <label>Default Notification Email</label>
+                                <input
+                                    type="email"
+                                    id="defaultNotifEmail"
+                                    placeholder="admin@example.com"
+                                />
+                            </div>
+                            <div class="form-group full">
+                                <label>Default Telegram Chat ID</label>
+                                <input
+                                    type="text"
+                                    id="defaultTelegramChatId"
+                                    placeholder="123456789"
+                                />
+                            </div>
+                            <div class="form-group full">
+                                <div class="checkbox-row">
+                                    <input
+                                        type="checkbox"
+                                        id="enableEmailNotif"
+                                    />
+                                    <label for="enableEmailNotif"
+                                        >Enable Email Notifications</label
+                                    >
+                                </div>
+                                <div class="checkbox-row">
+                                    <input
+                                        type="checkbox"
+                                        id="enableTelegramNotif"
+                                    />
+                                    <label for="enableTelegramNotif"
+                                        >Enable Telegram Notifications</label
+                                    >
+                                </div>
+                                <div class="checkbox-row">
+                                    <input
+                                        type="checkbox"
+                                        id="enableSmsNotif"
+                                    />
+                                    <label for="enableSmsNotif"
+                                        >Enable SMS Notifications
+                                        (Twilio)</label
+                                    >
+                                </div>
+                            </div>
+                            <div
+                                class="form-group full"
+                                style="margin-top: 16px"
+                            >
+                                <button
+                                    class="btn btn-green"
+                                    id="saveSettingsBtn"
+                                >
+                                    ◼ SAVE SETTINGS
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Test Tab -->
+                    <div class="tab-content" id="tab-test">
+                        <div class="form-grid">
+                            <div class="form-group full">
+                                <label>Test Email Address</label>
+                                <input
+                                    type="email"
+                                    id="testEmailAddress"
+                                    placeholder="test@example.com"
+                                />
+                            </div>
+                            <div class="form-group full">
+                                <button
+                                    class="btn btn-cyan"
+                                    id="testEmailBtn"
+                                    style="width: 100%"
+                                >
+                                    ✉ TEST EMAIL
+                                </button>
+                            </div>
+                            <div
+                                class="form-group full"
+                                style="margin-top: 24px"
+                            >
+                                <label>Test Telegram Chat ID</label>
+                                <input
+                                    type="text"
+                                    id="testTelegramChatId"
+                                    placeholder="123456789"
+                                />
+                            </div>
+                            <div class="form-group full">
+                                <button
+                                    class="btn btn-yellow"
+                                    id="testTelegramBtn"
+                                    style="width: 100%"
+                                >
+                                    ✈ TEST TELEGRAM
+                                </button>
+                            </div>
+                            <div
+                                class="form-group full"
+                                style="margin-top: 24px"
+                            >
+                                <label>Test SMS Phone Number</label>
+                                <input
+                                    type="text"
+                                    id="testSmsPhone"
+                                    placeholder="+14155552671"
+                                />
+                            </div>
+                            <div class="form-group full">
+                                <button
+                                    class="btn btn-cyan"
+                                    id="testSmsBtn"
+                                    style="width: 100%"
+                                >
+                                    📱 TEST SMS
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            let agentCount = 0;
+            const openLogPanels = new Set(); // track which log panels are expanded
+
+            // ── Toast ──────────────────────────────────────────────────────────
+            function toast(msg, isError = false) {
+                const el = document.getElementById("toast");
+                el.textContent = msg;
+                el.className = "show" + (isError ? " error" : "");
+                clearTimeout(el._t);
+                el._t = setTimeout(() => {
+                    el.className = "";
+                }, 3000);
+            }
+
+            // ── Log panel toggle ───────────────────────────────────────────────
+            function toggleLog(uid) {
+                const panel = document.getElementById("log-" + uid);
+                if (!panel) return;
+                if (openLogPanels.has(uid)) {
+                    openLogPanels.delete(uid);
+                    panel.style.display = "none";
+                } else {
+                    openLogPanels.add(uid);
+                    panel.style.display = "block";
+                    panel.scrollTop = panel.scrollHeight;
+                }
+            }
+
+            // ── Classify log entry for colour coding ───────────────────────────
+            function logClass(msg) {
+                if (/DATE FOUND|SUCCESS|DISMISSED|RESCHEDULED/i.test(msg))
+                    return "highlight";
+                if (/WARNING|ATTEMPT|COOL|SLEEPING|SOFT BAN/i.test(msg))
+                    return "warn";
+                if (/FAILED|ERROR|CRITICAL/i.test(msg)) return "error";
+                return "";
+            }
+
+            // ── Status polling ─────────────────────────────────────────────────
+            function renderAgents(data) {
+                const grid = document.getElementById("agentGrid");
+                const keys = Object.keys(data);
+                document.getElementById("agentCount").textContent =
+                    keys.filter((k) => data[k].is_running).length + " ONLINE";
+
+                if (keys.length === 0) {
+                    grid.innerHTML =
+                        '<p class="no-agents">&gt; NO AGENTS DEPLOYED</p>';
+                    return;
+                }
+
+                grid.innerHTML = keys
+                    .map((uid) => {
+                        const s = data[uid];
+                        const running = s.is_running;
+                        const logEntries = (s.action_log || [])
+                            .map(
+                                (e) =>
+                                    `<div class="log-entry ${logClass(e.msg)}">
+                     <span class="log-ts">${e.ts}</span><span>${e.msg}</span>
+                   </div>`,
+                            )
+                            .join("");
+
+                        return `
+                  <div class="agent-card ${running ? "running" : ""}">
+                    <div class="agent-id">&gt; ${uid}</div>
+
+                    <div class="status-row">
+                      <div class="status-dot ${running ? "on" : ""}"></div>
+                      <div class="status-text ${running ? "" : "off"}">${running ? "RUNNING" : "IDLE"}</div>
+                    </div>
+
+                    <div class="action-line">${s.current_action || "—"}</div>
+
+                    <div class="data-row">
+                      <span class="data-key">CURRENT</span>
+                      <span class="data-val">${s.current_appointment || "—"}</span>
+                    </div>
+                    <div class="data-row">
+                      <span class="data-key">FOUND</span>
+                      <span class="data-val ${s.new_appointment ? "found" : ""}">${s.new_appointment || "—"}</span>
+                    </div>
+                    <div class="data-row">
+                      <span class="data-key">LOCATION</span>
+                      <span class="data-val">${s.last_checked_location || "—"}</span>
+                    </div>
+
+                    <div class="card-footer" style="gap:8px;">
+                      <button class="btn btn-yellow" onclick="toggleLog('${uid}')"
+                        style="font-size:0.62rem;padding:5px 10px;">▤ LOGS</button>
+                      <button class="btn btn-red" onclick="stopAgent(this, '${uid}')"
+                        style="font-size:0.65rem;padding:5px 12px;">✕ STOP</button>
+                    </div>
+
+                    <div class="log-panel" id="log-${uid}">
+                      ${logEntries || '<div class="log-entry" style="color:var(--dimtext);">No log entries yet.</div>'}
+                    </div>
+                  </div>`;
+                    })
+                    .join("");
+
+                // Re-open any log panels that were expanded before the re-render
+                openLogPanels.forEach((uid) => {
+                    const panel = document.getElementById("log-" + uid);
+                    if (panel) {
+                        panel.style.display = "block";
+                        panel.scrollTop = panel.scrollHeight; // keep scrolled to latest entry
+                    }
+                });
+            }
+
+            function pollStatus() {
+                fetch("/get_all_status")
+                    .then((r) => {
+                        if (r.status === 401 || r.redirected) {
+                            // Session expired — redirect to login
+                            window.location.href = "/login";
+                            return null;
+                        }
+                        return r.json();
+                    })
+                    .then((d) => {
+                        if (d) renderAgents(d);
+                    })
+                    .catch(() => {});
+            }
+
+            pollStatus();
             pollPending();
-            setTimeout(pollStatus, 1200);
-          })
-          .catch(() => { toast('APPROVE FAILED', true); btn.disabled = false; btn.classList.remove('loading'); btn.innerHTML = '✓ APPROVE'; });
-          .catch(() => { toast('APPROVE FAILED', true); btn.disabled = false; btn.classList.remove('loading'); btn.innerHTML = '✓ APPROVE'; });
-      }
+            setInterval(pollStatus, 5000);
+            setInterval(pollPending, 6000);
 
-      function rejectClient(btn, token) {
-        btn.disabled = true;
-        btn.classList.add('loading');
-        btn.innerHTML = '<span class="spinner"></span>REJECTING...';
-      function rejectClient(btn, token) {
-        btn.disabled = true;
-        btn.classList.add('loading');
-        btn.innerHTML = '<span class="spinner"></span>REJECTING...';
-        const reason = prompt('Rejection reason (optional):') ?? '';
-        const fd = new FormData();
-        fd.append('reason', reason);
-        fetch(`/admin/reject_client/${encodeURIComponent(token)}`, { method: 'POST', body: fd })
-          .then(r => r.json())
-          .then(d => { toast('REQUEST_REJECTED'); pollPending(); })
-          .catch(() => { toast('REJECT FAILED', true); btn.disabled = false; btn.classList.remove('loading'); btn.innerHTML = '✕ REJECT'; });
-          .catch(() => { toast('REJECT FAILED', true); btn.disabled = false; btn.classList.remove('loading'); btn.innerHTML = '✕ REJECT'; });
-      }
-
-      function escHtml(s) {
-        return String(s)
-          .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-      }
-
-      // ── Stop individual agent ──────────────────────────────────────────
-      function stopAgent(btn, userId) {
-        btn.disabled = true;
-        btn.classList.add('loading');
-        btn.innerHTML = '<span class="spinner"></span>STOPPING...';
-      function stopAgent(btn, userId) {
-        btn.disabled = true;
-        btn.classList.add('loading');
-        btn.innerHTML = '<span class="spinner"></span>STOPPING...';
-        const fd = new FormData();
-        fd.append('user_id', userId);
-        fetch('/stop_automation', { method: 'POST', body: fd })
-          .then(r => {
-            if (!r.ok) { toast('SESSION_EXPIRED // RELOAD PAGE', true); return null; }
-            return r.json();
-          })
-          .then(d => { if (d) { toast(d.status); pollStatus(); } })
-          .catch(() => toast('CONNECTION_ERROR // STOP FAILED', true));
-      }
-
-      // ── Kill all ───────────────────────────────────────────────────────
-      document.getElementById('killAllBtn').addEventListener('click', function() {
-        this.disabled = true;
-        this.classList.add('loading');
-        this.innerHTML = '<span class="spinner"></span>KILLING...';
-      document.getElementById('killAllBtn').addEventListener('click', function() {
-        this.disabled = true;
-        this.classList.add('loading');
-        this.innerHTML = '<span class="spinner"></span>KILLING...';
-        fetch('/stop_all_automation', { method: 'POST' })
-          .then(r => {
-            if (!r.ok) { toast('SESSION_EXPIRED // RELOAD PAGE', true); return null; }
-            return r.json();
-          })
-          .then(d => { if (d) { toast(d.status, true); pollStatus(); } })
-          .catch(() => toast('CONNECTION_ERROR // KILL FAILED', true));
-      });
-
-      // ── Generate client link ───────────────────────────────────────────
-      document.getElementById('genLinkBtn').addEventListener('click', () => {
-        fetch('/generate_client_link')
-          .then(r => r.json())
-          .then(d => {
-            const banner = document.getElementById('linkBanner');
-            document.getElementById('clientLinkText').textContent = d.link;
-            banner.classList.add('visible');
-            toast('CLIENT_LINK_GENERATED // UNIQUE TOKEN');
-          })
-          .catch(() => toast('FAILED TO GENERATE LINK', true));
-      });
-
-      // ── View logs ───────────────────────────────────────────────────────
-      document.getElementById('viewLogBtn').addEventListener('click', () => {
-        fetch('/view_log/default')
-          .then(r => r.json())
-          .then(d => {
-            if (d.status === 'ready') {
-              showLogModal(d.log);
-            } else {
-              showLogModal('// No log file found');
+            // ── Pending requests ───────────────────────────────────────────────
+            function pollPending() {
+                fetch("/admin/pending_requests")
+                    .then((r) => {
+                        if (r.status === 401 || r.redirected) {
+                            window.location.href = "/login";
+                            return null;
+                        }
+                        return r.json();
+                    })
+                    .then((d) => {
+                        if (d) renderPending(d);
+                    })
+                    .catch(() => {});
             }
-          })
-          .catch(() => showLogModal('// Failed to load logs'));
-      });
 
-      function showLogModal(logContent) {
-        let modal = document.getElementById('logModal');
-        if (!modal) {
-          modal = document.createElement('div');
-          modal.id = 'logModal';
-          modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;';
-          modal.innerHTML = `
-            <div style="background:#080808;border:1px solid #1c1c1c;width:90%;max-width:900px;height:80vh;display:flex;flex-direction:column;">
-              <div style="padding:12px 16px;border-bottom:1px solid #1c1c1c;display:flex;justify-content:space-between;align-items:center;">
-                <span style="color:#00ff41;font-family:'Share Tech Mono',monospace;letter-spacing:2px;">SYSTEM_LOGS</span>
-                <div style="display:flex;gap:8px;">
-                  <a href="/download_log" class="btn btn-cyan" style="font-size:0.7rem;padding:4px 12px;text-decoration:none;">DOWNLOAD</a>
-                  <button id="closeLogModal" class="btn btn-red" style="font-size:0.7rem;padding:4px 12px;">✕</button>
-                </div>
-              </div>
-              <pre id="logContent" style="flex:1;overflow:auto;padding:16px;color:#777;font-family:'Share Tech Mono',monospace;font-size:0.75rem;line-height:1.4;margin:0;white-space:pre-wrap;word-break:break-all;"></pre>
-            </div>`;
-          document.body.appendChild(modal);
-          document.getElementById('closeLogModal').addEventListener('click', () => modal.remove());
-          modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
-        }
-        document.getElementById('logContent').textContent = logContent;
-        modal.style.display = 'flex';
-      }
+            function renderPending(data) {
+                const grid = document.getElementById("pendingGrid");
+                const keys = Object.keys(data);
+                document.getElementById("pendingCount").textContent =
+                    keys.length + " PENDING";
 
-      // ── View logs ───────────────────────────────────────────────────────
-      document.getElementById('viewLogBtn').addEventListener('click', () => {
-        fetch('/view_log/default')
-          .then(r => r.json())
-          .then(d => {
-            if (d.status === 'ready') {
-              showLogModal(d.log);
-            } else {
-              showLogModal('// No log file found');
+                if (keys.length === 0) {
+                    grid.innerHTML =
+                        '<p class="no-agents" style="color:var(--dimtext);">&gt; NO PENDING REQUESTS</p>';
+                    return;
+                }
+
+                grid.innerHTML = keys
+                    .map((token) => {
+                        const r = data[token];
+                        const short = token.slice(0, 12) + "…";
+                        return `
+                  <div class="pending-card">
+                    <div class="pending-name">${escHtml(r.name)}</div>
+                    <div class="data-row">
+                      <span class="data-key">TOKEN</span>
+                      <span class="data-val" style="color:var(--dimtext);font-size:0.65rem;">${short}</span>
+                    </div>
+                    <div class="data-row">
+                      <span class="data-key">EMAIL</span>
+                      <span class="data-val">${escHtml(r.email)}</span>
+                    </div>
+                    <div class="data-row">
+                      <span class="data-key">APT_ID</span>
+                      <span class="data-val">${escHtml(r.appointment_id)}</span>
+                    </div>
+                    <div class="data-row">
+                      <span class="data-key">RESCHEDULE</span>
+                      <span class="data-val" style="color:${r.reschedule ? "var(--red)" : "var(--text)"};">
+                        ${r.reschedule ? "⚠ YES" : "NO"}
+                      </span>
+                    </div>
+                    <div class="data-row">
+                      <span class="data-key">URL</span>
+                      <span class="data-val" style="font-size:0.62rem;" title="${escHtml(r.appointment_url_full)}">
+                        ${escHtml(r.appointment_url_full.slice(0, 40))}…
+                      </span>
+                    </div>
+                    <div class="pending-action-row">
+                      <button class="btn btn-green" style="font-size:0.65rem;padding:6px 14px;"
+                        onclick="approveClient(this, '${token}')">✓ APPROVE</button>
+                      <button class="btn btn-red" style="font-size:0.65rem;padding:6px 14px;"
+                        onclick="rejectClient(this, '${token}')">✕ REJECT</button>
+                    </div>
+                  </div>`;
+                    })
+                    .join("");
             }
-          })
-          .catch(() => showLogModal('// Failed to load logs'));
-      });
 
-      function showLogModal(logContent) {
-        let modal = document.getElementById('logModal');
-        if (!modal) {
-          modal = document.createElement('div');
-          modal.id = 'logModal';
-          modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;';
-          modal.innerHTML = `
-            <div style="background:#080808;border:1px solid #1c1c1c;width:90%;max-width:900px;height:80vh;display:flex;flex-direction:column;">
-              <div style="padding:12px 16px;border-bottom:1px solid #1c1c1c;display:flex;justify-content:space-between;align-items:center;">
-                <span style="color:#00ff41;font-family:'Share Tech Mono',monospace;letter-spacing:2px;">SYSTEM_LOGS</span>
-                <div style="display:flex;gap:8px;">
-                  <a href="/download_log" class="btn btn-cyan" style="font-size:0.7rem;padding:4px 12px;text-decoration:none;">DOWNLOAD</a>
-                  <button id="closeLogModal" class="btn btn-red" style="font-size:0.7rem;padding:4px 12px;">✕</button>
+            function approveClient(btn, token) {
+                btn.disabled = true;
+                btn.classList.add("loading");
+                btn.innerHTML = '<span class="spinner"></span>APPROVING...';
+                fetch(`/admin/approve_client/${encodeURIComponent(token)}`, {
+                    method: "POST",
+                })
+                    .then((r) => r.json())
+                    .then((d) => {
+                        toast("APPROVED // AGENT LAUNCHED");
+                        pollPending();
+                        setTimeout(pollStatus, 1200);
+                    })
+                    .catch(() => {
+                        toast("APPROVE FAILED", true);
+                        btn.disabled = false;
+                        btn.classList.remove("loading");
+                        btn.innerHTML = "✓ APPROVE";
+                    });
+            }
+
+            function rejectClient(btn, token) {
+                btn.disabled = true;
+                btn.classList.add("loading");
+                btn.innerHTML = '<span class="spinner"></span>REJECTING...';
+                const reason = prompt("Rejection reason (optional):") ?? "";
+                const fd = new FormData();
+                fd.append("reason", reason);
+                fetch(`/admin/reject_client/${encodeURIComponent(token)}`, {
+                    method: "POST",
+                    body: fd,
+                })
+                    .then((r) => r.json())
+                    .then((d) => {
+                        toast("REQUEST_REJECTED");
+                        pollPending();
+                    })
+                    .catch(() => {
+                        toast("REJECT FAILED", true);
+                        btn.disabled = false;
+                        btn.classList.remove("loading");
+                        btn.innerHTML = "✕ REJECT";
+                    });
+            }
+
+            function escHtml(s) {
+                return String(s)
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;");
+            }
+
+            // ── Stop individual agent ──────────────────────────────────────────
+            function stopAgent(btn, userId) {
+                btn.disabled = true;
+                btn.classList.add("loading");
+                btn.innerHTML = '<span class="spinner"></span>STOPPING...';
+                const fd = new FormData();
+                fd.append("user_id", userId);
+                fetch("/stop_automation", { method: "POST", body: fd })
+                    .then((r) => {
+                        if (!r.ok) {
+                            toast("SESSION_EXPIRED // RELOAD PAGE", true);
+                            return null;
+                        }
+                        return r.json();
+                    })
+                    .then((d) => {
+                        if (d) {
+                            toast(d.status);
+                            pollStatus();
+                        }
+                    })
+                    .catch(() =>
+                        toast("CONNECTION_ERROR // STOP FAILED", true),
+                    );
+            }
+
+            // ── Kill all ───────────────────────────────────────────────────────
+            document
+                .getElementById("killAllBtn")
+                .addEventListener("click", function () {
+                    this.disabled = true;
+                    this.classList.add("loading");
+                    this.innerHTML = '<span class="spinner"></span>KILLING...';
+                    fetch("/stop_all_automation", { method: "POST" })
+                        .then((r) => {
+                            if (!r.ok) {
+                                toast("SESSION_EXPIRED // RELOAD PAGE", true);
+                                return null;
+                            }
+                            return r.json();
+                        })
+                        .then((d) => {
+                            if (d) {
+                                toast(d.status, true);
+                                pollStatus();
+                            }
+                        })
+                        .catch(() =>
+                            toast("CONNECTION_ERROR // KILL FAILED", true),
+                        );
+                });
+
+            // ── Generate client link ───────────────────────────────────────────
+            document
+                .getElementById("genLinkBtn")
+                .addEventListener("click", () => {
+                    fetch("/generate_client_link")
+                        .then((r) => r.json())
+                        .then((d) => {
+                            const banner =
+                                document.getElementById("linkBanner");
+                            document.getElementById(
+                                "clientLinkText",
+                            ).textContent = d.link;
+                            banner.classList.add("visible");
+                            toast("CLIENT_LINK_GENERATED // UNIQUE TOKEN");
+                        })
+                        .catch(() => toast("FAILED TO GENERATE LINK", true));
+                });
+
+            // ── View logs ───────────────────────────────────────────────────────
+            document
+                .getElementById("viewLogBtn")
+                .addEventListener("click", () => {
+                    fetch("/view_log/default")
+                        .then((r) => r.json())
+                        .then((d) => {
+                            if (d.status === "ready") {
+                                showLogModal(d.log);
+                            } else {
+                                showLogModal("// No log file found");
+                            }
+                        })
+                        .catch(() => showLogModal("// Failed to load logs"));
+                });
+
+            function showLogModal(logContent) {
+                let modal = document.getElementById("logModal");
+                if (!modal) {
+                    modal = document.createElement("div");
+                    modal.id = "logModal";
+                    modal.style.cssText =
+                        "position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;";
+                    modal.innerHTML = `
+                  <div style="background:#080808;border:1px solid #1c1c1c;width:90%;max-width:900px;height:80vh;display:flex;flex-direction:column;">
+                    <div style="padding:12px 16px;border-bottom:1px solid #1c1c1c;display:flex;justify-content:space-between;align-items:center;">
+                      <span style="color:#00ff41;font-family:'Share Tech Mono',monospace;letter-spacing:2px;">SYSTEM_LOGS</span>
+                      <div style="display:flex;gap:8px;">
+                        <a href="/download_log" class="btn btn-cyan" style="font-size:0.7rem;padding:4px 12px;text-decoration:none;">DOWNLOAD</a>
+                        <button id="closeLogModal" class="btn btn-red" style="font-size:0.7rem;padding:4px 12px;">✕</button>
+                      </div>
+                    </div>
+                    <pre id="logContent" style="flex:1;overflow:auto;padding:16px;color:#777;font-family:'Share Tech Mono',monospace;font-size:0.75rem;line-height:1.4;margin:0;white-space:pre-wrap;word-break:break-all;"></pre>
+                  </div>`;
+                    document.body.appendChild(modal);
+                    document
+                        .getElementById("closeLogModal")
+                        .addEventListener("click", () => modal.remove());
+                    modal.addEventListener("click", (e) => {
+                        if (e.target === modal) modal.remove();
+                    });
+                }
+                document.getElementById("logContent").textContent = logContent;
+                modal.style.display = "flex";
+            }
+
+            document
+                .getElementById("copyLinkBtn")
+                .addEventListener("click", () => {
+                    const text =
+                        document.getElementById("clientLinkText").textContent;
+                    navigator.clipboard
+                        .writeText(text)
+                        .then(() => toast("LINK_COPIED // CLIPBOARD"));
+                });
+
+            // ── Add agent form ─────────────────────────────────────────────────
+            document
+                .getElementById("addAgentBtn")
+                .addEventListener("click", addAgentForm);
+
+            function addAgentForm() {
+                agentCount++;
+                const uid = `agent_${agentCount}`;
+                const div = document.createElement("div");
+                div.className = "user-form";
+                div.dataset.uid = uid;
+                div.innerHTML = `
+                <div class="form-agent-title">
+                  <span>&gt; AGENT_${String(agentCount).padStart(3, "0")}</span>
+                  <button class="btn btn-red" style="font-size:0.6rem;padding:4px 10px;"
+                    onclick="this.closest('.user-form').remove()">✕ REMOVE</button>
                 </div>
-              </div>
-              <pre id="logContent" style="flex:1;overflow:auto;padding:16px;color:#777;font-family:'Share Tech Mono',monospace;font-size:0.75rem;line-height:1.4;margin:0;white-space:pre-wrap;word-break:break-all;"></pre>
-            </div>`;
-          document.body.appendChild(modal);
-          document.getElementById('closeLogModal').addEventListener('click', () => modal.remove());
-          modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
-        }
-        document.getElementById('logContent').textContent = logContent;
-        modal.style.display = 'flex';
-      }
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label>Agent ID</label>
+                    <input type="text" name="user_id" value="${uid}" />
+                  </div>
+                  <div class="form-group">
+                    <label>Visa Portal Username</label>
+                    <input type="text" name="username" placeholder="email@example.com" />
+                  </div>
+                  <div class="form-group">
+                    <label>Visa Portal Password</label>
+                    <input type="password" name="password" />
+                  </div>
+                  <div class="form-group">
+                    <label>Appointment ID</label>
+                    <input type="text" name="appointment_id" placeholder="12345678" />
+                  </div>
+                  <div class="form-group full">
+                    <label>Appointment URL</label>
+                    <input type="text" name="appointment_url"
+                      placeholder="https://ais.usvisa-info.com/en-ca/niv/schedule/{}/appointment" />
+                  </div>
+                  <div class="form-group full">
+                    <label>Notification Email</label>
+                    <input type="email" name="notification_email" placeholder="client@example.com" />
+                  </div>
+                  <div class="form-group full">
+                    <label>Telegram Chat ID (optional)</label>
+                    <input type="text" name="telegram_chat_id" placeholder="123456789" />
+                  </div>
+                  <div class="form-group">
+                    <label>Browser Sessions</label>
+                    <input type="number" name="browsers" value="1" min="1" max="20" />
+                  </div>
+                  <div class="form-group">
+                    <label>Check Cycles</label>
+                    <input type="number" name="check" value="12" min="1" />
+                  </div>
+                  <div class="form-group full">
+                    <div class="checkbox-row">
+                      <input type="checkbox" name="reschedule" id="reschedule_${agentCount}" />
+                      <label for="reschedule_${agentCount}">AUTO-RESCHEDULE</label>
+                      <span class="warn">⚠ RISKY — WILL BOOK WITHOUT CONFIRMATION</span>
+                    </div>
+                    <div class="checkbox-row">
+                      <input type="checkbox" name="send_telegram" id="telegram_${agentCount}" />
+                      <label for="telegram_${agentCount}">TELEGRAM NOTIFICATIONS</label>
+                    </div>
+                  </div>
+                </div>`;
+                document.getElementById("userForms").appendChild(div);
+            }
 
-      document.getElementById('copyLinkBtn').addEventListener('click', () => {
-        const text = document.getElementById('clientLinkText').textContent;
-        navigator.clipboard.writeText(text).then(() => toast('LINK_COPIED // CLIPBOARD'));
-      });
+            // ── Execute all agents ─────────────────────────────────────────────
+            document
+                .getElementById("executeAllBtn")
+                .addEventListener("click", function () {
+                    const btn = this;
+                    const forms = document.querySelectorAll(".user-form");
+                    if (forms.length === 0) {
+                        toast("NO AGENTS CONFIGURED", true);
+                        return;
+                    }
 
-      // ── Add agent form ─────────────────────────────────────────────────
-      document.getElementById('addAgentBtn').addEventListener('click', addAgentForm);
+                    btn.disabled = true;
+                    btn.classList.add("loading");
+                    btn.innerHTML = '<span class="spinner"></span>LAUNCHING...';
 
-      function addAgentForm() {
-        agentCount++;
-        const uid = `agent_${agentCount}`;
-        const div = document.createElement('div');
-        div.className = 'user-form';
-        div.dataset.uid = uid;
-        div.innerHTML = `
-          <div class="form-agent-title">
-            <span>&gt; AGENT_${String(agentCount).padStart(3,'0')}</span>
-            <button class="btn btn-red" style="font-size:0.6rem;padding:4px 10px;"
-              onclick="this.closest('.user-form').remove()">✕ REMOVE</button>
-          </div>
-          <div class="form-grid">
-            <div class="form-group">
-              <label>Agent ID</label>
-              <input type="text" name="user_id" value="${uid}" />
-            </div>
-            <div class="form-group">
-              <label>Visa Portal Username</label>
-              <input type="text" name="username" placeholder="email@example.com" />
-            </div>
-            <div class="form-group">
-              <label>Visa Portal Password</label>
-              <input type="password" name="password" />
-            </div>
-            <div class="form-group">
-              <label>Appointment ID</label>
-              <input type="text" name="appointment_id" placeholder="12345678" />
-            </div>
-            <div class="form-group full">
-              <label>Appointment URL</label>
-              <input type="text" name="appointment_url"
-                placeholder="https://ais.usvisa-info.com/en-ca/niv/schedule/{}/appointment" />
-            </div>
-            <div class="form-group full">
-              <label>Notification Email</label>
-              <input type="email" name="notification_email" placeholder="client@example.com" />
-            </div>
-            <div class="form-group full">
-              <label>Telegram Chat ID (optional)</label>
-              <input type="text" name="telegram_chat_id" placeholder="123456789" />
-            </div>
-            <div class="form-group full">
-              <label>Telegram Chat ID (optional)</label>
-              <input type="text" name="telegram_chat_id" placeholder="123456789" />
-            </div>
-            <div class="form-group">
-              <label>Browser Sessions</label>
-              <input type="number" name="browsers" value="1" min="1" max="20" />
-            </div>
-            <div class="form-group">
-              <label>Check Cycles</label>
-              <input type="number" name="check" value="12" min="1" />
-            </div>
-            <div class="form-group full">
-              <div class="checkbox-row">
-                <input type="checkbox" name="reschedule" id="reschedule_${agentCount}" />
-                <label for="reschedule_${agentCount}">AUTO-RESCHEDULE</label>
-                <span class="warn">⚠ RISKY — WILL BOOK WITHOUT CONFIRMATION</span>
-              </div>
-              <div class="checkbox-row">
-                <input type="checkbox" name="send_telegram" id="telegram_${agentCount}" />
-                <label for="telegram_${agentCount}">TELEGRAM NOTIFICATIONS</label>
-              </div>
-              <div class="checkbox-row">
-                <input type="checkbox" name="send_telegram" id="telegram_${agentCount}" />
-                <label for="telegram_${agentCount}">TELEGRAM NOTIFICATIONS</label>
-              </div>
-            </div>
-          </div>`;
-        document.getElementById('userForms').appendChild(div);
-      }
+                    const usersData = {};
+                    forms.forEach((form) => {
+                        const uid =
+                            form
+                                .querySelector('[name="user_id"]')
+                                .value.trim() || form.dataset.uid;
+                        usersData[uid] = {
+                            username: form
+                                .querySelector('[name="username"]')
+                                .value.trim(),
+                            password:
+                                form.querySelector('[name="password"]').value,
+                            appointment_id: form
+                                .querySelector('[name="appointment_id"]')
+                                .value.trim(),
+                            appointment_url: form
+                                .querySelector('[name="appointment_url"]')
+                                .value.trim(),
+                            notification_email: form
+                                .querySelector('[name="notification_email"]')
+                                .value.trim(),
+                            telegram_chat_id: form
+                                .querySelector('[name="telegram_chat_id"]')
+                                .value.trim(),
+                            browsers:
+                                parseInt(
+                                    form.querySelector('[name="browsers"]')
+                                        .value,
+                                ) || 1,
+                            check:
+                                parseInt(
+                                    form.querySelector('[name="check"]').value,
+                                ) || 12,
+                            reschedule: form.querySelector(
+                                '[name="reschedule"]',
+                            ).checked,
+                            send_telegram: form.querySelector(
+                                '[name="send_telegram"]',
+                            ).checked,
+                        };
+                    });
 
-      // ── Execute all agents ─────────────────────────────────────────────
-      document.getElementById('executeAllBtn').addEventListener('click', function() {
-        const btn = this;
-      document.getElementById('executeAllBtn').addEventListener('click', function() {
-        const btn = this;
-        const forms = document.querySelectorAll('.user-form');
-        if (forms.length === 0) { toast('NO AGENTS CONFIGURED', true); return; }
+                    const fd = new FormData();
+                    fd.append("users_data", JSON.stringify(usersData));
 
-        btn.disabled = true;
-        btn.classList.add('loading');
-        btn.innerHTML = '<span class="spinner"></span>LAUNCHING...';
+                    fetch("/start_multi_automation", {
+                        method: "POST",
+                        body: fd,
+                    })
+                        .then((r) => {
+                            if (!r.ok) {
+                                toast("SESSION_EXPIRED // RELOAD PAGE", true);
+                                return null;
+                            }
+                            return r.json();
+                        })
+                        .then((d) => {
+                            if (d) {
+                                toast(d.status);
+                                setTimeout(pollStatus, 1000);
+                            }
+                        })
+                        .catch(() => {
+                            toast("CONNECTION_ERROR", true);
+                        })
+                        .finally(() => {
+                            btn.disabled = false;
+                            btn.classList.remove("loading");
+                            btn.innerHTML = "▶ EXECUTE ALL";
+                        });
+                });
 
-        btn.disabled = true;
-        btn.classList.add('loading');
-        btn.innerHTML = '<span class="spinner"></span>LAUNCHING...';
+            // ── Settings Modal ─────────────────────────────────────────────────
+            document
+                .getElementById("settingsBtn")
+                .addEventListener("click", () => {
+                    fetch("/get_settings")
+                        .then((r) => r.json())
+                        .then((d) => {
+                            document.getElementById("defaultNotifEmail").value =
+                                d.default_notif_email || "";
+                            document.getElementById(
+                                "defaultTelegramChatId",
+                            ).value = d.default_telegram_chat_id || "";
+                            document.getElementById(
+                                "enableEmailNotif",
+                            ).checked = d.email_enabled !== false;
+                            document.getElementById(
+                                "enableTelegramNotif",
+                            ).checked = d.telegram_enabled !== false;
+                            document.getElementById("enableSmsNotif").checked =
+                                d.sms_enabled !== false;
+                            document
+                                .getElementById("settingsModal")
+                                .classList.add("visible");
+                        })
+                        .catch(() =>
+                            document
+                                .getElementById("settingsModal")
+                                .classList.add("visible"),
+                        );
+                });
 
-        const usersData = {};
-        forms.forEach(form => {
-          const uid = form.querySelector('[name="user_id"]').value.trim() || form.dataset.uid;
-          usersData[uid] = {
-            username:           form.querySelector('[name="username"]').value.trim(),
-            password:           form.querySelector('[name="password"]').value,
-            appointment_id:     form.querySelector('[name="appointment_id"]').value.trim(),
-            appointment_url:    form.querySelector('[name="appointment_url"]').value.trim(),
-            notification_email: form.querySelector('[name="notification_email"]').value.trim(),
-            telegram_chat_id:  form.querySelector('[name="telegram_chat_id"]').value.trim(),
-            telegram_chat_id:  form.querySelector('[name="telegram_chat_id"]').value.trim(),
-            browsers:           parseInt(form.querySelector('[name="browsers"]').value) || 1,
-            check:              parseInt(form.querySelector('[name="check"]').value) || 12,
-            reschedule:         form.querySelector('[name="reschedule"]').checked,
-            send_telegram:      form.querySelector('[name="send_telegram"]').checked,
-            send_telegram:      form.querySelector('[name="send_telegram"]').checked,
-          };
-        });
+            document
+                .getElementById("closeSettingsModal")
+                .addEventListener("click", () => {
+                    document
+                        .getElementById("settingsModal")
+                        .classList.remove("visible");
+                });
 
-        const fd = new FormData();
-        fd.append('users_data', JSON.stringify(usersData));
+            document.querySelectorAll(".modal-tab").forEach((tab) => {
+                tab.addEventListener("click", () => {
+                    document
+                        .querySelectorAll(".modal-tab")
+                        .forEach((t) => t.classList.remove("active"));
+                    document
+                        .querySelectorAll(".tab-content")
+                        .forEach((c) => c.classList.remove("active"));
+                    tab.classList.add("active");
+                    document
+                        .getElementById("tab-" + tab.dataset.tab)
+                        .classList.add("active");
+                });
+            });
 
-        fetch('/start_multi_automation', { method: 'POST', body: fd })
-          .then(r => {
-            if (!r.ok) { toast('SESSION_EXPIRED // RELOAD PAGE', true); return null; }
-            return r.json();
-          })
-          .then(d => {
-            if (d) { toast(d.status); setTimeout(pollStatus, 1000); }
-          })
-          .catch(() => { toast('CONNECTION_ERROR', true); })
-          .finally(() => { btn.disabled = false; btn.classList.remove('loading'); btn.innerHTML = '▶ EXECUTE ALL'; });
-      });
+            // Save settings
+            document
+                .getElementById("saveSettingsBtn")
+                .addEventListener("click", function () {
+                    const btn = this;
+                    btn.classList.add("loading");
+                    btn.innerHTML = '<span class="spinner"></span>Saving...';
 
-      // ── Settings Modal ─────────────────────────────────────────────────
-      document.getElementById('settingsBtn').addEventListener('click', () => {
-        fetch('/get_settings')
-          .then(r => r.json())
-          .then(d => {
-            document.getElementById('defaultNotifEmail').value = d.default_notif_email || '';
-            document.getElementById('defaultTelegramChatId').value = d.default_telegram_chat_id || '';
-            document.getElementById('enableEmailNotif').checked = d.email_enabled !== false;
-            document.getElementById('enableTelegramNotif').checked = d.telegram_enabled !== false;
-            document.getElementById('enableSmsNotif').checked = d.sms_enabled !== false;
-            document.getElementById('settingsModal').classList.add('visible');
-          })
-          .catch(() => document.getElementById('settingsModal').classList.add('visible'));
-      });
+                    const fd = new FormData();
+                    fd.append(
+                        "default_notif_email",
+                        document.getElementById("defaultNotifEmail").value,
+                    );
+                    fd.append(
+                        "default_telegram_chat_id",
+                        document.getElementById("defaultTelegramChatId").value,
+                    );
+                    fd.append(
+                        "email_enabled",
+                        document.getElementById("enableEmailNotif").checked,
+                    );
+                    fd.append(
+                        "telegram_enabled",
+                        document.getElementById("enableTelegramNotif").checked,
+                    );
+                    fd.append(
+                        "sms_enabled",
+                        document.getElementById("enableSmsNotif").checked,
+                    );
 
-      document.getElementById('closeSettingsModal').addEventListener('click', () => {
-        document.getElementById('settingsModal').classList.remove('visible');
-      });
+                    fetch("/save_settings", { method: "POST", body: fd })
+                        .then((r) => r.json())
+                        .then((d) => {
+                            toast("SETTINGS_SAVED");
+                            btn.classList.remove("loading");
+                            btn.innerHTML = "◼ SAVE SETTINGS";
+                        })
+                        .catch(() => {
+                            toast("SAVE_FAILED", true);
+                            btn.classList.remove("loading");
+                            btn.innerHTML = "◼ SAVE SETTINGS";
+                        });
+                });
 
-      document.querySelectorAll('.modal-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-          document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));
-          document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-          tab.classList.add('active');
-          document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
-        });
-      });
+            // Test email
+            document
+                .getElementById("testEmailBtn")
+                .addEventListener("click", function () {
+                    const btn = this;
+                    btn.classList.add("loading");
+                    btn.innerHTML = '<span class="spinner"></span>SENDING...';
 
-      // Save settings
-      document.getElementById('saveSettingsBtn').addEventListener('click', function() {
-        const btn = this;
-        btn.classList.add('loading');
-        btn.innerHTML = '<span class="spinner"></span>Saving...';
+                    const fd = new FormData();
+                    fd.append(
+                        "email",
+                        document.getElementById("testEmailAddress").value,
+                    );
 
-        const fd = new FormData();
-        fd.append('default_notif_email', document.getElementById('defaultNotifEmail').value);
-        fd.append('default_telegram_chat_id', document.getElementById('defaultTelegramChatId').value);
-        fd.append('email_enabled', document.getElementById('enableEmailNotif').checked);
-        fd.append('telegram_enabled', document.getElementById('enableTelegramNotif').checked);
-        fd.append('sms_enabled', document.getElementById('enableSmsNotif').checked);
+                    fetch("/test_email", { method: "POST", body: fd })
+                        .then((r) => r.json())
+                        .then((d) => {
+                            if (d.status === "ok") toast("TEST_EMAIL_SENT");
+                            else toast(d.error || "EMAIL_FAILED", true);
+                            btn.classList.remove("loading");
+                            btn.innerHTML = "✉ TEST EMAIL";
+                        })
+                        .catch(() => {
+                            toast("EMAIL_FAILED", true);
+                            btn.classList.remove("loading");
+                            btn.innerHTML = "✉ TEST EMAIL";
+                        });
+                });
 
-        fetch('/save_settings', { method: 'POST', body: fd })
-          .then(r => r.json())
-          .then(d => { toast('SETTINGS_SAVED'); btn.classList.remove('loading'); btn.innerHTML = '◼ SAVE SETTINGS'; })
-          .catch(() => { toast('SAVE_FAILED', true); btn.classList.remove('loading'); btn.innerHTML = '◼ SAVE SETTINGS'; });
-      });
+            // Test telegram
+            document
+                .getElementById("testTelegramBtn")
+                .addEventListener("click", function () {
+                    const btn = this;
+                    btn.classList.add("loading");
+                    btn.innerHTML = '<span class="spinner"></span>SENDING...';
 
-      // Test email
-      document.getElementById('testEmailBtn').addEventListener('click', function() {
-        const btn = this;
-        btn.classList.add('loading');
-        btn.innerHTML = '<span class="spinner"></span>SENDING...';
+                    const fd = new FormData();
+                    fd.append(
+                        "chat_id",
+                        document.getElementById("testTelegramChatId").value,
+                    );
 
-        const fd = new FormData();
-        fd.append('email', document.getElementById('testEmailAddress').value);
+                    fetch("/test_telegram", { method: "POST", body: fd })
+                        .then((r) => r.json())
+                        .then((d) => {
+                            if (d.status === "ok") toast("TEST_MESSAGE_SENT");
+                            else toast(d.error || "TELEGRAM_FAILED", true);
+                            btn.classList.remove("loading");
+                            btn.innerHTML = "✈ TEST TELEGRAM";
+                        })
+                        .catch(() => {
+                            toast("TELEGRAM_FAILED", true);
+                            btn.classList.remove("loading");
+                            btn.innerHTML = "✈ TEST TELEGRAM";
+                        });
+                });
 
-        fetch('/test_email', { method: 'POST', body: fd })
-          .then(r => r.json())
-          .then(d => {
-            if (d.status === 'ok') toast('TEST_EMAIL_SENT');
-            else toast(d.error || 'EMAIL_FAILED', true);
-            btn.classList.remove('loading');
-            btn.innerHTML = '✉ TEST EMAIL';
-          })
-          .catch(() => { toast('EMAIL_FAILED', true); btn.classList.remove('loading'); btn.innerHTML = '✉ TEST EMAIL'; });
-      });
+            // Test SMS
+            document
+                .getElementById("testSmsBtn")
+                .addEventListener("click", function () {
+                    const btn = this;
+                    btn.classList.add("loading");
+                    btn.innerHTML = '<span class="spinner"></span>SENDING...';
 
-      // Test telegram
-      document.getElementById('testTelegramBtn').addEventListener('click', function() {
-        const btn = this;
-        btn.classList.add('loading');
-        btn.innerHTML = '<span class="spinner"></span>SENDING...';
+                    const fd = new FormData();
+                    fd.append(
+                        "phone",
+                        document.getElementById("testSmsPhone").value,
+                    );
 
-        const fd = new FormData();
-        fd.append('chat_id', document.getElementById('testTelegramChatId').value);
-
-        fetch('/test_telegram', { method: 'POST', body: fd })
-          .then(r => r.json())
-          .then(d => {
-            if (d.status === 'ok') toast('TEST_MESSAGE_SENT');
-            else toast(d.error || 'TELEGRAM_FAILED', true);
-            btn.classList.remove('loading');
-            btn.innerHTML = '✈ TEST TELEGRAM';
-          })
-          .catch(() => { toast('TELEGRAM_FAILED', true); btn.classList.remove('loading'); btn.innerHTML = '✈ TEST TELEGRAM'; });
-      });
-
-      // Test SMS
-      document.getElementById('testSmsBtn').addEventListener('click', function() {
-        const btn = this;
-        btn.classList.add('loading');
-        btn.innerHTML = '<span class="spinner"></span>SENDING...';
-
-        const fd = new FormData();
-        fd.append('phone', document.getElementById('testSmsPhone').value);
-
-        fetch('/test_sms', { method: 'POST', body: fd })
-          .then(r => r.json())
-          .then(d => {
-            if (d.status === 'ok') toast('SMS_SENT');
-            else toast(d.error || 'SMS_FAILED', true);
-            btn.classList.remove('loading');
-            btn.innerHTML = '📱 TEST SMS';
-          })
-          .catch(() => { toast('SMS_FAILED', true); btn.classList.remove('loading'); btn.innerHTML = '📱 TEST SMS'; });
-      });
-    </script>
-  </body>
+                    fetch("/test_sms", { method: "POST", body: fd })
+                        .then((r) => r.json())
+                        .then((d) => {
+                            if (d.status === "ok") toast("SMS_SENT");
+                            else toast(d.error || "SMS_FAILED", true);
+                            btn.classList.remove("loading");
+                            btn.innerHTML = "📱 TEST SMS";
+                        })
+                        .catch(() => {
+                            toast("SMS_FAILED", true);
+                            btn.classList.remove("loading");
+                            btn.innerHTML = "📱 TEST SMS";
+                        });
+                });
+        </script>
+    </body>
 </html>
