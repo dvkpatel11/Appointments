@@ -4,6 +4,7 @@ import time
 import os
 
 from datetime import datetime
+from datetime import datetime
 from pathlib import Path
 from dateutil import parser
 from playwright.sync_api import TimeoutError, sync_playwright
@@ -20,18 +21,22 @@ def setup_logger(name, log_file, level=logging.INFO):
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
 
+
     file_handler = RotatingFileHandler(
         log_file, maxBytes=5 * 1024 * 1024, backupCount=3
     )
     file_handler.setFormatter(formatter)
 
+
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(formatter)
+
 
     logger = logging.getLogger(name)
     logger.setLevel(level)
     logger.addHandler(file_handler)
     logger.addHandler(console_handler)
+
 
     return logger
 
@@ -71,6 +76,7 @@ class VisaAutomation:
         notification_email=None,
         browsers=1,
         check=12,
+        check=12,
         reschedule=False,
         telegram_chat_id=None,
         send_telegram=False,
@@ -94,7 +100,10 @@ class VisaAutomation:
         self.last_checked_location = None
         self.action_log = []
         self.current_action = ""
+        self.action_log = []
+        self.current_action = ""
         self.appointments_page_screenshot = None
+        self.user_id = user_id
         self.user_id = user_id
 
         self.username = username
@@ -155,6 +164,7 @@ class VisaAutomation:
     def create_new_context(self):
         user_agent = random.choice(self.user_agents)
         self._log(f"Using User-Agent: {user_agent}", "debug")
+        self._log(f"Using User-Agent: {user_agent}", "debug")
         self.context = self.browser.new_context(user_agent=user_agent)
         self.page = self.context.new_page()
 
@@ -175,6 +185,8 @@ class VisaAutomation:
         try:
             self._log("Attempting to log in")
             self.current_action = "LOGIN"
+            self._log("Attempting to log in")
+            self.current_action = "LOGIN"
             self.go_to_page(self.login_url)
             self.capture_debug_screenshot("login_page")
 
@@ -191,17 +203,23 @@ class VisaAutomation:
             if press_ok:
                 self.page.get_by_label("OK").click()
                 self._log("Pressed OK button", "debug")
+                self._log("Pressed OK button", "debug")
 
             if continue_login:
                 self.page.get_by_role(
                     "menuitem", name=self.s["continue_button"]
                 ).click()
                 self._log("Clicked continue button", "debug")
+                self._log("Clicked continue button", "debug")
+
+            self._log("Login successful")
+            self.current_action = "IDLE"
 
             self._log("Login successful")
             self.current_action = "IDLE"
 
         except Exception as e:
+            self._log(f"Login failed: {str(e)}", "error")
             self._log(f"Login failed: {str(e)}", "error")
             self.capture_debug_screenshot("login_error")
             time.sleep(60)
@@ -250,6 +268,7 @@ class VisaAutomation:
             self.current_action = "CHECKING"
         except Exception as e:
             self._log(f"Failed to navigate to appointments: {str(e)}", "error")
+            self._log(f"Failed to navigate to appointments: {str(e)}", "error")
             self.capture_debug_screenshot("navigation_error")
             time.sleep(120)
             self.navigate_to_appointments(appointment_id)
@@ -278,15 +297,19 @@ class VisaAutomation:
             except Exception:
                 self._log("Exception in check_availability()", "error")
                 self._log("No match found, continuing checks...", "debug")
+                self._log("Exception in check_availability()", "error")
+                self._log("No match found, continuing checks...", "debug")
                 return False, True
 
             if calendar_date:
+                self._log(
                 self._log(
                     f"Date found: {calendar_date.strftime('%Y-%m-%d')}. Exiting..."
                 )
                 self.new_date = calendar_date
                 return True, False
 
+        self._log("No suitable date found", "debug")
         self._log("No suitable date found", "debug")
         return False, True
 
@@ -313,8 +336,10 @@ class VisaAutomation:
                 formatted_appointment_date, "%Y-%m-%d %H:%M:%S"
             )
             self._log(f"Current appointment details: {appointment_datetime}")
+            self._log(f"Current appointment details: {appointment_datetime}")
             return appointment_datetime
         else:
+            self._log("No appointment date information found.", "warning")
             self._log("No appointment date information found.", "warning")
             return None
 
@@ -347,7 +372,9 @@ class VisaAutomation:
 
         for location in self.visa_locations:
             self.last_checked_location = location
+            self.last_checked_location = location
             self.page.route(re.compile(self.network_request_regex), self.handle_request)
+            self._log(f"Checking availability at {location}")
             self._log(f"Checking availability at {location}")
             self.select_location(location)
 
@@ -377,6 +404,7 @@ class VisaAutomation:
                             f"Date available at {location} on {formatted_found_date}"
                         )
                         self._log(message)
+                        self._log(message)
                         self.capture_debug_screenshot(f"date_found_{location}")
 
                         if (
@@ -393,6 +421,9 @@ class VisaAutomation:
                             if self.new_date and self.current_date:
                                 if self.new_date < self.current_date:
                                     self.reschedule_appointment(location)
+                            if self.new_date and self.current_date:
+                                if self.new_date < self.current_date:
+                                    self.reschedule_appointment(location)
 
                         break
 
@@ -403,9 +434,11 @@ class VisaAutomation:
 
                 self.page.keyboard.press("Escape")
                 self._log("Closed calendar dropdown", "debug")
+                self._log("Closed calendar dropdown", "debug")
 
             else:
                 availability_list.append(False)
+                self._log(f"No dates available at {location}")
                 self._log(f"No dates available at {location}")
 
         return any(availability_list)
@@ -495,6 +528,8 @@ class VisaAutomation:
         try:
             self.current_action = "RESCHEDULING"
             self._log(f"Attempting to reschedule appointment at {location}")
+            self.current_action = "RESCHEDULING"
+            self._log(f"Attempting to reschedule appointment at {location}")
             self.capture_debug_screenshot("before_reschedule")
 
             self.page.query_selector(self.s["match_date"]).click()
@@ -508,13 +543,16 @@ class VisaAutomation:
 
             self.page.get_by_text("Reschedule").last.click()
             self._log("Clicked Reschedule button")
+            self._log("Clicked Reschedule button")
 
             self.page.get_by_text("Confirm").last.click()
+            self._log("Clicked Confirm button")
             self._log("Clicked Confirm button")
 
             time.sleep(5)
 
             self.current_date = self.get_appointment_date()
+            self._log(f"New appointment date: {self.current_date}")
             self._log(f"New appointment date: {self.current_date}")
 
             location_address = self.visa_locations.get(location, "Unknown Location")
@@ -523,14 +561,19 @@ class VisaAutomation:
             self._send_notifications(message)
             self.capture_debug_screenshot("reschedule_complete")
             self.current_action = "IDLE"
+            self.current_action = "IDLE"
 
+        except Exception:
         except Exception:
             message = f"Error while booking new date for {location}"
             self._log(message, "error")
+            self._log(message, "error")
             self.capture_debug_screenshot("reschedule_error")
+            self.current_action = "IDLE"
             self.current_action = "IDLE"
 
     def handle_soft_ban(self):
+        self._log("Sleeping for 10 mins due to soft ban")
         self._log("Sleeping for 10 mins due to soft ban")
         time.sleep(600)
         self.poll_count = 0
@@ -540,13 +583,19 @@ class VisaAutomation:
         max_sleep = min_sleep + config.MAX_SLEEP_BEFORE_RETRY
         sleep_time = random.randint(min_sleep, max_sleep)
         self._log(f"Sleeping for {sleep_time} seconds before next check")
+        self._log(f"Sleeping for {sleep_time} seconds before next check")
         time.sleep(sleep_time)
 
     def handle_error(self, error):
         self._log(f"Error occurred while checking: {error}", "error")
         self._log("Sleeping for 5 mins due to error")
+        self._log(f"Error occurred while checking: {error}", "error")
+        self._log("Sleeping for 5 mins due to error")
         time.sleep(300)
 
+    def stop(self):
+        self.is_running = False
+        self._log("Stop requested")
     def stop(self):
         self.is_running = False
         self._log("Stop requested")
@@ -562,6 +611,7 @@ if __name__ == "__main__":
         password=password,
         appointment_id=appointment_id,
         appointment_url=appointment_url,
+        browsers=1,
         browsers=1,
         check=check,
         reschedule=reschedule,

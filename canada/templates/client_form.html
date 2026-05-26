@@ -289,6 +289,13 @@
       .hint span {
         color: #888;
         font-size: 0.58rem;
+        color: #666;
+        font-size: 0.62rem;
+        margin-top: 4px;
+      }
+      .hint span {
+        color: #888;
+        font-size: 0.58rem;
       }
 
       .reschedule-box {
@@ -361,6 +368,10 @@
         color: var(--green);
         border-color: var(--green);
         box-shadow: 0 0 16px rgba(0, 255, 65, 0.3);
+        background: rgba(0, 255, 65, 0.15);
+        color: var(--green);
+        border-color: var(--green);
+        box-shadow: 0 0 16px rgba(0, 255, 65, 0.3);
       }
       .btn-submit:hover::before {
         transform: scaleX(1);
@@ -368,6 +379,26 @@
       .btn-submit:disabled {
         opacity: 0.4;
         cursor: not-allowed;
+      }
+      .btn-submit.loading {
+        pointer-events: none;
+        opacity: 0.7;
+      }
+      .btn-submit.loading .spinner {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border: 2px solid currentColor;
+        border-top-color: transparent;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        vertical-align: middle;
+        margin-right: 6px;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
       }
       .btn-submit.loading {
         pointer-events: none;
@@ -785,6 +816,8 @@
           Submit your credentials below to initialize automated monitoring of your US visa appointment slot.<br /><br />
           We'll scan all consulate locations and notify you the moment an earlier date becomes available. You can enable
           notifications after approval.
+          We'll scan all consulate locations and notify you the moment an earlier date becomes available. You can enable
+          notifications after approval.
           <span>live monitoring status</span> after submission.
         </p>
       </div>
@@ -833,6 +866,7 @@
 
             <p class="form-section-label">&gt; PERSONAL DETAILS</p>
             <div class="form-grid">
+              <div class="form-group full">
               <div class="form-group full">
                 <label>Your Name</label>
                 <input type="text" name="name" placeholder="Jane Smith" required />
@@ -1147,6 +1181,7 @@
         <p style="margin-top: 20px; font-size: 0.68rem; color: var(--dimtext); letter-spacing: 1px; line-height: 1.8">
           Bookmark this page — you can return at any time to check your monitoring status.<br />
           All Canadian consulate locations are being scanned. Notification will be sent when an earlier date is found.
+          All Canadian consulate locations are being scanned. Notification will be sent when an earlier date is found.
         </p>
       </div>
     </div>
@@ -1199,6 +1234,7 @@
         if (!validateUrl()) return;
 
         const required = ["name", "username", "password", "appointment_url"];
+        const required = ["name", "username", "password", "appointment_url"];
         for (const field of required) {
           if (!form[field].value.trim()) {
             showValidationError(`Field "${field.toUpperCase().replace("_", " ")}" is required.`);
@@ -1206,6 +1242,8 @@
           }
         }
 
+        submitBtn.classList.add("loading");
+        submitBtn.innerHTML = '<span class="spinner"></span>TRANSMITTING...';
         submitBtn.classList.add("loading");
         submitBtn.innerHTML = '<span class="spinner"></span>TRANSMITTING...';
         document.getElementById("urlValidationError").style.display = "none";
@@ -1218,10 +1256,13 @@
           .then((data) => {
             if (data.status === "pending_approval") {
               showPendingPanel();
+              showPendingPanel();
             } else if (data.status === "rejected") {
               showRejectedPanel(data.reason || "Your request was not approved.");
             } else {
               showValidationError(data.message || "Submission failed — please try again.");
+              submitBtn.classList.remove("loading");
+              submitBtn.innerHTML = "▶ INITIATE";
               submitBtn.classList.remove("loading");
               submitBtn.innerHTML = "▶ INITIATE";
             }
@@ -1230,11 +1271,14 @@
             showValidationError("Connection error — could not reach the server.");
             submitBtn.classList.remove("loading");
             submitBtn.innerHTML = "▶ INITIATE";
+            submitBtn.classList.remove("loading");
+            submitBtn.innerHTML = "▶ INITIATE";
           });
       });
 
       // ── State panels ───────────────────────────────────────────────────────
 
+      function showPendingPanel() {
       function showPendingPanel() {
         document.getElementById("formSection").style.display = "none";
         document.getElementById("pendingPanel").style.display = "block";
@@ -1255,6 +1299,7 @@
         }
       }
 
+      function showMonitorPanel() {
       function showMonitorPanel() {
         document.getElementById("formSection").style.display = "none";
         document.getElementById("pendingPanel").style.display = "none";
@@ -1460,6 +1505,7 @@
         if (d.status === "ok") {
           // Approved and automation is running — switch to monitor view
           showMonitorPanel();
+          showMonitorPanel();
           updateMonitorUI(d);
           // Continue polling for live updates
         }
@@ -1529,6 +1575,7 @@
             if (d.status === "ready") {
               const img = document.getElementById("screenshotImg");
               img.src = d.image_url;
+              img.src = d.image_url;
               img.style.display = "block";
               document.getElementById("screenshotSpinner").style.display = "none";
             } else {
@@ -1556,9 +1603,11 @@
             if (d.status === "issued") return; // not yet submitted — show form
             if (d.status === "pending_approval") {
               showPendingPanel();
+              showPendingPanel();
             } else if (d.status === "rejected") {
               showRejectedPanel(d.reason || "Your request was not approved.");
             } else if (d.status === "ok" || d.status === "approved") {
+              showMonitorPanel();
               showMonitorPanel();
               if (d.status === "ok") updateMonitorUI(d);
               startStatusPolling();

@@ -50,57 +50,57 @@ substitutions:
 
 steps:
   # ── Step 1: Build Docker image ──────────────────────────────────────────────
-  - name: 'gcr.io/cloud-builders/docker'
-    id: 'build'
+  - name: "gcr.io/cloud-builders/docker"
+    id: "build"
     args:
-      - 'build'
-      - '--tag=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/visa-ctrl:$COMMIT_SHA'
-      - '--tag=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/visa-ctrl:latest'
-      - '--cache-from=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/visa-ctrl:latest'
-      - '.'
+      - "build"
+      - "--tag=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/visa-ctrl:$COMMIT_SHA"
+      - "--tag=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/visa-ctrl:latest"
+      - "--cache-from=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/visa-ctrl:latest"
+      - "."
 
   # ── Step 2: Push both tags ──────────────────────────────────────────────────
-  - name: 'gcr.io/cloud-builders/docker'
-    id: 'push'
-    waitFor: ['build']
+  - name: "gcr.io/cloud-builders/docker"
+    id: "push"
+    waitFor: ["build"]
     args:
-      - 'push'
-      - '--all-tags'
-      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/visa-ctrl'
+      - "push"
+      - "--all-tags"
+      - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/visa-ctrl"
 
   # ── Step 3: Deploy to Cloud Run ─────────────────────────────────────────────
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    id: 'deploy'
-    waitFor: ['push']
-    entrypoint: 'gcloud'
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    id: "deploy"
+    waitFor: ["push"]
+    entrypoint: "gcloud"
     args:
-      - 'run'
-      - 'deploy'
-      - '${_SERVICE}'
-      - '--image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/visa-ctrl:$COMMIT_SHA'
-      - '--region=${_REGION}'
-      - '--platform=managed'
-      - '--allow-unauthenticated'
-      - '--memory=2Gi'
-      - '--cpu=2'
-      - '--min-instances=0'
-      - '--max-instances=10'
-      - '--timeout=3600'
-      - '--concurrency=5'
+      - "run"
+      - "deploy"
+      - "${_SERVICE}"
+      - "--image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/visa-ctrl:$COMMIT_SHA"
+      - "--region=${_REGION}"
+      - "--platform=managed"
+      - "--allow-unauthenticated"
+      - "--memory=2Gi"
+      - "--cpu=2"
+      - "--min-instances=0"
+      - "--max-instances=10"
+      - "--timeout=3600"
+      - "--concurrency=5"
       # ── Inject secrets from Secret Manager ──
       - >-
         --set-secrets=SECRET_KEY=visa-ctrl-secret-key:latest,ADMIN_PASSWORD=visa-ctrl-admin-password:latest,SMTP_USER=visa-ctrl-smtp-user:latest,SMTP_PASSWORD=visa-ctrl-smtp-password:latest,RESEND_API_KEY=visa-ctrl-resend-key:latest,TELEGRAM_BOT_TOKEN=visa-ctrl-telegram-token:latest,TELEGRAM_CHAT_ID=visa-ctrl-telegram-chat:latest,SENTRY_DSN=visa-ctrl-sentry-dsn:latest,TWILIO_ACCOUNT_SID=visa-ctrl-twilio-sid:latest,TWILIO_AUTH_TOKEN=visa-ctrl-twilio-token:latest,TWILIO_FROM_NUMBER=visa-ctrl-twilio-from:latest
       # ── Static env vars ──
-      - '--set-env-vars=SMTP_HOST=smtp.gmail.com,SMTP_PORT=587,FLASK_DEBUG=false'
+      - "--set-env-vars=SMTP_HOST=smtp.gmail.com,SMTP_PORT=587,FLASK_DEBUG=false"
 
 # Images to store in the registry after the build
 images:
-  - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/visa-ctrl:$COMMIT_SHA'
-  - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/visa-ctrl:latest'
+  - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/visa-ctrl:$COMMIT_SHA"
+  - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/visa-ctrl:latest"
 
 # Build options
 options:
   logging: CLOUD_LOGGING_ONLY
-  machineType: 'E2_HIGHCPU_8'
+  machineType: "E2_HIGHCPU_8"
 
-timeout: '1200s'
+timeout: "1200s"
