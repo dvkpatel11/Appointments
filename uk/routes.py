@@ -1,9 +1,11 @@
 from flask import Flask, render_template, request, jsonify
+from threading import Thread
 from main import VisaAutomation
 
 app = Flask(__name__)
 
 visa_automation = None
+automation_thread = None
 
 
 @app.route("/")
@@ -13,40 +15,40 @@ def index():
 
 @app.route("/start_automation", methods=["POST"])
 def start_automation():
-    global visa_automation
-    if visa_automation is None or not visa_automation.is_running:
-        # Get credentials and settings from the form
-        username = request.form.get("username")
-        password = request.form.get("password")
-        appointment_id = request.form.get("appointment_id")
-        appointment_url = request.form.get("appointment_url")
-        token = request.form.get("token")
-        chat_id = request.form.get("chat_id")
-        browsers = int(request.form.get("browsers", 1))
-        check = int(request.form.get("check", 1))
-        reschedule = request.form.get("reschedule") == "true"
-        send_telegram_notification = (
-            request.form.get("send_telegram_notification") == "true"
-        )
-
-        visa_automation = VisaAutomation(
-            username=username,
-            password=password,
-            appointment_id=appointment_id,
-            appointment_url=appointment_url,
-            token=token,
-            chat_id=chat_id,
-            browsers=browsers,
-            check=check,
-            reschedule=reschedule,
-            telegram_noti_enabled=send_telegram_notification,
-        )
-        visa_automation.run()
-        # thread = threading.Thread(target=visa_automation.run)
-        # thread.start()
-        return jsonify({"status": "Automation started"})
-    else:
+    global visa_automation, automation_thread
+    if visa_automation and visa_automation.is_running:
         return jsonify({"status": "Automation already running"})
+
+    username = request.form.get("username")
+    password = request.form.get("password")
+    appointment_id = request.form.get("appointment_id")
+    appointment_url = request.form.get("appointment_url")
+    token = request.form.get("token")
+    chat_id = request.form.get("chat_id")
+    browsers = int(request.form.get("browsers", 1))
+    check = int(request.form.get("check", 1))
+    reschedule = request.form.get("reschedule") == "true"
+    send_telegram_notification = (
+        request.form.get("send_telegram_notification") == "true"
+    )
+    notification_email = request.form.get("notification_email")
+
+    visa_automation = VisaAutomation(
+        username=username,
+        password=password,
+        appointment_id=appointment_id,
+        appointment_url=appointment_url,
+        token=token,
+        chat_id=chat_id,
+        browsers=browsers,
+        check=check,
+        reschedule=reschedule,
+        telegram_noti_enabled=send_telegram_notification,
+        notification_email=notification_email,
+    )
+    automation_thread = Thread(target=visa_automation.run, daemon=True)
+    automation_thread.start()
+    return jsonify({"status": "Automation started"})
 
 
 @app.route("/stop_automation", methods=["POST"])

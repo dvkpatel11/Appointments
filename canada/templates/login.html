@@ -235,10 +235,15 @@
       }
 
       button[type="submit"]:hover {
-        color: #000;
-        box-shadow: 0 0 24px rgba(0,255,65,0.5);
+        background: rgba(0,255,65,0.15);
+        color: var(--green);
+        border-color: var(--green);
+        box-shadow: 0 0 16px rgba(0,255,65,0.3);
       }
       button[type="submit"]:hover::before { transform: scaleX(1); }
+
+      button[type="submit"].loading { pointer-events: none; opacity: 0.7; }
+      button[type="submit"].loading .spinner { display:inline-block;width:12px;height:12px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:6px; }
 
       .footer-text {
         margin-top: 24px;
