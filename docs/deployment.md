@@ -33,6 +33,10 @@ cp .env.example .env
 | `RESEND_API_KEY` | No | Resend API key for alternative email delivery |
 | `TELEGRAM_BOT_TOKEN` | No | Telegram bot token from @BotFather |
 | `TELEGRAM_CHAT_ID` | No | Telegram chat ID for notifications |
+| `SENTRY_DSN` | No | Sentry DSN for error tracking (get at sentry.io) |
+| `TWILIO_ACCOUNT_SID` | No | Twilio account SID for SMS notifications |
+| `TWILIO_AUTH_TOKEN` | No | Twilio auth token |
+| `TWILIO_FROM_NUMBER` | No | Twilio phone number (e.g. +14155552671) |
 | `FLASK_DEBUG` | No | Set to `true` for local development only |
 | `PORT` | No | Port to listen on (default: `8080` for cloud, `5000` local) |
 

@@ -1074,6 +1074,10 @@
               <span class="notif-icon">✈</span>
               <span class="notif-label">TELEGRAM</span>
             </div>
+            <div class="notif-card" id="phoneNotifCard">
+              <span class="notif-icon">📱</span>
+              <span class="notif-label">SMS</span>
+            </div>
           </div>
         </div>
 
@@ -1114,6 +1118,22 @@
               <button class="btn-popup" id="telegramTestBtn">✈ TEST</button>
               <button class="btn-popup primary" id="telegramSaveBtn">SAVE</button>
               <button class="btn-popup" id="telegramCloseBtn">CLOSE</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- SMS Popup -->
+        <div class="notif-card-popup" id="phonePopup">
+          <div class="popup-content">
+            <div class="popup-title">&gt; SMS_NOTIFICATION</div>
+            <div class="popup-field">
+              <label>PHONE NUMBER (with country code)</label>
+              <input type="text" id="popupPhone" placeholder="+14155552671" />
+            </div>
+            <div class="popup-actions">
+              <button class="btn-popup" id="phoneTestBtn">📱 TEST</button>
+              <button class="btn-popup primary" id="phoneSaveBtn">SAVE</button>
+              <button class="btn-popup" id="phoneCloseBtn">CLOSE</button>
             </div>
           </div>
         </div>
@@ -1365,6 +1385,46 @@
           .catch(() => { btn.textContent = "FAILED"; setTimeout(() => btn.textContent = "✈ TEST", 2000); });
       });
 
+      // ── SMS / Phone ───────────────────────────────────────────────────────────
+      window.clientPhoneNumber = null;
+
+      document.getElementById("phoneNotifCard").addEventListener("click", function() {
+        document.getElementById("popupPhone").value = window.clientPhoneNumber || "";
+        document.getElementById("phonePopup").classList.add("show");
+      });
+      document.getElementById("phoneCloseBtn").addEventListener("click", function() {
+        document.getElementById("phonePopup").classList.remove("show");
+      });
+      document.getElementById("phoneSaveBtn").addEventListener("click", function() {
+        const phone = document.getElementById("popupPhone").value.trim();
+        window.clientPhoneNumber = phone;
+        if (phone) {
+          fetch("/client_update_notif", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user_id: PAGE_TOKEN, phone_number: phone })
+          });
+        }
+        document.getElementById("phonePopup").classList.remove("show");
+      });
+      document.getElementById("phoneTestBtn").addEventListener("click", function() {
+        const phone = document.getElementById("popupPhone").value.trim();
+        if (!phone) return;
+        const btn = document.getElementById("phoneTestBtn");
+        btn.textContent = "SENDING...";
+        fetch("/test_sms", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone: phone })
+        })
+          .then(r => r.json())
+          .then(d => {
+            btn.textContent = d.status === "ok" ? "SENT!" : "FAILED";
+            setTimeout(() => btn.textContent = "📱 TEST", 2000);
+          })
+          .catch(() => { btn.textContent = "FAILED"; setTimeout(() => btn.textContent = "📱 TEST", 2000); });
+      });
+
       // ── Status polling (handles all state transitions) ─────────────────────
       let _pollInterval = null;
 
@@ -1384,6 +1444,11 @@
       }
 
       function handleStateUpdate(d) {
+        // Pre-fill notification fields from server
+        if (d.notification_email) window.clientNotificationEmail = d.notification_email;
+        if (d.telegram_chat_id) window.clientTelegramChatId = d.telegram_chat_id;
+        if (d.phone_number) window.clientPhoneNumber = d.phone_number;
+
         if (d.status === "pending_approval" || d.status === "issued" || d.status === "approved") {
           // Still waiting — keep polling
           return;

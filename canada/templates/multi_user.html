@@ -556,6 +556,10 @@
                   <input type="checkbox" id="enableTelegramNotif" />
                   <label for="enableTelegramNotif">Enable Telegram Notifications</label>
                 </div>
+                <div class="checkbox-row">
+                  <input type="checkbox" id="enableSmsNotif" />
+                  <label for="enableSmsNotif">Enable SMS Notifications (Twilio)</label>
+                </div>
               </div>
               <div class="form-group full" style="margin-top:16px;">
                 <button class="btn btn-green" id="saveSettingsBtn">◼ SAVE SETTINGS</button>
@@ -578,6 +582,13 @@
               </div>
               <div class="form-group full">
                 <button class="btn btn-yellow" id="testTelegramBtn" style="width:100%;">✈ TEST TELEGRAM</button>
+              </div>
+              <div class="form-group full" style="margin-top:24px;">
+                <label>Test SMS Phone Number</label>
+                <input type="text" id="testSmsPhone" placeholder="+14155552671" />
+              </div>
+              <div class="form-group full">
+                <button class="btn btn-cyan" id="testSmsBtn" style="width:100%;">📱 TEST SMS</button>
               </div>
             </div>
           </div>
@@ -1007,6 +1018,7 @@
             document.getElementById('defaultTelegramChatId').value = d.default_telegram_chat_id || '';
             document.getElementById('enableEmailNotif').checked = d.email_enabled !== false;
             document.getElementById('enableTelegramNotif').checked = d.telegram_enabled !== false;
+            document.getElementById('enableSmsNotif').checked = d.sms_enabled !== false;
             document.getElementById('settingsModal').classList.add('visible');
           })
           .catch(() => document.getElementById('settingsModal').classList.add('visible'));
@@ -1036,6 +1048,7 @@
         fd.append('default_telegram_chat_id', document.getElementById('defaultTelegramChatId').value);
         fd.append('email_enabled', document.getElementById('enableEmailNotif').checked);
         fd.append('telegram_enabled', document.getElementById('enableTelegramNotif').checked);
+        fd.append('sms_enabled', document.getElementById('enableSmsNotif').checked);
 
         fetch('/save_settings', { method: 'POST', body: fd })
           .then(r => r.json())
@@ -1081,6 +1094,26 @@
             btn.innerHTML = '✈ TEST TELEGRAM';
           })
           .catch(() => { toast('TELEGRAM_FAILED', true); btn.classList.remove('loading'); btn.innerHTML = '✈ TEST TELEGRAM'; });
+      });
+
+      // Test SMS
+      document.getElementById('testSmsBtn').addEventListener('click', function() {
+        const btn = this;
+        btn.classList.add('loading');
+        btn.innerHTML = '<span class="spinner"></span>SENDING...';
+
+        const fd = new FormData();
+        fd.append('phone', document.getElementById('testSmsPhone').value);
+
+        fetch('/test_sms', { method: 'POST', body: fd })
+          .then(r => r.json())
+          .then(d => {
+            if (d.status === 'ok') toast('SMS_SENT');
+            else toast(d.error || 'SMS_FAILED', true);
+            btn.classList.remove('loading');
+            btn.innerHTML = '📱 TEST SMS';
+          })
+          .catch(() => { toast('SMS_FAILED', true); btn.classList.remove('loading'); btn.innerHTML = '📱 TEST SMS'; });
       });
     </script>
   </body>

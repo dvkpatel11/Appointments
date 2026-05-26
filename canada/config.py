@@ -23,6 +23,7 @@ MAX_WAIT_BETWEEN_CHECKS = 60
 STATE_DIR = "canada/status"
 SETTINGS_FILE = "canada/settings.json"
 CLIENT_TOKENS_FILE = "canada/canada/client_tokens.json"
+DB_PATH = "canada/visactrl.db"
 
 
 # ── US Visa Portal — Canada ───────────────────────────────────────────────────
@@ -118,6 +119,7 @@ DEFAULT_SETTINGS = {
     "default_telegram_chat_id": "",
     "email_enabled": True,
     "telegram_enabled": False,
+    "sms_enabled": False,
 }
 
 MAX_ACTION_LOG_ENTRIES = 100

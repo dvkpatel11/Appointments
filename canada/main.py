@@ -38,7 +38,8 @@ def setup_logger(name, log_file, level=logging.INFO):
 
 def run_in_subprocess(user_id, username, password, appointment_id, appointment_url,
                       notification_email=None, browsers=1, check=12, reschedule=False,
-                      telegram_chat_id=None, send_telegram=False):
+                      telegram_chat_id=None, send_telegram=False,
+                      phone_number=None, send_sms=False):
     """Entry point for multiprocessing — runs Playwright in separate process."""
     logger = setup_logger("canada_app", "app.log")
     instance = VisaAutomation(
@@ -52,6 +53,8 @@ def run_in_subprocess(user_id, username, password, appointment_id, appointment_u
         reschedule=reschedule,
         telegram_chat_id=telegram_chat_id,
         send_telegram=send_telegram,
+        phone_number=phone_number,
+        send_sms=send_sms,
         logger=logger,
         user_id=user_id,
     )
@@ -71,6 +74,8 @@ class VisaAutomation:
         reschedule=False,
         telegram_chat_id=None,
         send_telegram=False,
+        phone_number=None,
+        send_sms=False,
         logger=None,
         user_id=None,
     ):
@@ -102,6 +107,8 @@ class VisaAutomation:
         self.reschedule = reschedule
         self.telegram_chat_id = telegram_chat_id
         self.send_telegram = send_telegram
+        self.phone_number = phone_number
+        self.send_sms = send_sms
 
         self.login_url = config.LOGIN_URL
         self.s = config.SELECTORS
@@ -475,6 +482,12 @@ class VisaAutomation:
             notifications.send_telegram(
                 message=message,
                 chat_id=self.telegram_chat_id,
+                logger=lambda msg, lvl="info": self._log(msg, lvl),
+            )
+        if self.send_sms and self.phone_number:
+            notifications.send_sms(
+                message=message,
+                to_phone=self.phone_number,
                 logger=lambda msg, lvl="info": self._log(msg, lvl),
             )
 

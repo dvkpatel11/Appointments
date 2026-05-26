@@ -82,6 +82,8 @@ dmypy.json
 *.mo
 *.pot
 
+docs/
+
 # Flask
 instance/
 .webassets.cache

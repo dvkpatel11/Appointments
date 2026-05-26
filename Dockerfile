@@ -16,6 +16,7 @@ COPY canada/ ./canada/
 RUN mkdir -p /app/canada/screenshots \
              /app/canada/status \
              /app/canada/logs \
+             /app/data \
     && chown -R appuser:appuser /app
 
 # ── Playwright browsers (base image includes them; re-install if needed) ──

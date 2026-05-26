@@ -13,3 +13,5 @@ urllib3==2.3.0
 waitress==3.0.0
 resend>=0.1.0
 python-telegram-bot>=20.0
+sentry-sdk>=2.0
+twilio>=9.0

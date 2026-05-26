@@ -49,7 +49,7 @@ gcloud artifacts repositories create "$REPO" \
   --project="$PROJECT_ID" 2>/dev/null || warn "Repository already exists"
 
 # ── Step 3: Create Secrets (skip if exists) ──────────────────────────────────
-SECRETS=("SECRET_KEY:visa-ctrl-secret-key" "ADMIN_PASSWORD:visa-ctrl-admin-password" "SMTP_USER:visa-ctrl-smtp-user" "SMTP_PASSWORD:visa-ctrl-smtp-password" "RESEND_API_KEY:visa-ctrl-resend-key" "TELEGRAM_BOT_TOKEN:visa-ctrl-telegram-token" "TELEGRAM_CHAT_ID:visa-ctrl-telegram-chat")
+SECRETS=("SECRET_KEY:visa-ctrl-secret-key" "ADMIN_PASSWORD:visa-ctrl-admin-password" "SMTP_USER:visa-ctrl-smtp-user" "SMTP_PASSWORD:visa-ctrl-smtp-password" "RESEND_API_KEY:visa-ctrl-resend-key" "TELEGRAM_BOT_TOKEN:visa-ctrl-telegram-token" "TELEGRAM_CHAT_ID:visa-ctrl-telegram-chat" "SENTRY_DSN:visa-ctrl-sentry-dsn" "TWILIO_ACCOUNT_SID:visa-ctrl-twilio-sid" "TWILIO_AUTH_TOKEN:visa-ctrl-twilio-token" "TWILIO_FROM_NUMBER:visa-ctrl-twilio-from")
 
 for pair in "${SECRETS[@]}"; do
   IFS=: read -r env_name secret_name <<< "$pair"

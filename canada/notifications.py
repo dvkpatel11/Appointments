@@ -1,5 +1,6 @@
 import os
 import smtplib
+import logging
 from email.mime.text import MIMEText
 
 
@@ -70,4 +71,35 @@ def send_telegram(message, chat_id=None, bot_token=None, emoji="🇨🇦", logge
     except Exception:
         if logger:
             logger("Telegram error", "error")
+        return False
+
+
+# ── SMS (Twilio) ────────────────────────────────────────────────────────────────
+
+
+def send_sms(message, to_phone=None, logger=None):
+    account_sid = os.environ.get("TWILIO_ACCOUNT_SID")
+    auth_token = os.environ.get("TWILIO_AUTH_TOKEN")
+    from_phone = os.environ.get("TWILIO_FROM_NUMBER")
+    to_phone = to_phone or os.environ.get("TWILIO_TO_NUMBER")
+
+    if not account_sid or not auth_token or not from_phone or not to_phone:
+        if logger:
+            logger("Twilio not configured, skipping SMS", "warning")
+        return False
+
+    try:
+        from twilio.rest import Client
+        client = Client(account_sid, auth_token)
+        client.messages.create(
+            body=message,
+            from_=from_phone,
+            to=to_phone,
+        )
+        if logger:
+            logger(f"SMS sent to {to_phone}")
+        return True
+    except Exception as e:
+        if logger:
+            logger(f"SMS send failed: {e}", "error")
         return False
