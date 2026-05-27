@@ -1134,6 +1134,10 @@
                       </span>
                     </div>
                     <div class="data-row">
+                      <span class="data-key">LOCATIONS</span>
+                      <span class="data-val" style="font-size:0.62rem;">${escHtml((r.locations || []).join(", "))}</span>
+                    </div>
+                    <div class="data-row">
                       <span class="data-key">URL</span>
                       <span class="data-val" style="font-size:0.62rem;" title="${escHtml(r.appointment_url_full)}">
                         ${escHtml(r.appointment_url_full.slice(0, 40))}…
@@ -1159,9 +1163,16 @@
                 })
                     .then((r) => r.json())
                     .then((d) => {
-                        toast("APPROVED // AGENT LAUNCHED");
-                        pollPending();
-                        setTimeout(pollStatus, 1200);
+                        if (d.status === "approved" || d.status === "already_running") {
+                            toast("APPROVED // AGENT LAUNCHED");
+                            pollPending();
+                            setTimeout(pollStatus, 1200);
+                        } else {
+                            toast(d.message || "APPROVE FAILED", true);
+                            btn.disabled = false;
+                            btn.classList.remove("loading");
+                            btn.innerHTML = "✓ APPROVE";
+                        }
                     })
                     .catch(() => {
                         toast("APPROVE FAILED", true);
@@ -1319,14 +1330,32 @@
                 modal.style.display = "flex";
             }
 
+            function copyToClipboard(text) {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(text).catch(() => {
+                        fallbackCopy(text);
+                    });
+                } else {
+                    fallbackCopy(text);
+                }
+            }
+            function fallbackCopy(text) {
+                const ta = document.createElement("textarea");
+                ta.value = text;
+                ta.style.position = "fixed";
+                ta.style.opacity = "0";
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand("copy");
+                document.body.removeChild(ta);
+            }
             document
                 .getElementById("copyLinkBtn")
                 .addEventListener("click", () => {
-                    const text =
-                        document.getElementById("clientLinkText").textContent;
-                    navigator.clipboard
-                        .writeText(text)
-                        .then(() => toast("LINK_COPIED // CLIPBOARD"));
+                    copyToClipboard(
+                        document.getElementById("clientLinkText").textContent
+                    );
+                    toast("LINK_COPIED // CLIPBOARD");
                 });
 
             // ── Add agent form ─────────────────────────────────────────────────

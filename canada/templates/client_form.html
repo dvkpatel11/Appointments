@@ -333,6 +333,33 @@
         color: var(--red);
       }
 
+      .locations-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px 16px;
+        margin-top: 8px;
+      }
+      .locations-grid label {
+        font-size: 0.7rem;
+        color: var(--text);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+      }
+      .locations-grid input[type="checkbox"] {
+        accent-color: var(--green);
+        width: 12px;
+        height: 12px;
+      }
+      .locations-header {
+        font-size: 0.62rem;
+        letter-spacing: 2px;
+        color: var(--cyan);
+        margin-top: 16px;
+        margin-bottom: 4px;
+      }
+
       .submit-row {
         margin-top: 28px;
         display: flex;
@@ -908,6 +935,17 @@
               </div>
             </div>
 
+            <!-- Preferred Locations -->
+            <p class="locations-header">▸ MONITOR LOCATIONS</p>
+            <div class="locations-grid">
+              <label><input type="checkbox" name="location" value="Toronto" checked /> Toronto</label>
+              <label><input type="checkbox" name="location" value="Vancouver" checked /> Vancouver</label>
+              <label><input type="checkbox" name="location" value="Calgary" checked /> Calgary</label>
+              <label><input type="checkbox" name="location" value="Ottawa" checked /> Ottawa</label>
+              <label><input type="checkbox" name="location" value="Halifax" checked /> Halifax</label>
+              <label><input type="checkbox" name="location" value="Montreal" checked /> Montreal</label>
+            </div>
+
             <!-- Reschedule -->
             <div class="reschedule-box">
               <p class="reschedule-header">⚠ DANGER ZONE // AUTO-RESCHEDULE</p>
@@ -1250,6 +1288,9 @@
 
         const fd = new FormData(form);
         fd.set("reschedule", form.reschedule.checked ? "true" : "false");
+        // Collect selected locations
+        const locs = Array.from(document.querySelectorAll('input[name="location"]:checked')).map(cb => cb.value);
+        fd.set("preferred_locations", JSON.stringify(locs));
 
         fetch("/client_submit", { method: "POST", body: fd })
           .then((r) => r.json())
@@ -1343,6 +1384,9 @@
       });
 
       // Link Telegram button - generates deep link and opens Telegram
+      let _botUsername = "us_x_visa_x_bot";
+      fetch("/bot_info").then(r => r.json()).then(d => { if (d.username) _botUsername = d.username; }).catch(() => {});
+
       document.getElementById("linkTelegramBtn").addEventListener("click", function() {
         const btn = this;
         btn.textContent = "GENERATING...";
@@ -1353,7 +1397,7 @@
             // Store token for polling
             window.telegramLinkToken = d.token;
             // Open Telegram with deep link - client clicks START there, bot auto-links
-            window.open("https://t.me/us_x_visa_x_bot?start=" + d.token, "_blank");
+            window.open("https://t.me/" + _botUsername + "?start=" + d.token, "_blank");
             // Start polling for linking
             pollTelegramLink();
           })
@@ -1487,22 +1531,16 @@
         if (d.telegram_chat_id) window.clientTelegramChatId = d.telegram_chat_id;
         if (d.phone_number) window.clientPhoneNumber = d.phone_number;
 
-        if (d.status === "pending_approval" || d.status === "issued" || d.status === "approved") {
-          // Still waiting — keep polling
+        if (d.status === "pending_approval" || d.status === "issued") {
           return;
         }
         if (d.status === "rejected") {
           showRejectedPanel(d.reason || "Your request was not approved.");
           return;
         }
-        if (d.status === "ok") {
-          // Approved and automation is running — switch to monitor view
-          showMonitorPanel();
-          updateMonitorUI(d);
-        }
-        if (d.status === "ok" || d.status === "approved") {
-          updateMonitorUI(d);
-        }
+        // Both "ok" (running) and "approved" (stopped) show the monitor panel
+        showMonitorPanel();
+        updateMonitorUI(d);
       }
 
       // ── Log classification ─────────────────────────────────────────────────

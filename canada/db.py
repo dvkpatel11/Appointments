@@ -2,6 +2,7 @@ import os
 import json
 import sqlite3
 import time
+from datetime import datetime
 from contextlib import contextmanager
 
 from canada import config
@@ -256,6 +257,12 @@ def delete_automation_state(user_id):
 
 
 def save_pending_link(token, data):
+    def _ts(val, default=None):
+        if val is None:
+            return default
+        if isinstance(val, (int, float)):
+            return datetime.fromtimestamp(val).strftime("%Y-%m-%d %H:%M:%S")
+        return str(val)
     with cursor() as cur:
         cur.execute(
             """INSERT OR REPLACE INTO pending_links
@@ -263,8 +270,8 @@ def save_pending_link(token, data):
                VALUES (?, ?, ?, ?)""",
             (token,
              data.get("chat_id"),
-             data.get("created", time.time()),
-             data.get("linked_at"))
+             _ts(data.get("created")),
+             _ts(data.get("linked_at")))
         )
 
 
@@ -274,10 +281,19 @@ def get_pending_link(token):
         row = cur.fetchone()
     if not row:
         return None
+    def _parse_ts(val):
+        if not val:
+            return 0 if val is None else None
+        if isinstance(val, (int, float)):
+            return int(val)
+        try:
+            return int(time.mktime(time.strptime(str(val), "%Y-%m-%d %H:%M:%S")))
+        except (ValueError, TypeError):
+            return 0
     return {
         "chat_id": row["chat_id"],
-        "created": time.mktime(time.strptime(row["created_at"], "%Y-%m-%d %H:%M:%S")) if row["created_at"] else 0,
-        "linked_at": time.mktime(time.strptime(row["linked_at"], "%Y-%m-%d %H:%M:%S")) if row["linked_at"] else None,
+        "created": _parse_ts(row["created_at"]),
+        "linked_at": _parse_ts(row["linked_at"]),
     }
 
 
@@ -286,10 +302,19 @@ def get_all_pending_links():
         cur.execute("SELECT * FROM pending_links")
         result = {}
         for row in cur.fetchall():
+            def _parse_ts(val):
+                if not val:
+                    return 0 if val is None else None
+                if isinstance(val, (int, float)):
+                    return int(val)
+                try:
+                    return int(time.mktime(time.strptime(str(val), "%Y-%m-%d %H:%M:%S")))
+                except (ValueError, TypeError):
+                    return 0
             result[row["token"]] = {
                 "chat_id": row["chat_id"],
-                "created": time.mktime(time.strptime(row["created_at"], "%Y-%m-%d %H:%M:%S")) if row["created_at"] else 0,
-                "linked_at": time.mktime(time.strptime(row["linked_at"], "%Y-%m-%d %H:%M:%S")) if row["linked_at"] else None,
+                "created": _parse_ts(row["created_at"]),
+                "linked_at": _parse_ts(row["linked_at"]),
             }
         return result
 

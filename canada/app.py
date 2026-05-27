@@ -50,6 +50,51 @@ automation_instances = {}
 automation_processes = {}
 
 
+def resume_approved_agents():
+    """On startup, relaunch any approved agents that went down (crash/restart)."""
+    for token, data in db.get_client_tokens_by_state("approved").items():
+        req = data.get("request") or {}
+        if not req.get("username") or not req.get("password"):
+            continue
+        if token in automation_instances and automation_instances[token].is_running:
+            continue
+        try:
+            instance = VisaAutomation(
+                username=req["username"],
+                password=req["password"],
+                appointment_id=req.get("appointment_id"),
+                appointment_url=req.get("appointment_url"),
+                notification_email=data.get("notification_email") or req.get("email"),
+                browsers=1,
+                check=12,
+                reschedule=req.get("reschedule", False),
+                phone_number=data.get("phone_number"),
+                send_sms=bool(data.get("phone_number")),
+                preferred_locations=req.get("preferred_locations"),
+            )
+            automation_instances[token] = instance
+            process = multiprocessing.Process(
+                target=run_in_subprocess,
+                args=(token, instance.username, instance.password,
+                      instance.appointment_id, instance.appointment_url,
+                      instance.notification_email, instance.browsers,
+                      instance.check, instance.reschedule,
+                      instance.telegram_chat_id, instance.send_telegram,
+                      instance.phone_number, instance.send_sms),
+                kwargs={"preferred_locations": instance.preferred_locations},
+            )
+            process.start()
+            instance.is_running = True
+            automation_processes[token] = process
+            app.logger.info(f"Resumed agent {token[:12]}…")
+        except Exception as e:
+            app.logger.error(f"Failed to resume agent {token[:12]}…: {e}")
+
+
+# Resume approved agents on startup
+resume_approved_agents()
+
+
 def sanitize_user_id(uid):
     if not uid or not re.match(r"^[a-zA-Z0-9_-]+$", uid):
         return None
@@ -159,6 +204,7 @@ def pending_requests():
             "appointment_id": req.get("appointment_id", "—"),
             "appointment_url_full": req.get("appointment_url_full", "—"),
             "reschedule": req.get("reschedule", False),
+            "locations": req.get("preferred_locations") or list(config.VISA_LOCATIONS.keys()),
         }
     return jsonify(result)
 
@@ -189,6 +235,7 @@ def approve_client(token):
             reschedule=req.get("reschedule", False),
             phone_number=token_data.get("phone_number"),
             send_sms=bool(token_data.get("phone_number")),
+            preferred_locations=req.get("preferred_locations"),
         )
         automation_instances[user_id] = instance
         process = multiprocessing.Process(
@@ -196,16 +243,13 @@ def approve_client(token):
             args=(user_id, instance.username, instance.password, instance.appointment_id,
                   instance.appointment_url, instance.notification_email, instance.browsers,
                   instance.check, instance.reschedule, instance.telegram_chat_id, instance.send_telegram,
-                  instance.phone_number, instance.send_sms)
+                  instance.phone_number, instance.send_sms),
+            kwargs={"preferred_locations": instance.preferred_locations},
         )
         process.start()
+        instance.is_running = True
         automation_processes[user_id] = process
 
-        update = {"state": "approved", "user_id": user_id}
-        notif_email = req.get("email")
-        if notif_email:
-            update["notification_email"] = notif_email
-        db.save_client_token(token, update)
         return jsonify({"status": "approved", "user_id": user_id})
 
     except Exception as e:
@@ -242,9 +286,11 @@ def start_automation():
             args=(user_id, instance.username, instance.password, instance.appointment_id,
                   instance.appointment_url, instance.notification_email, instance.browsers,
                   instance.check, instance.reschedule, instance.telegram_chat_id, instance.send_telegram,
-                  instance.phone_number, instance.send_sms)
+                  instance.phone_number, instance.send_sms),
+            kwargs={"preferred_locations": instance.preferred_locations},
         )
         process.start()
+        instance.is_running = True
         automation_processes[user_id] = process
         return jsonify({"status": f"ONLINE // {user_id}"})
     except (ValueError, TypeError) as e:
@@ -279,6 +325,7 @@ def start_multi_automation():
                 send_telegram=bool(data.get("send_telegram", False)),
                 phone_number=data.get("phone_number"),
                 send_sms=bool(data.get("send_sms", False)),
+                preferred_locations=data.get("preferred_locations"),
             )
             automation_instances[user_id] = instance
             process = multiprocessing.Process(
@@ -286,9 +333,11 @@ def start_multi_automation():
                 args=(user_id, instance.username, instance.password, instance.appointment_id,
                       instance.appointment_url, instance.notification_email, instance.browsers,
                       instance.check, instance.reschedule, instance.telegram_chat_id, instance.send_telegram,
-                      instance.phone_number, instance.send_sms)
+                      instance.phone_number, instance.send_sms),
+                kwargs={"preferred_locations": instance.preferred_locations},
             )
             process.start()
+            instance.is_running = True
             automation_processes[user_id] = process
             started.append(user_id)
         except Exception as e:
@@ -393,6 +442,12 @@ def client_submit():
             appointment_url_full,
         )
 
+        raw_locs = request.form.get("preferred_locations", "")
+        try:
+            preferred_locations = json.loads(raw_locs) if raw_locs else None
+        except (json.JSONDecodeError, TypeError):
+            preferred_locations = None
+
         db.save_client_token(token, {
             "state": "pending",
             "user_id": None,
@@ -405,6 +460,7 @@ def client_submit():
                 "appointment_url": appointment_url_template,
                 "appointment_url_full": appointment_url_full,
                 "reschedule": request.form.get("reschedule") == "true",
+                "preferred_locations": preferred_locations,
             },
             "reject_reason": None,
         })
@@ -438,8 +494,16 @@ def client_status(token):
         "telegram_chat_id": data.get("telegram_chat_id") or "",
         "phone_number": data.get("phone_number") or "",
     }
+    empty_run = {
+        "is_running": False,
+        "current_action": None,
+        "action_log": [],
+        "current_appointment": None,
+        "new_appointment": None,
+        "last_checked_location": None,
+    }
     if not user_id or user_id not in automation_instances:
-        return jsonify({"status": "approved", **notif_info})
+        return jsonify({"status": "approved", **empty_run, **notif_info})
 
     s = state.load_state(user_id)
     if s:
@@ -521,6 +585,7 @@ def get_settings():
         "email_enabled": db.get_setting("email_enabled", "true") == "true",
         "telegram_enabled": db.get_setting("telegram_enabled", "false") == "true",
         "sms_enabled": db.get_setting("sms_enabled", "false") == "true",
+        "telegram_bot_username": os.environ.get("TELEGRAM_BOT_USERNAME", "us_x_visa_x_bot"),
     })
 
 
@@ -533,6 +598,13 @@ def save_settings():
     db.set_setting("telegram_enabled", "true" if request.form.get("telegram_enabled") in ("true", "on") else "false")
     db.set_setting("sms_enabled", "true" if request.form.get("sms_enabled") in ("true", "on") else "false")
     return jsonify({"status": "ok"})
+
+
+@app.route("/bot_info")
+def bot_info():
+    return jsonify({
+        "username": os.environ.get("TELEGRAM_BOT_USERNAME", "us_x_visa_x_bot"),
+    })
 
 
 @app.route("/test_email", methods=["POST"])
@@ -711,18 +783,19 @@ def client_update_notif():
 def _cleanup_stale():
     db.delete_stale_pending_links(config.PENDING_LINK_TTL_SECONDS)
 
-    stopped = [uid for uid, inst in list(automation_instances.items())
-               if not inst.is_running]
-    for uid in stopped:
-        del automation_instances[uid]
-        automation_processes.pop(uid, None)
-        state.delete_state(uid)
-
+    # Remove instances whose process has died (finished or crashed)
     dead = [uid for uid, p in list(automation_processes.items())
             if not p.is_alive()]
     for uid in dead:
         automation_processes.pop(uid, None)
         automation_instances.pop(uid, None)
+        state.delete_state(uid)
+
+    # Remove orphaned instances with no process and not running
+    orphaned = [uid for uid, inst in list(automation_instances.items())
+                if uid not in automation_processes and not inst.is_running]
+    for uid in orphaned:
+        del automation_instances[uid]
         state.delete_state(uid)
 
 
@@ -734,6 +807,11 @@ def _maintenance():
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _build_instance_from_form(form):
+    raw = form.get("preferred_locations", "[]")
+    try:
+        preferred_locations = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        preferred_locations = None
     return VisaAutomation(
         username=form.get("username"),
         password=form.get("password"),
@@ -747,6 +825,7 @@ def _build_instance_from_form(form):
         send_telegram=form.get("send_telegram") == "true",
         phone_number=form.get("phone_number"),
         send_sms=form.get("send_sms") == "true",
+        preferred_locations=preferred_locations,
     )
 
 

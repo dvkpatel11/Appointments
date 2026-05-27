@@ -28,7 +28,15 @@ if ! python3 -c "from playwright.sync_api import sync_playwright" 2>/dev/null; t
   python3 -m playwright install --with-deps chromium
 fi
 
-# ── 4. Run ─────────────────────────────────────────────────────────────────
-echo "[+] Starting VisaCtrl on http://localhost:${PORT:-5000}"
+# ── 4. Kill anything on the target port ─────────────────────────────────────
+port="${PORT:-5000}"
+if lsof -ti :"$port" &>/dev/null; then
+  echo "[+] Killing process on port $port ..."
+  kill -9 $(lsof -ti :"$port") 2>/dev/null || true
+  sleep 0.5
+fi
+
+# ── 5. Run ─────────────────────────────────────────────────────────────────
+echo "[+] Starting VisaCtrl on http://localhost:${port}"
 FLASK_DEBUG="${FLASK_DEBUG:-true}" \
-python3 -m flask --app canada.app run --port "${PORT:-5000}" --host 0.0.0.0
+python3 -m flask --app canada.app run --port "$port" --host 0.0.0.0
