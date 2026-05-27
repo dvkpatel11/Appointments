@@ -97,6 +97,7 @@ SELECTORS = {
     "appointment_date": ".consular-appt",
     "time_slot": "#appointments_consulate_appointment_time",
     "next_button": "Next",
+    "applicants_checkbox": "input[type='checkbox'][name^='applicants']",
 }
 
 APPOINTMENT_DATE_REGEX = r".*Appointment:(.*)(?:Vancouver|Toronto|Calgary|Ottawa|Halifax|Montreal) local time.*$"

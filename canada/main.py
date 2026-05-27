@@ -14,6 +14,9 @@ from canada import config
 from canada import notifications
 from canada import state
 
+MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
+SCREENSHOTS_BASE = os.path.join(MODULE_DIR, "screenshots")
+
 def setup_logger(name, log_file, level=logging.INFO):
     formatter = logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -37,7 +40,8 @@ def setup_logger(name, log_file, level=logging.INFO):
 def run_in_subprocess(user_id, username, password, appointment_id, appointment_url,
                       notification_email=None, browsers=1, check=12, reschedule=False,
                       telegram_chat_id=None, send_telegram=False,
-                      phone_number=None, send_sms=False):
+                      phone_number=None, send_sms=False,
+                      preferred_locations=None):
     """Entry point for multiprocessing — runs Playwright in separate process."""
     logger = setup_logger("canada_app", "app.log")
     instance = VisaAutomation(
@@ -55,6 +59,7 @@ def run_in_subprocess(user_id, username, password, appointment_id, appointment_u
         send_sms=send_sms,
         logger=logger,
         user_id=user_id,
+        preferred_locations=preferred_locations,
     )
     instance.run()
 
@@ -75,12 +80,13 @@ class VisaAutomation:
         send_sms=False,
         logger=None,
         user_id=None,
+        preferred_locations=None,
     ):
         self._logger = logger
         self.playwright = sync_playwright().start()
         self.browser = self.playwright.chromium.launch(headless=True)
         self.screenshots_folder = str(int(time.time()))
-        Path(f"./screenshots/{self.screenshots_folder}").mkdir(
+        Path(SCREENSHOTS_BASE, self.screenshots_folder).mkdir(
             parents=True, exist_ok=True
         )
         self.context = None
@@ -91,11 +97,8 @@ class VisaAutomation:
         self.last_checked_location = None
         self.action_log = []
         self.current_action = ""
-        self.action_log = []
-        self.current_action = ""
         self.appointments_page_screenshot = None
         self.user_id = user_id
-
         self.username = username
         self.password = password
         self.appointment_id = appointment_id
@@ -118,6 +121,7 @@ class VisaAutomation:
         self.poll_count = 0
         self.debug_screenshot_counter = 0
         self.user_agents = config.USER_AGENTS
+        self.preferred_locations = preferred_locations
 
     def _log(self, msg, level="info"):
         ts = datetime.now().strftime("%H:%M:%S")
@@ -133,11 +137,13 @@ class VisaAutomation:
             print(f"[{level.upper()}] {msg}")
 
     def capture_debug_screenshot(self, name: str):
+        self.debug_screenshot_counter += 1
+        screenshot_name = f"{self.debug_screenshot_counter:03d}_{name}"
+        self.capture_screenshot(screenshot_name)
         if name == "appointments_page":
-            self.debug_screenshot_counter += 1
-            screenshot_name = f"{self.debug_screenshot_counter:03d}_{name}"
-            self.capture_screenshot(screenshot_name)
-            self.appointments_page_screenshot = f"./screenshots/{self.screenshots_folder}/{screenshot_name}.png"
+            self.appointments_page_screenshot = str(
+                Path(SCREENSHOTS_BASE, self.screenshots_folder, f"{screenshot_name}.png")
+            )
         if self.user_id:
             state.save_state(self.user_id, self)
 
@@ -168,12 +174,10 @@ class VisaAutomation:
         self.page.goto(page)
 
     def capture_screenshot(self, name: str = "image"):
-        self.page.screenshot(path=f"./screenshots/{self.screenshots_folder}/{name}.png")
+        self.page.screenshot(path=str(Path(SCREENSHOTS_BASE, self.screenshots_folder, f"{name}.png")))
 
     def login(self, username, password, continue_login=True, press_ok=False):
         try:
-            self._log("Attempting to log in")
-            self.current_action = "LOGIN"
             self._log("Attempting to log in")
             self.current_action = "LOGIN"
             self.go_to_page(self.login_url)
@@ -198,9 +202,6 @@ class VisaAutomation:
                     "menuitem", name=self.s["continue_button"]
                 ).click()
                 self._log("Clicked continue button", "debug")
-
-            self._log("Login successful")
-            self.current_action = "IDLE"
 
             self._log("Login successful")
             self.current_action = "IDLE"
@@ -237,17 +238,37 @@ class VisaAutomation:
                 self._log("Found 'I understand' checkbox, clicking...")
                 understand.click()
                 time.sleep(0.5)
+                self.capture_debug_screenshot("understand_checked")
 
             limit = self.page.locator("#confirmed_limit_message")
             if limit.count() > 0:
                 self._log("Found limit confirmation checkbox, clicking...")
                 limit.check()
                 time.sleep(0.5)
+                self.capture_debug_screenshot("limit_checked")
                 continue_btn = self.page.get_by_text("Continue").first
                 if continue_btn.count() > 0:
                     continue_btn.click()
                     self.page.wait_for_load_state("networkidle")
                     self._log("Clicked Continue after limit confirmation")
+
+            # Handle multi-applicant selection page
+            applicant_checkboxes = self.page.locator(self.s["applicants_checkbox"])
+            if applicant_checkboxes.count() > 0:
+                count = applicant_checkboxes.count()
+                self._log(f"Applicant selection page detected ({count} applicant(s)) — checking all")
+                for i in range(count):
+                    cb = applicant_checkboxes.nth(i)
+                    if not cb.is_checked():
+                        cb.check()
+                        self._log(f"Checked applicant #{i+1}")
+                time.sleep(0.5)
+                continue_btn = self.page.get_by_text("Continue").first
+                if continue_btn.count() > 0:
+                    continue_btn.click()
+                    self.page.wait_for_load_state("networkidle")
+                    self._log("Clicked Continue after applicant selection")
+                self.capture_debug_screenshot("after_applicant_selection")
 
             self.capture_debug_screenshot("appointments_page")
             self._log("Successfully navigated to appointments page")
@@ -280,8 +301,6 @@ class VisaAutomation:
                 calendar_date = datetime(year, month_number, day)
                 self._log(f"Found potential date: {calendar_date}", "debug")
             except Exception:
-                self._log("Exception in check_availability()", "error")
-                self._log("No match found, continuing checks...", "debug")
                 self._log("Exception in check_availability()", "error")
                 self._log("No match found, continuing checks...", "debug")
                 return False, True
@@ -325,21 +344,43 @@ class VisaAutomation:
             return None
 
     def select_location(self, location):
-        if location in self.visa_locations:
-            try:
-                self._log(f"Selecting location: {location}")
+        if location not in self.visa_locations:
+            return
+        try:
+            self._log(f"Selecting location: {location}")
 
-                location_selector = self.page.locator(self.s["location"])
-                current = location_selector.evaluate("el => el.value")
-                self._log(f"Current location: {current}", "debug")
+            loc = self.page.locator(self.s["location"])
+            found = loc.count() > 0
 
-                location_selector.select_option(location)
-                self.page.wait_for_load_state("networkidle")
-                time.sleep(0.5)
+            if not found:
+                self._log(f"Primary selector '{self.s['location']}' not found — searching for alternatives", "warn")
+                self.capture_debug_screenshot(f"location_selector_missing_{location}")
+                selects = self.page.eval_on_selector_all("select",
+                    "els => els.map(e => e.id + '|' + e.name + '|' + e.className)")
+                self._log(f"Available <select> elements: {selects}", "debug")
+                if selects:
+                    first_id = selects[0].split("|")[0]
+                    if first_id:
+                        loc = self.page.locator(f"#{first_id}")
+                        found = loc.count() > 0
+                        if found:
+                            self._log(f"Fell back to selector: #{first_id}")
 
-                self._log(f"Selected {location}")
-            except Exception as e:
-                self._log(f"Error selecting {location}: {str(e)}", "error")
+            if not found:
+                self._log(f"No location <select> found on page — cannot select {location}", "error")
+                return
+
+            current = loc.evaluate("el => el.value")
+            self._log(f"Current location: {current}", "debug")
+
+            loc.select_option(location)
+            self.page.wait_for_load_state("networkidle")
+            time.sleep(0.5)
+
+            self._log(f"Selected {location}")
+        except Exception as e:
+            self._log(f"Error selecting {location}: {str(e)}", "error")
+            self.capture_debug_screenshot(f"location_error_{location}")
 
     def is_date_available(self, wait_time: int = 100):
         try:
@@ -351,10 +392,17 @@ class VisaAutomation:
     def run_check(self):
         availability_list = []
 
-        for location in self.visa_locations:
+        locations_to_check = self.visa_locations
+        if self.preferred_locations:
+            locations_to_check = {k: v for k, v in self.visa_locations.items()
+                                  if k in self.preferred_locations}
+            self._log(f"Filtered to {len(locations_to_check)} preferred locations: {list(locations_to_check.keys())}")
+
+        for location in locations_to_check:
             self.last_checked_location = location
             self.page.route(re.compile(self.network_request_regex), self.handle_request)
             self._log(f"Checking availability at {location}")
+            self.capture_debug_screenshot(f"before_location_{location}")
             self.select_location(location)
 
             if self.is_date_available():
@@ -396,9 +444,6 @@ class VisaAutomation:
                                 self._send_notifications(msg)
 
                         if self.reschedule:
-                            if self.new_date and self.current_date:
-                                if self.new_date < self.current_date:
-                                    self.reschedule_appointment(location)
                             if self.new_date and self.current_date:
                                 if self.new_date < self.current_date:
                                     self.reschedule_appointment(location)
@@ -504,9 +549,20 @@ class VisaAutomation:
         try:
             self.current_action = "RESCHEDULING"
             self._log(f"Attempting to reschedule appointment at {location}")
-            self.current_action = "RESCHEDULING"
-            self._log(f"Attempting to reschedule appointment at {location}")
             self.capture_debug_screenshot("before_reschedule")
+
+            # Handle multiple applicants: uncheck all by default
+            applicant_checkboxes = self.page.locator(self.s["applicants_checkbox"])
+            applicant_count = applicant_checkboxes.count()
+            if applicant_count > 1:
+                self._log(f"Multiple applicants detected ({applicant_count}) — unchecking all by default")
+                for i in range(applicant_count):
+                    checkbox = applicant_checkboxes.nth(i)
+                    if checkbox.is_checked():
+                        checkbox.uncheck()
+                        self._log(f"Unchecked applicant #{i+1}")
+                self.page.get_by_text(self.s["continue_button"]).click()
+                self._log("Clicked Continue after applicant selection")
 
             self.page.query_selector(self.s["match_date"]).click()
             self._log("Selected new date")
@@ -556,13 +612,8 @@ class VisaAutomation:
     def handle_error(self, error):
         self._log(f"Error occurred while checking: {error}", "error")
         self._log("Sleeping for 5 mins due to error")
-        self._log(f"Error occurred while checking: {error}", "error")
-        self._log("Sleeping for 5 mins due to error")
         time.sleep(300)
 
-    def stop(self):
-        self.is_running = False
-        self._log("Stop requested")
     def stop(self):
         self.is_running = False
         self._log("Stop requested")
