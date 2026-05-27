@@ -91,11 +91,8 @@ class VisaAutomation:
         self.last_checked_location = None
         self.action_log = []
         self.current_action = ""
-        self.action_log = []
-        self.current_action = ""
         self.appointments_page_screenshot = None
         self.user_id = user_id
-
         self.username = username
         self.password = password
         self.appointment_id = appointment_id
@@ -399,9 +396,6 @@ class VisaAutomation:
                             if self.new_date and self.current_date:
                                 if self.new_date < self.current_date:
                                     self.reschedule_appointment(location)
-                            if self.new_date and self.current_date:
-                                if self.new_date < self.current_date:
-                                    self.reschedule_appointment(location)
 
                         break
 
@@ -504,9 +498,20 @@ class VisaAutomation:
         try:
             self.current_action = "RESCHEDULING"
             self._log(f"Attempting to reschedule appointment at {location}")
-            self.current_action = "RESCHEDULING"
-            self._log(f"Attempting to reschedule appointment at {location}")
             self.capture_debug_screenshot("before_reschedule")
+
+            # Handle multiple applicants: uncheck all by default
+            applicant_checkboxes = self.page.locator(self.s["applicants_checkbox"])
+            applicant_count = applicant_checkboxes.count()
+            if applicant_count > 1:
+                self._log(f"Multiple applicants detected ({applicant_count}) — unchecking all by default")
+                for i in range(applicant_count):
+                    checkbox = applicant_checkboxes.nth(i)
+                    if checkbox.is_checked():
+                        checkbox.uncheck()
+                        self._log(f"Unchecked applicant #{i+1}")
+                self.page.get_by_text(self.s["continue_button"]).click()
+                self._log("Clicked Continue after applicant selection")
 
             self.page.query_selector(self.s["match_date"]).click()
             self._log("Selected new date")
@@ -556,13 +561,8 @@ class VisaAutomation:
     def handle_error(self, error):
         self._log(f"Error occurred while checking: {error}", "error")
         self._log("Sleeping for 5 mins due to error")
-        self._log(f"Error occurred while checking: {error}", "error")
-        self._log("Sleeping for 5 mins due to error")
         time.sleep(300)
 
-    def stop(self):
-        self.is_running = False
-        self._log("Stop requested")
     def stop(self):
         self.is_running = False
         self._log("Stop requested")

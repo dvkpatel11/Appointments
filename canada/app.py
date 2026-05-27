@@ -33,13 +33,16 @@ ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 
 SENTRY_DSN = os.environ.get("SENTRY_DSN", "")
 if SENTRY_DSN:
-    import sentry_sdk
-    from sentry_sdk.integrations.flask import FlaskIntegration
-    sentry_sdk.init(
-        dsn=SENTRY_DSN,
-        integrations=[FlaskIntegration()],
-        traces_sample_rate=0.1,
-    )
+    try:
+        import sentry_sdk
+        from sentry_sdk.integrations.flask import FlaskIntegration
+        sentry_sdk.init(
+            dsn=SENTRY_DSN,
+            integrations=[FlaskIntegration()],
+            traces_sample_rate=0.1,
+        )
+    except Exception:
+        app.logger.warning("Sentry DSN configured but invalid — skipping")
 
 # ── Stores ────────────────────────────────────────────────────────────────────
 
@@ -199,7 +202,7 @@ def approve_client(token):
         automation_processes[user_id] = process
 
         update = {"state": "approved", "user_id": user_id}
-        notif_email = req.get("notification_email")
+        notif_email = req.get("email")
         if notif_email:
             update["notification_email"] = notif_email
         db.save_client_token(token, update)

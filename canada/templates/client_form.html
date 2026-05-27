@@ -867,9 +867,13 @@
             <p class="form-section-label">&gt; PERSONAL DETAILS</p>
             <div class="form-grid">
               <div class="form-group full">
-              <div class="form-group full">
                 <label>Your Name</label>
                 <input type="text" name="name" placeholder="Jane Smith" required />
+              </div>
+              <div class="form-group full">
+                <label>Notification Email</label>
+                <input type="email" name="email" placeholder="your@email.com" />
+                <p class="hint">// for alerts when earlier dates are found</p>
               </div>
             </div>
 
@@ -1181,7 +1185,6 @@
         <p style="margin-top: 20px; font-size: 0.68rem; color: var(--dimtext); letter-spacing: 1px; line-height: 1.8">
           Bookmark this page — you can return at any time to check your monitoring status.<br />
           All Canadian consulate locations are being scanned. Notification will be sent when an earlier date is found.
-          All Canadian consulate locations are being scanned. Notification will be sent when an earlier date is found.
         </p>
       </div>
     </div>
@@ -1234,7 +1237,6 @@
         if (!validateUrl()) return;
 
         const required = ["name", "username", "password", "appointment_url"];
-        const required = ["name", "username", "password", "appointment_url"];
         for (const field of required) {
           if (!form[field].value.trim()) {
             showValidationError(`Field "${field.toUpperCase().replace("_", " ")}" is required.`);
@@ -1242,8 +1244,6 @@
           }
         }
 
-        submitBtn.classList.add("loading");
-        submitBtn.innerHTML = '<span class="spinner"></span>TRANSMITTING...';
         submitBtn.classList.add("loading");
         submitBtn.innerHTML = '<span class="spinner"></span>TRANSMITTING...';
         document.getElementById("urlValidationError").style.display = "none";
@@ -1256,13 +1256,10 @@
           .then((data) => {
             if (data.status === "pending_approval") {
               showPendingPanel();
-              showPendingPanel();
             } else if (data.status === "rejected") {
               showRejectedPanel(data.reason || "Your request was not approved.");
             } else {
               showValidationError(data.message || "Submission failed — please try again.");
-              submitBtn.classList.remove("loading");
-              submitBtn.innerHTML = "▶ INITIATE";
               submitBtn.classList.remove("loading");
               submitBtn.innerHTML = "▶ INITIATE";
             }
@@ -1271,14 +1268,11 @@
             showValidationError("Connection error — could not reach the server.");
             submitBtn.classList.remove("loading");
             submitBtn.innerHTML = "▶ INITIATE";
-            submitBtn.classList.remove("loading");
-            submitBtn.innerHTML = "▶ INITIATE";
           });
       });
 
       // ── State panels ───────────────────────────────────────────────────────
 
-      function showPendingPanel() {
       function showPendingPanel() {
         document.getElementById("formSection").style.display = "none";
         document.getElementById("pendingPanel").style.display = "block";
@@ -1299,7 +1293,6 @@
         }
       }
 
-      function showMonitorPanel() {
       function showMonitorPanel() {
         document.getElementById("formSection").style.display = "none";
         document.getElementById("pendingPanel").style.display = "none";
@@ -1505,9 +1498,7 @@
         if (d.status === "ok") {
           // Approved and automation is running — switch to monitor view
           showMonitorPanel();
-          showMonitorPanel();
           updateMonitorUI(d);
-          // Continue polling for live updates
         }
         if (d.status === "ok" || d.status === "approved") {
           updateMonitorUI(d);
@@ -1575,7 +1566,6 @@
             if (d.status === "ready") {
               const img = document.getElementById("screenshotImg");
               img.src = d.image_url;
-              img.src = d.image_url;
               img.style.display = "block";
               document.getElementById("screenshotSpinner").style.display = "none";
             } else {
@@ -1603,11 +1593,9 @@
             if (d.status === "issued") return; // not yet submitted — show form
             if (d.status === "pending_approval") {
               showPendingPanel();
-              showPendingPanel();
             } else if (d.status === "rejected") {
               showRejectedPanel(d.reason || "Your request was not approved.");
             } else if (d.status === "ok" || d.status === "approved") {
-              showMonitorPanel();
               showMonitorPanel();
               if (d.status === "ok") updateMonitorUI(d);
               startStatusPolling();
