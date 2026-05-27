@@ -68,6 +68,8 @@ def resume_approved_agents():
                 browsers=1,
                 check=12,
                 reschedule=req.get("reschedule", False),
+                telegram_chat_id=data.get("telegram_chat_id"),
+                send_telegram=bool(data.get("telegram_chat_id")),
                 phone_number=data.get("phone_number"),
                 send_sms=bool(data.get("phone_number")),
                 preferred_locations=req.get("preferred_locations"),
@@ -233,6 +235,8 @@ def approve_client(token):
             browsers=1,
             check=12,
             reschedule=req.get("reschedule", False),
+            telegram_chat_id=token_data.get("telegram_chat_id"),
+            send_telegram=bool(token_data.get("telegram_chat_id")),
             phone_number=token_data.get("phone_number"),
             send_sms=bool(token_data.get("phone_number")),
             preferred_locations=req.get("preferred_locations"),
@@ -451,6 +455,7 @@ def client_submit():
         db.save_client_token(token, {
             "state": "pending",
             "user_id": None,
+            "telegram_chat_id": request.form.get("telegram_chat_id", "").strip() or None,
             "request": {
                 "name": request.form.get("name", "Client"),
                 "email": request.form.get("email", "").strip(),

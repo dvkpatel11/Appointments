@@ -3,8 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>MISSION BRIEFING // VISA MONITOR</title>
-    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+    <title>Visa Appointment Monitor</title>
     <style>
       *,
       *::before,
@@ -15,23 +14,27 @@
       }
 
       :root {
-        --green: #00ff41;
-        --magenta: #ff00ff;
-        --cyan: #00ffff;
-        --red: #ff0044;
-        --yellow: #ffe600;
-        --bg: #000;
-        --surface: #050505;
-        --panel: #080808;
-        --border: #1c1c1c;
-        --text: #777;
-        --dimtext: #333;
+        --primary: #3f51b5;
+        --primary-dark: #303f9f;
+        --accent: #2196f3;
+        --green: #4caf50;
+        --red: #f44336;
+        --orange: #ff9800;
+        --bg: #fafafa;
+        --surface: #ffffff;
+        --panel: #ffffff;
+        --border: #e0e0e0;
+        --text: #212121;
+        --text-secondary: #757575;
+        --dimtext: #9e9e9e;
+        --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+        --shadow-hover: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.06);
       }
 
       body {
         background: var(--bg);
-        color: var(--green);
-        font-family: "Share Tech Mono", monospace;
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         min-height: 100vh;
         display: flex;
         align-items: flex-start;
@@ -40,177 +43,98 @@
         overflow-x: hidden;
       }
 
-      /* Scanlines */
-      body::after {
-        content: "";
-        position: fixed;
-        inset: 0;
-        background: repeating-linear-gradient(
-          0deg,
-          transparent,
-          transparent 2px,
-          rgba(0, 0, 0, 0.18) 2px,
-          rgba(0, 0, 0, 0.18) 4px
-        );
-        pointer-events: none;
-        z-index: 9999;
-      }
-
-      /* Vignette */
-      body::before {
-        content: "";
-        position: fixed;
-        inset: 0;
-        background: radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.75) 100%);
-        pointer-events: none;
-        z-index: 9998;
-      }
-
       .wrapper {
         width: min(720px, 100%);
       }
 
-      /* ── HEADER ─────────────────────────────────────────────────── */
       .page-header {
         margin-bottom: 32px;
       }
 
       .sys-badge {
-        font-size: 0.62rem;
-        letter-spacing: 4px;
-        color: var(--text);
-        margin-bottom: 12px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        margin-bottom: 8px;
       }
 
       .page-title {
-        font-size: clamp(1.6rem, 6vw, 2.4rem);
-        letter-spacing: 5px;
-        line-height: 1.1;
-        color: var(--green);
-        text-shadow:
-          0 0 10px rgba(0, 255, 65, 0.5),
-          0.04em 0 0 var(--magenta),
-          -0.04em 0 0 var(--cyan);
-        animation: glitch 6s infinite;
-      }
-
-      @keyframes glitch {
-        0%,
-        72%,
-        76%,
-        78%,
-        100% {
-          text-shadow:
-            0 0 10px rgba(0, 255, 65, 0.5),
-            0.04em 0 0 var(--magenta),
-            -0.04em 0 0 var(--cyan);
-        }
-        73% {
-          text-shadow:
-            -0.04em 0 0 var(--magenta),
-            0.04em 0 0 var(--cyan);
-          transform: translate(-2px);
-        }
-        75% {
-          text-shadow:
-            0.06em 0 0 var(--magenta),
-            -0.04em 0 0 var(--cyan);
-          transform: translate(2px, 1px);
-        }
-        77% {
-          text-shadow:
-            0.04em 0 0 var(--magenta),
-            -0.04em 0 0 var(--cyan);
-          transform: translate(0);
-        }
+        font-size: clamp(1.6rem, 6vw, 2.2rem);
+        font-weight: 700;
+        color: var(--primary);
+        line-height: 1.2;
+        letter-spacing: -0.5px;
       }
 
       .page-desc {
         margin-top: 16px;
-        color: var(--text);
-        font-size: 0.78rem;
-        letter-spacing: 1px;
+        color: var(--text-secondary);
+        font-size: 0.85rem;
         line-height: 1.7;
-        border-left: 2px solid var(--border);
-        padding-left: 14px;
+        border-left: 3px solid var(--primary);
+        padding-left: 16px;
       }
 
       .page-desc span {
-        color: var(--cyan);
+        color: var(--primary);
+        font-weight: 600;
       }
 
-      /* ── HOW IT WORKS ───────────────────────────────────────────── */
       .steps {
         display: flex;
         gap: 0;
         margin: 28px 0;
         flex-wrap: wrap;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: var(--shadow);
       }
 
       .step {
         flex: 1;
         min-width: 140px;
-        padding: 14px;
-        border: 1px solid var(--border);
-        border-right: none;
-        background: var(--panel);
+        padding: 16px;
+        background: var(--surface);
+        border-right: 1px solid var(--border);
       }
       .step:last-child {
-        border-right: 1px solid var(--border);
+        border-right: none;
       }
 
       .step-num {
-        font-size: 1.4rem;
-        color: var(--dimtext);
-        margin-bottom: 6px;
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: var(--primary);
+        margin-bottom: 4px;
       }
       .step-label {
-        font-size: 0.65rem;
-        letter-spacing: 2px;
-        color: var(--text);
+        font-size: 0.72rem;
+        color: var(--text-secondary);
         line-height: 1.5;
       }
       .step-label strong {
-        color: var(--green);
+        color: var(--text);
+        font-weight: 600;
         display: block;
         margin-bottom: 2px;
       }
 
-      /* ── FORM ───────────────────────────────────────────────────── */
       .form-panel {
+        background: var(--surface);
         border: 1px solid var(--border);
-        background: var(--panel);
+        border-radius: 8px;
         padding: 28px;
-        position: relative;
-      }
-
-      .form-panel::before,
-      .form-panel::after {
-        content: "";
-        position: absolute;
-        width: 14px;
-        height: 14px;
-        border-color: var(--cyan);
-        border-style: solid;
-      }
-      .form-panel::before {
-        top: -1px;
-        left: -1px;
-        border-width: 2px 0 0 2px;
-      }
-      .form-panel::after {
-        bottom: -1px;
-        right: -1px;
-        border-width: 0 2px 2px 0;
+        box-shadow: var(--shadow);
       }
 
       .form-section-label {
-        font-size: 0.65rem;
-        letter-spacing: 3px;
-        color: var(--cyan);
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: var(--primary);
         margin: 24px 0 12px;
         padding-bottom: 6px;
         border-bottom: 1px solid var(--border);
+        letter-spacing: 0.3px;
       }
       .form-section-label:first-of-type {
         margin-top: 0;
@@ -219,7 +143,7 @@
       .form-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-        gap: 14px;
+        gap: 16px;
       }
 
       .form-group {
@@ -232,101 +156,84 @@
       }
 
       label {
-        font-size: 0.65rem;
-        color: var(--text);
-        letter-spacing: 2px;
-        text-transform: uppercase;
+        font-size: 0.72rem;
+        font-weight: 500;
+        color: var(--text-secondary);
       }
 
       input[type="text"],
       input[type="password"],
       input[type="email"] {
-        background: #000;
+        background: #fff;
         border: 1px solid var(--border);
-        border-bottom-color: #2a2a2a;
-        color: var(--green);
-        font-family: "Share Tech Mono", monospace;
-        font-size: 0.85rem;
+        border-radius: 4px;
+        color: var(--text);
+        font-family: inherit;
+        font-size: 0.88rem;
         padding: 9px 12px;
         outline: none;
         width: 100%;
-        transition:
-          border-color 0.15s,
-          box-shadow 0.15s;
+        transition: border-color 0.15s;
       }
       input:focus {
-        border-color: var(--green);
-        box-shadow: 0 0 8px rgba(0, 255, 65, 0.2);
+        border-color: var(--primary);
+        box-shadow: 0 0 0 2px rgba(63,81,181,0.15);
       }
 
       input.url-valid {
         border-color: var(--green);
-        box-shadow: 0 0 8px rgba(0, 255, 65, 0.3);
       }
       input.url-invalid {
         border-color: var(--red);
-        box-shadow: 0 0 8px rgba(255, 0, 68, 0.2);
       }
 
       .url-feedback {
-        font-size: 0.65rem;
-        letter-spacing: 1px;
+        font-size: 0.72rem;
         margin-top: 5px;
-        min-height: 1em;
+        min-height: 1.2em;
       }
       .url-feedback.ok {
         color: var(--green);
+        font-weight: 500;
       }
       .url-feedback.bad {
         color: var(--red);
       }
 
       .hint {
-        color: #666;
-        font-size: 0.62rem;
+        color: var(--dimtext);
+        font-size: 0.7rem;
         margin-top: 4px;
-      }
-      .hint span {
-        color: #888;
-        font-size: 0.58rem;
-        color: #666;
-        font-size: 0.62rem;
-        margin-top: 4px;
-      }
-      .hint span {
-        color: #888;
-        font-size: 0.58rem;
       }
 
       .reschedule-box {
-        border: 1px solid rgba(255, 0, 68, 0.3);
-        background: rgba(255, 0, 68, 0.04);
+        border: 1px solid #ffcdd2;
+        background: #ffebee;
+        border-radius: 6px;
         padding: 14px;
         margin-top: 20px;
       }
-
       .reschedule-header {
-        font-size: 0.65rem;
-        letter-spacing: 2px;
+        font-size: 0.72rem;
+        font-weight: 600;
         color: var(--red);
         margin-bottom: 10px;
       }
-
       .checkbox-row {
         display: flex;
         align-items: flex-start;
         gap: 10px;
       }
       .checkbox-row input[type="checkbox"] {
-        accent-color: var(--red);
-        width: 14px;
-        height: 14px;
+        accent-color: var(--primary);
+        width: 16px;
+        height: 16px;
         flex-shrink: 0;
         margin-top: 2px;
       }
       .checkbox-desc {
-        font-size: 0.7rem;
-        color: var(--text);
+        font-size: 0.78rem;
+        color: var(--text-secondary);
         line-height: 1.6;
       }
       .checkbox-desc strong {
@@ -340,22 +247,25 @@
         margin-top: 8px;
       }
       .locations-grid label {
-        font-size: 0.7rem;
+        font-size: 0.8rem;
         color: var(--text);
         display: flex;
         align-items: center;
         gap: 6px;
         cursor: pointer;
+        font-weight: 400;
+        text-transform: none;
+        letter-spacing: 0;
       }
       .locations-grid input[type="checkbox"] {
-        accent-color: var(--green);
-        width: 12px;
-        height: 12px;
+        accent-color: var(--primary);
+        width: 16px;
+        height: 16px;
       }
       .locations-header {
-        font-size: 0.62rem;
-        letter-spacing: 2px;
-        color: var(--cyan);
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: var(--text-secondary);
         margin-top: 16px;
         margin-bottom: 4px;
       }
@@ -367,44 +277,24 @@
       }
 
       .btn-submit {
-        background: transparent;
-        border: 1px solid var(--green);
-        color: var(--green);
-        font-family: "Share Tech Mono", monospace;
-        font-size: 0.8rem;
-        letter-spacing: 3px;
-        padding: 12px 32px;
+        background: var(--primary);
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        font-family: inherit;
+        font-size: 0.88rem;
+        font-weight: 500;
+        padding: 12px 36px;
         cursor: pointer;
-        text-transform: uppercase;
-        transition: all 0.15s;
-        position: relative;
-        overflow: hidden;
-      }
-      .btn-submit::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background: var(--green);
-        transform: scaleX(0);
-        transform-origin: left;
-        transition: transform 0.15s;
-        z-index: -1;
+        transition: background 0.15s, box-shadow 0.15s;
+        box-shadow: var(--shadow);
       }
       .btn-submit:hover {
-        background: rgba(0, 255, 65, 0.15);
-        color: var(--green);
-        border-color: var(--green);
-        box-shadow: 0 0 16px rgba(0, 255, 65, 0.3);
-        background: rgba(0, 255, 65, 0.15);
-        color: var(--green);
-        border-color: var(--green);
-        box-shadow: 0 0 16px rgba(0, 255, 65, 0.3);
-      }
-      .btn-submit:hover::before {
-        transform: scaleX(1);
+        background: var(--primary-dark);
+        box-shadow: var(--shadow-hover);
       }
       .btn-submit:disabled {
-        opacity: 0.4;
+        opacity: 0.5;
         cursor: not-allowed;
       }
       .btn-submit.loading {
@@ -413,129 +303,53 @@
       }
       .btn-submit.loading .spinner {
         display: inline-block;
-        width: 12px;
-        height: 12px;
-        border: 2px solid currentColor;
-        border-top-color: transparent;
+        width: 14px;
+        height: 14px;
+        border: 2px solid rgba(255,255,255,0.3);
+        border-top-color: #fff;
         border-radius: 50%;
         animation: spin 0.8s linear infinite;
         vertical-align: middle;
         margin-right: 6px;
       }
       @keyframes spin {
-        to {
-          transform: rotate(360deg);
-        }
-      }
-      .btn-submit.loading {
-        pointer-events: none;
-        opacity: 0.7;
-      }
-      .btn-submit.loading .spinner {
-        display: inline-block;
-        width: 12px;
-        height: 12px;
-        border: 2px solid currentColor;
-        border-top-color: transparent;
-        border-radius: 50%;
-        animation: spin 0.8s linear infinite;
-        vertical-align: middle;
-        margin-right: 6px;
-      }
-      @keyframes spin {
-        to {
-          transform: rotate(360deg);
-        }
+        to { transform: rotate(360deg); }
       }
 
-      /* ── MONITORING PANEL ───────────────────────────────────────── */
       #monitorPanel {
         display: none;
       }
 
       .monitor-header {
-        border: 1px solid var(--green);
-        background: rgba(0, 255, 65, 0.03);
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
         padding: 24px 28px;
-        position: relative;
+        box-shadow: var(--shadow);
         margin-bottom: 16px;
       }
-      .monitor-header::before {
-        content: "";
-        position: absolute;
-        top: -1px;
-        left: -1px;
-        width: 14px;
-        height: 14px;
-        border-top: 2px solid var(--cyan);
-        border-left: 2px solid var(--cyan);
-      }
-      .monitor-header::after {
-        content: "";
-        position: absolute;
-        bottom: -1px;
-        right: -1px;
-        width: 14px;
-        height: 14px;
-        border-bottom: 2px solid var(--cyan);
-        border-right: 2px solid var(--cyan);
-      }
-
       .monitor-status-row {
         display: flex;
         align-items: center;
         gap: 12px;
         margin-bottom: 18px;
       }
-
       .status-dot {
-        width: 10px;
-        height: 10px;
+        width: 12px;
+        height: 12px;
         border-radius: 50%;
         background: var(--border);
         flex-shrink: 0;
       }
       .status-dot.on {
         background: var(--green);
-        box-shadow:
-          0 0 8px var(--green),
-          0 0 16px var(--green);
-        animation: pulse 2s ease-in-out infinite;
       }
       .status-dot.stopped {
         background: var(--red);
       }
-
-      @keyframes pulse {
-        0%,
-        100% {
-          box-shadow:
-            0 0 4px var(--green),
-            0 0 8px var(--green);
-        }
-        50% {
-          box-shadow:
-            0 0 12px var(--green),
-            0 0 28px var(--green);
-        }
-      }
-      @keyframes pulse-yellow {
-        0%,
-        100% {
-          box-shadow:
-            0 0 4px var(--yellow),
-            0 0 8px var(--yellow);
-        }
-        50% {
-          box-shadow:
-            0 0 12px var(--yellow),
-            0 0 24px var(--yellow);
-        }
-      }
-
       .monitor-status-text {
-        font-size: 1.1rem;
-        letter-spacing: 4px;
+        font-size: 1rem;
+        font-weight: 600;
       }
       .monitor-status-text.on {
         color: var(--green);
@@ -544,9 +358,8 @@
         color: var(--red);
       }
       .monitor-status-text.idle {
-        color: var(--text);
+        color: var(--text-secondary);
       }
-
       .monitor-meta {
         display: grid;
         gap: 6px;
@@ -555,7 +368,7 @@
       .meta-row {
         display: flex;
         gap: 16px;
-        font-size: 0.75rem;
+        font-size: 0.82rem;
       }
       .meta-key {
         color: var(--dimtext);
@@ -566,14 +379,12 @@
         color: var(--text);
       }
       .meta-val.found {
-        color: var(--cyan);
-        text-shadow: 0 0 8px var(--cyan);
+        color: var(--primary);
+        font-weight: 600;
       }
-
       .action-bar {
-        font-size: 0.75rem;
-        color: var(--cyan);
-        letter-spacing: 1px;
+        font-size: 0.82rem;
+        color: var(--text-secondary);
         padding: 8px 0;
         border-top: 1px solid var(--border);
         overflow: hidden;
@@ -581,23 +392,22 @@
         white-space: nowrap;
       }
 
-      /* Log panel */
-      /* notifications */
       .notif-section {
         margin-top: 20px;
+        background: var(--surface);
         border: 1px solid var(--border);
-        background: var(--panel);
+        border-radius: 8px;
         padding: 16px;
       }
       .notif-section-label {
-        font-size: 0.62rem;
-        letter-spacing: 3px;
-        color: var(--yellow);
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: var(--text-secondary);
         margin-bottom: 12px;
       }
       .notif-grid {
         display: flex;
-        gap: 12px;
+        gap: 10px;
         flex-wrap: wrap;
       }
       .notif-card {
@@ -606,16 +416,17 @@
         gap: 8px;
         padding: 10px 14px;
         border: 1px solid var(--border);
-        background: rgba(0, 0, 0, 0.2);
-        font-family: "Share Tech Mono", monospace;
-        font-size: 0.62rem;
-        letter-spacing: 1px;
+        border-radius: 6px;
+        background: var(--bg);
+        font-family: inherit;
+        font-size: 0.78rem;
         cursor: pointer;
         transition: border-color 0.15s, box-shadow 0.15s;
+        color: var(--text);
       }
       .notif-card:hover {
-        border-color: var(--cyan);
-        box-shadow: 0 0 8px rgba(0, 255, 255, 0.2);
+        border-color: var(--accent);
+        box-shadow: var(--shadow-hover);
       }
       .notif-card-popup {
         position: fixed;
@@ -623,7 +434,7 @@
         left: 0;
         width: 100%;
         height: 100%;
-        background: rgba(0, 0, 0, 0.85);
+        background: rgba(0,0,0,0.4);
         display: none;
         justify-content: center;
         align-items: center;
@@ -633,17 +444,17 @@
         display: flex;
       }
       .popup-content {
-        background: var(--panel);
-        border: 1px solid var(--cyan);
+        background: var(--surface);
+        border-radius: 8px;
         padding: 24px 30px;
         max-width: 400px;
         width: 90%;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.15);
       }
       .popup-title {
-        font-family: "Share Tech Mono", monospace;
-        font-size: 0.75rem;
-        color: var(--cyan);
-        letter-spacing: 3px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text);
         margin-bottom: 20px;
       }
       .popup-field {
@@ -651,24 +462,27 @@
       }
       .popup-field label {
         display: block;
-        font-size: 0.6rem;
-        color: var(--dimtext);
-        letter-spacing: 2px;
+        font-size: 0.72rem;
+        font-weight: 500;
+        color: var(--text-secondary);
         margin-bottom: 6px;
+        text-transform: none;
+        letter-spacing: 0;
       }
       .popup-field input {
         width: 100%;
-        background: #000;
+        background: #fff;
         border: 1px solid var(--border);
-        color: var(--green);
-        font-family: "Share Tech Mono", monospace;
-        font-size: 0.8rem;
+        border-radius: 4px;
+        color: var(--text);
+        font-family: inherit;
+        font-size: 0.85rem;
         padding: 8px 12px;
         outline: none;
       }
       .popup-field input:focus {
-        border-color: var(--green);
-        box-shadow: 0 0 8px rgba(0, 255, 65, 0.2);
+        border-color: var(--primary);
+        box-shadow: 0 0 0 2px rgba(63,81,181,0.15);
       }
       .popup-actions {
         display: flex;
@@ -678,62 +492,40 @@
       .btn-popup {
         flex: 1;
         padding: 10px 16px;
-        font-family: "Share Tech Mono", monospace;
-        font-size: 0.65rem;
-        letter-spacing: 1px;
+        font-family: inherit;
+        font-size: 0.8rem;
+        font-weight: 500;
         cursor: pointer;
+        border-radius: 4px;
+        transition: background 0.15s, box-shadow 0.15s;
+      }
+      .btn-popup {
         background: transparent;
         border: 1px solid var(--border);
         color: var(--text);
       }
       .btn-popup:hover {
-        border-color: var(--cyan);
-        color: var(--cyan);
+        background: #f5f5f5;
       }
       .btn-popup.primary {
-        border-color: var(--green);
-        color: var(--green);
+        background: var(--primary);
+        border-color: var(--primary);
+        color: #fff;
       }
       .btn-popup.primary:hover {
-        background: rgba(0, 255, 65, 0.1);
+        background: var(--primary-dark);
       }
       .notif-icon {
-        font-size: 0.9rem;
-      }
-      .notif-status {
-        color: var(--green);
-      }
-      .notif-status.disabled {
-        color: var(--red);
+        font-size: 1rem;
       }
       .notif-label {
-        color: var(--dimtext);
-      }
-      .notif-btn {
-        margin-left: 8px;
-        background: transparent;
-        border: 1px solid var(--cyan);
-        color: var(--cyan);
-        padding: 4px 10px;
-        font-family: "Share Tech Mono", monospace;
-        font-size: 0.58rem;
-        letter-spacing: 1px;
-        cursor: pointer;
-      }
-      .notif-btn:hover {
-        background: rgba(0, 255, 255, 0.1);
-        box-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
-      }
-      .notif-btn.linked {
-        background: rgba(0, 255, 65, 0.1);
-        border-color: var(--green);
-        color: var(--green);
+        color: var(--text-secondary);
       }
 
       .log-section-label {
-        font-size: 0.65rem;
-        letter-spacing: 3px;
-        color: var(--text);
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: var(--text-secondary);
         margin: 20px 0 10px;
         display: flex;
         align-items: center;
@@ -745,23 +537,21 @@
         height: 1px;
         background: var(--border);
       }
-
       .log-panel {
+        background: var(--surface);
         border: 1px solid var(--border);
-        background: var(--panel);
+        border-radius: 6px;
         padding: 14px;
         max-height: 360px;
         overflow-y: auto;
-        scrollbar-width: thin;
-        scrollbar-color: var(--border) transparent;
       }
-
       .log-entry {
-        font-size: 0.68rem;
+        font-size: 0.75rem;
         line-height: 1.8;
         color: var(--text);
         display: flex;
         gap: 10px;
+        font-family: monospace;
       }
       .log-ts {
         color: var(--dimtext);
@@ -769,67 +559,60 @@
       }
       .log-entry.highlight {
         color: var(--green);
+        font-weight: 600;
       }
       .log-entry.warn {
-        color: var(--yellow);
+        color: var(--orange);
       }
       .log-entry.error {
         color: var(--red);
       }
-
       .log-empty {
         color: var(--dimtext);
-        font-size: 0.68rem;
-        letter-spacing: 1px;
+        font-size: 0.78rem;
       }
 
-      /* screenshot */
       .screenshot-section {
         margin-top: 20px;
+        background: var(--surface);
         border: 1px solid var(--border);
-        background: var(--panel);
+        border-radius: 8px;
         padding: 16px;
       }
       .screenshot-label {
-        font-size: 0.62rem;
-        letter-spacing: 3px;
-        color: var(--cyan);
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: var(--text-secondary);
         margin-bottom: 12px;
       }
       #screenshotImg {
         max-width: 100%;
         border: 1px solid var(--border);
+        border-radius: 4px;
         display: none;
       }
       #screenshotSpinner {
-        color: var(--text);
-        font-size: 0.7rem;
-        letter-spacing: 2px;
+        color: var(--text-secondary);
+        font-size: 0.8rem;
       }
 
-      /* ── ERROR/VALIDATION ────────────────────────────────────────── */
       #urlValidationError {
         display: none;
         margin-top: 12px;
         padding: 12px 16px;
         border: 1px solid var(--red);
-        background: rgba(255, 0, 68, 0.05);
+        background: #ffebee;
+        border-radius: 6px;
         color: var(--red);
-        font-size: 0.72rem;
-        letter-spacing: 1px;
+        font-size: 0.8rem;
       }
 
       .blink {
         animation: blink 1s step-end infinite;
       }
       @keyframes blink {
-        0%,
-        100% {
-          opacity: 1;
-        }
-        50% {
-          opacity: 0;
-        }
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0; }
       }
     </style>
   </head>
@@ -837,15 +620,12 @@
     <div class="wrapper">
       <!-- Header -->
       <div class="page-header">
-        <p class="sys-badge">&gt; VISA_CTRL</p>
-        <h1 class="page-title">APPOINTMENT<br />MONITOR</h1>
+        <p class="sys-badge">Visa Appointment Monitor</p>
+        <h1 class="page-title">Appointment<br />Monitor</h1>
         <p class="page-desc">
           Submit your credentials below to initialize automated monitoring of your US visa appointment slot.<br /><br />
           We'll scan all consulate locations and notify you the moment an earlier date becomes available. You can enable
-          notifications after approval.
-          We'll scan all consulate locations and notify you the moment an earlier date becomes available. You can enable
-          notifications after approval.
-          <span>live monitoring status</span> after submission.
+          notifications after approval and view <span>live monitoring status</span> after submission.
         </p>
       </div>
 
@@ -865,7 +645,7 @@
         </div>
         <div class="step">
           <div class="step-num">04</div>
-          <div class="step-label"><strong>NOTIFY</strong>Email alert the instant an earlier slot appears</div>
+          <div class="step-label"><strong>NOTIFY</strong>Instant alerts via email, Telegram, or SMS</div>
         </div>
       </div>
 
@@ -891,7 +671,7 @@
           <form id="missionForm" autocomplete="off" novalidate>
             <input type="hidden" name="token" id="tokenField" value="{{ token }}" />
 
-            <p class="form-section-label">&gt; PERSONAL DETAILS</p>
+            <p class="form-section-label">Personal Details</p>
             <div class="form-grid">
               <div class="form-group full">
                 <label>Your Name</label>
@@ -900,16 +680,21 @@
               <div class="form-group full">
                 <label>Notification Email</label>
                 <input type="email" name="email" placeholder="your@email.com" />
-                <p class="hint">// for alerts when earlier dates are found</p>
+                <p class="hint">For alerts when earlier dates are found</p>
+              </div>
+              <div class="form-group full">
+                <label>Telegram Chat ID (optional)</label>
+                <input type="text" name="telegram_chat_id" placeholder="123456789" />
+                <p class="hint">For Telegram notifications — or link via popup after approval</p>
               </div>
             </div>
 
-            <p class="form-section-label">&gt; VISA PORTAL CREDENTIALS</p>
+            <p class="form-section-label">Visa Portal Credentials</p>
             <div class="form-grid">
               <div class="form-group">
                 <label>Portal Login (Email)</label>
                 <input type="text" name="username" placeholder="your@login.com" required />
-                <p class="hint">// ais.usvisa-info.com login</p>
+                <p class="hint">ais.usvisa-info.com login</p>
               </div>
               <div class="form-group">
                 <label>Portal Password</label>
@@ -917,7 +702,7 @@
               </div>
             </div>
 
-            <p class="form-section-label">&gt; APPOINTMENT DETAILS</p>
+            <p class="form-section-label">Appointment Details</p>
             <div class="form-grid">
               <div class="form-group full">
                 <label>Appointment URL</label>
@@ -930,13 +715,13 @@
                   spellcheck="false"
                   placeholder="https://ais.usvisa-info.com/en-ca/niv/schedule/12345678/appointment"
                 />
-                <p class="hint">// Paste the full URL from your appointment confirmation page</p>
+                <p class="hint">Paste the full URL from your appointment confirmation page</p>
                 <p id="urlFeedback" class="url-feedback"></p>
               </div>
             </div>
 
             <!-- Preferred Locations -->
-            <p class="locations-header">▸ MONITOR LOCATIONS</p>
+            <p class="locations-header">Monitor Locations</p>
             <div class="locations-grid">
               <label><input type="checkbox" name="location" value="Toronto" checked /> Toronto</label>
               <label><input type="checkbox" name="location" value="Vancouver" checked /> Vancouver</label>
@@ -948,7 +733,7 @@
 
             <!-- Reschedule -->
             <div class="reschedule-box">
-              <p class="reschedule-header">⚠ DANGER ZONE // AUTO-RESCHEDULE</p>
+              <p class="reschedule-header">Auto-Reschedule</p>
               <div class="checkbox-row">
                 <input type="checkbox" name="reschedule" id="reschedule" />
                 <label class="checkbox-desc" for="reschedule">
@@ -960,7 +745,7 @@
             </div>
 
             <div class="submit-row">
-              <button type="submit" class="btn-submit" id="submitBtn">▶ INITIATE</button>
+              <button type="submit" class="btn-submit" id="submitBtn">Submit</button>
             </div>
           </form>
 
@@ -970,126 +755,43 @@
 
       <!-- ── PENDING APPROVAL PANEL ──────────────────────────────────── -->
       <div id="pendingPanel" style="display: none">
-        <div
-          style="
-            border: 1px solid var(--yellow);
-            background: rgba(255, 230, 0, 0.03);
-            padding: 28px;
-            position: relative;
-          "
-        >
-          <span
-            style="
-              position: absolute;
-              top: -1px;
-              left: -1px;
-              width: 14px;
-              height: 14px;
-              border-top: 2px solid var(--yellow);
-              border-left: 2px solid var(--yellow);
-              display: block;
-            "
-          ></span>
-          <span
-            style="
-              position: absolute;
-              bottom: -1px;
-              right: -1px;
-              width: 14px;
-              height: 14px;
-              border-bottom: 2px solid var(--yellow);
-              border-right: 2px solid var(--yellow);
-              display: block;
-            "
-          ></span>
-
-          <p style="font-size: 0.62rem; letter-spacing: 4px; color: var(--text); margin-bottom: 14px">
-            &gt; REQUEST_STATUS
+        <div style="border: 1px solid #ffe0b2; background: #fff8e1; border-radius: 8px; padding: 28px;">
+          <p style="font-size: 0.72rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 14px">
+            REQUEST STATUS
           </p>
-
           <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px">
-            <span
-              style="
-                width: 10px;
-                height: 10px;
-                border-radius: 50%;
-                background: var(--yellow);
-                box-shadow: 0 0 8px var(--yellow);
-                animation: pulse-yellow 1.5s ease-in-out infinite;
-                flex-shrink: 0;
-              "
-            ></span>
-            <span style="font-size: 1.1rem; letter-spacing: 4px; color: var(--yellow)">AWAITING_APPROVAL</span>
+            <span style="width: 12px; height: 12px; border-radius: 50%; background: var(--orange); flex-shrink: 0;"></span>
+            <span style="font-size: 1.1rem; font-weight: 600; color: var(--orange)">AWAITING APPROVAL</span>
           </div>
-
-          <p style="font-size: 0.75rem; color: var(--text); line-height: 1.8; margin-bottom: 16px">
+          <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.8; margin-bottom: 16px">
             Your request has been received and is pending review.<br />
             This page will automatically update once approved — no need to refresh.
           </p>
-
-          <div style="display: flex; gap: 16px; font-size: 0.75rem">
+          <div style="display: flex; gap: 16px; font-size: 0.82rem">
             <span style="color: var(--dimtext); width: 80px; flex-shrink: 0">STATUS</span>
-            <span style="color: var(--yellow)">Pending admin approval <span class="blink">▮</span></span>
+            <span style="color: var(--orange)">Pending admin approval <span class="blink">▮</span></span>
           </div>
         </div>
       </div>
 
       <!-- ── REJECTED PANEL ────────────────────────────────────────────── -->
       <div id="rejectedPanel" style="display: none">
-        <div
-          style="border: 1px solid var(--red); background: rgba(255, 0, 68, 0.03); padding: 28px; position: relative"
-        >
-          <span
-            style="
-              position: absolute;
-              top: -1px;
-              left: -1px;
-              width: 14px;
-              height: 14px;
-              border-top: 2px solid var(--red);
-              border-left: 2px solid var(--red);
-              display: block;
-            "
-          ></span>
-          <span
-            style="
-              position: absolute;
-              bottom: -1px;
-              right: -1px;
-              width: 14px;
-              height: 14px;
-              border-bottom: 2px solid var(--red);
-              border-right: 2px solid var(--red);
-              display: block;
-            "
-          ></span>
-
-          <p style="font-size: 0.62rem; letter-spacing: 4px; color: var(--text); margin-bottom: 14px">
-            &gt; REQUEST_STATUS
+        <div style="border: 1px solid #ffcdd2; background: #ffebee; border-radius: 8px; padding: 28px;">
+          <p style="font-size: 0.72rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 14px">
+            REQUEST STATUS
           </p>
-
           <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px">
-            <span
-              style="
-                width: 10px;
-                height: 10px;
-                border-radius: 50%;
-                background: var(--red);
-                box-shadow: 0 0 8px var(--red);
-                flex-shrink: 0;
-              "
-            ></span>
-            <span style="font-size: 1.1rem; letter-spacing: 4px; color: var(--red)">REQUEST_DECLINED</span>
+            <span style="width: 12px; height: 12px; border-radius: 50%; background: var(--red); flex-shrink: 0;"></span>
+            <span style="font-size: 1.1rem; font-weight: 600; color: var(--red)">REQUEST DECLINED</span>
           </div>
-
-          <p style="font-size: 0.72rem; color: var(--text); margin-bottom: 10px">Reason:</p>
+          <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 10px">Reason:</p>
           <p
             id="rejectReason"
             style="
-              font-size: 0.8rem;
+              font-size: 0.85rem;
               color: var(--red);
               line-height: 1.7;
-              border-left: 2px solid var(--red);
+              border-left: 3px solid var(--red);
               padding-left: 12px;
             "
           ></p>
@@ -1099,13 +801,13 @@
       <!-- ── MONITORING PANEL (shown after submit) ────────────────── -->
       <div id="monitorPanel">
         <div class="monitor-header">
-          <p style="font-size: 0.62rem; letter-spacing: 4px; color: var(--text); margin-bottom: 14px">
-            &gt; MISSION_STATUS
+          <p style="font-size: 0.72rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 14px">
+            MONITOR STATUS
           </p>
 
           <div class="monitor-status-row">
             <span class="status-dot" id="mStatusDot"></span>
-            <span class="monitor-status-text" id="mStatusText">INITIALIZING...</span>
+            <span class="monitor-status-text" id="mStatusText">Initializing...</span>
           </div>
 
           <div class="monitor-meta">
@@ -1133,14 +835,14 @@
 
         <!-- Appointment screenshot -->
         <div class="screenshot-section">
-          <p class="screenshot-label">&gt; APPOINTMENT_PAGE // CAPTURED AT LOGIN</p>
+          <p class="screenshot-label">Appointment Page (captured at login)</p>
           <div id="screenshotSpinner"><span class="blink">▮</span> Loading screenshot...</div>
           <img id="screenshotImg" src="" alt="Appointment page" />
         </div>
 
         <!-- Notifications -->
         <div class="notif-section">
-          <p class="notif-section-label">&gt; NOTIFICATIONS</p>
+          <p class="notif-section-label">Notifications</p>
           <div class="notif-grid">
             <div class="notif-card" id="emailNotifCard">
               <span class="notif-icon">✉</span>
@@ -1160,7 +862,7 @@
         <!-- Email Popup -->
         <div class="notif-card-popup" id="emailPopup">
           <div class="popup-content">
-            <div class="popup-title">&gt; EMAIL_NOTIFICATION</div>
+            <div class="popup-title">Email Notification</div>
             <div class="popup-field">
               <label>EMAIL ADDRESS</label>
               <input type="email" id="popupEmail" placeholder="your@email.com" />
@@ -1176,7 +878,7 @@
         <!-- Telegram Popup -->
         <div class="notif-card-popup" id="telegramPopup">
           <div class="popup-content">
-            <div class="popup-title">&gt; TELEGRAM_NOTIFICATION</div>
+            <div class="popup-title">Telegram Notification</div>
 
             <button class="btn-popup primary" id="linkTelegramBtn" style="width:100%; margin-bottom:16px;">
               ⚡ LINK TELEGRAM
@@ -1201,7 +903,7 @@
         <!-- SMS Popup -->
         <div class="notif-card-popup" id="phonePopup">
           <div class="popup-content">
-            <div class="popup-title">&gt; SMS_NOTIFICATION</div>
+            <div class="popup-title">SMS Notification</div>
             <div class="popup-field">
               <label>PHONE NUMBER (with country code)</label>
               <input type="text" id="popupPhone" placeholder="+14155552671" />
@@ -1215,14 +917,14 @@
         </div>
 
         <!-- Live log -->
-        <div class="log-section-label">&gt; LIVE_LOG</div>
+        <div class="log-section-label">Live Log</div>
         <div class="log-panel" id="mLogPanel">
           <p class="log-empty"><span class="blink">▮</span> Waiting for log entries...</p>
         </div>
 
         <p style="margin-top: 20px; font-size: 0.68rem; color: var(--dimtext); letter-spacing: 1px; line-height: 1.8">
           Bookmark this page — you can return at any time to check your monitoring status.<br />
-          All Canadian consulate locations are being scanned. Notification will be sent when an earlier date is found.
+          All selected consulate locations are being scanned. You'll be notified when an earlier date is found.
         </p>
       </div>
     </div>
@@ -1283,7 +985,7 @@
         }
 
         submitBtn.classList.add("loading");
-        submitBtn.innerHTML = '<span class="spinner"></span>TRANSMITTING...';
+        submitBtn.innerHTML = '<span class="spinner"></span>Submitting...';
         document.getElementById("urlValidationError").style.display = "none";
 
         const fd = new FormData(form);
@@ -1302,7 +1004,7 @@
             } else {
               showValidationError(data.message || "Submission failed — please try again.");
               submitBtn.classList.remove("loading");
-              submitBtn.innerHTML = "▶ INITIATE";
+              submitBtn.innerHTML = "Submit";
             }
           })
           .catch(() => {
@@ -1558,7 +1260,7 @@
 
         dot.className = "status-dot " + (running ? "on" : "stopped");
         text.className = "monitor-status-text " + (running ? "on" : "stopped");
-        text.textContent = running ? "SURVEILLANCE_ONLINE" : "STOPPED";
+        text.textContent = running ? "RUNNING" : "STOPPED";
 
         document.getElementById("mActionBar").textContent = d.current_action || "—";
         document.getElementById("mCurrentApt").textContent = d.current_appointment || "—";

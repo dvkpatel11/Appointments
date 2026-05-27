@@ -344,32 +344,43 @@ class VisaAutomation:
             return None
 
     def select_location(self, location):
-        if location in self.visa_locations:
-            try:
-                self._log(f"Selecting location: {location}")
+        if location not in self.visa_locations:
+            return
+        try:
+            self._log(f"Selecting location: {location}")
 
-                # Quick presence check before evaluate (avoids 30s timeout)
-                loc = self.page.locator(self.s["location"])
-                if loc.count() == 0:
-                    self._log(f"Location selector '{self.s['location']}' not found on page", "error")
-                    self.capture_debug_screenshot(f"location_selector_missing_{location}")
-                    # Debug: dump available select/input elements to identify correct selector
-                    selects = self.page.eval_on_selector_all("select, input:not([type=hidden])",
-                        "els => els.map(e => e.id + '|' + e.name + '|' + (e.tagName||''))")
-                    self._log(f"Available form fields on page: {selects}", "debug")
-                    return
+            loc = self.page.locator(self.s["location"])
+            found = loc.count() > 0
 
-                current = loc.evaluate("el => el.value")
-                self._log(f"Current location: {current}", "debug")
+            if not found:
+                self._log(f"Primary selector '{self.s['location']}' not found — searching for alternatives", "warn")
+                self.capture_debug_screenshot(f"location_selector_missing_{location}")
+                selects = self.page.eval_on_selector_all("select",
+                    "els => els.map(e => e.id + '|' + e.name + '|' + e.className)")
+                self._log(f"Available <select> elements: {selects}", "debug")
+                if selects:
+                    first_id = selects[0].split("|")[0]
+                    if first_id:
+                        loc = self.page.locator(f"#{first_id}")
+                        found = loc.count() > 0
+                        if found:
+                            self._log(f"Fell back to selector: #{first_id}")
 
-                loc.select_option(location)
-                self.page.wait_for_load_state("networkidle")
-                time.sleep(0.5)
+            if not found:
+                self._log(f"No location <select> found on page — cannot select {location}", "error")
+                return
 
-                self._log(f"Selected {location}")
-            except Exception as e:
-                self._log(f"Error selecting {location}: {str(e)}", "error")
-                self.capture_debug_screenshot(f"location_error_{location}")
+            current = loc.evaluate("el => el.value")
+            self._log(f"Current location: {current}", "debug")
+
+            loc.select_option(location)
+            self.page.wait_for_load_state("networkidle")
+            time.sleep(0.5)
+
+            self._log(f"Selected {location}")
+        except Exception as e:
+            self._log(f"Error selecting {location}: {str(e)}", "error")
+            self.capture_debug_screenshot(f"location_error_{location}")
 
     def is_date_available(self, wait_time: int = 100):
         try:

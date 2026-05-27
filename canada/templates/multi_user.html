@@ -3,11 +3,7 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>VISA_CTRL // NEXUS</title>
-        <link
-            href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap"
-            rel="stylesheet"
-        />
+        <title>Visa Monitor — Admin</title>
         <style>
             *,
             *::before,
@@ -18,151 +14,125 @@
             }
 
             :root {
-                --green: #00ff41;
-                --magenta: #ff00ff;
-                --cyan: #00ffff;
-                --red: #ff0044;
-                --yellow: #ffe600;
-                --bg: #000;
-                --surface: #050505;
-                --panel: #080808;
-                --border: #1c1c1c;
-                --text: #777;
-                --dimtext: #333;
+                --primary: #3f51b5;
+                --primary-dark: #303f9f;
+                --accent: #2196f3;
+                --green: #4caf50;
+                --red: #f44336;
+                --orange: #ff9800;
+                --bg: #fafafa;
+                --surface: #ffffff;
+                --panel: #ffffff;
+                --border: #e0e0e0;
+                --text: #212121;
+                --text-secondary: #757575;
+                --dimtext: #9e9e9e;
+                --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+                --shadow-hover: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.06);
             }
 
             body {
                 background: var(--bg);
-                color: var(--green);
-                font-family: "Share Tech Mono", monospace;
+                color: var(--text);
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                font-size: 16px;
                 min-height: 100vh;
                 overflow-x: hidden;
             }
 
-            /* Scanlines overlay */
-            body::after {
-                content: "";
-                position: fixed;
-                inset: 0;
-                background: repeating-linear-gradient(
-                    0deg,
-                    transparent,
-                    transparent 2px,
-                    rgba(0, 0, 0, 0.15) 2px,
-                    rgba(0, 0, 0, 0.15) 4px
-                );
-                pointer-events: none;
-                z-index: 9999;
-            }
-
-            /* ── HEADER ─────────────────────────────────────────────────────── */
             header {
+                background: var(--surface);
                 border-bottom: 1px solid var(--border);
-                padding: 16px 28px;
+                padding: 12px 28px;
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
                 flex-wrap: wrap;
                 gap: 12px;
-                background: var(--surface);
                 position: sticky;
                 top: 0;
                 z-index: 100;
-                box-shadow:
-                    0 1px 0 #000,
-                    0 2px 20px rgba(0, 255, 65, 0.04);
-            }
-
-            .brand {
-                display: flex;
-                flex-direction: column;
+                box-shadow: var(--shadow);
             }
 
             .brand-title {
-                font-size: 1.4rem;
-                letter-spacing: 6px;
-                color: var(--green);
-                text-shadow:
-                    0 0 8px rgba(0, 255, 65, 0.5),
-                    0.04em 0 0 var(--magenta),
-                    -0.04em 0 0 var(--cyan);
-                animation: gglitch 5s infinite;
+                font-size: 1.2rem;
+                font-weight: 600;
+                color: var(--primary);
+                letter-spacing: 1px;
             }
-
-            @keyframes glitch {
-                0%,
-                74%,
-                76%,
-                78%,
-                100% {
-                    text-shadow:
-                        0 0 8px rgba(0, 255, 65, 0.5),
-                        0.04em 0 0 var(--magenta),
-                        -0.04em 0 0 var(--cyan);
-                }
-                75% {
-                    text-shadow:
-                        -0.04em 0 0 var(--magenta),
-                        0.04em 0 0 var(--cyan);
-                    transform: translate(-1px);
-                }
-                77% {
-                    text-shadow:
-                        0.04em 0 0 var(--magenta),
-                        -0.04em 0 0 var(--cyan);
-                    transform: translate(1px);
-                }
-            }
-
             .brand-sub {
-                font-size: 0.6rem;
-                color: var(--text);
-                letter-spacing: 3px;
+                font-size: 0.88rem;
+                color: var(--text-secondary);
                 margin-top: 2px;
             }
-
             .header-nav {
                 display: flex;
-                gap: 10px;
+                gap: 8px;
                 flex-wrap: wrap;
                 align-items: center;
             }
 
-            /* ── BUTTONS ─────────────────────────────────────────────────────── */
             .btn {
-                background: transparent;
-                border: 1px solid currentColor;
-                font-family: "Share Tech Mono", monospace;
-                font-size: 0.72rem;
-                letter-spacing: 2px;
-                padding: 7px 14px;
+                font-family: inherit;
+                font-size: 0.92rem;
+                font-weight: 500;
+                padding: 7px 16px;
+                border-radius: 4px;
                 cursor: pointer;
-                text-transform: uppercase;
+                text-transform: none;
                 text-decoration: none;
-                display: inline-block;
-                transition: all 0.15s;
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                transition: background 0.15s, box-shadow 0.15s;
+                border: 1px solid transparent;
+                letter-spacing: 0.3px;
             }
             .btn-green {
-                color: var(--green);
+                background: var(--green);
+                color: #fff;
+                border-color: var(--green);
+            }
+            .btn-green:hover {
+                background: #43a047;
+                box-shadow: var(--shadow-hover);
             }
             .btn-cyan {
-                color: var(--cyan);
+                background: var(--accent);
+                color: #fff;
+                border-color: var(--accent);
+            }
+            .btn-cyan:hover {
+                background: #1e88e5;
+                box-shadow: var(--shadow-hover);
             }
             .btn-red {
-                color: var(--red);
+                background: var(--red);
+                color: #fff;
+                border-color: var(--red);
+            }
+            .btn-red:hover {
+                background: #e53935;
+                box-shadow: var(--shadow-hover);
             }
             .btn-yellow {
-                color: var(--yellow);
+                background: var(--orange);
+                color: #fff;
+                border-color: var(--orange);
+            }
+            .btn-yellow:hover {
+                background: #f57c00;
+                box-shadow: var(--shadow-hover);
             }
             .btn-magenta {
-                color: var(--magenta);
+                background: var(--primary);
+                color: #fff;
+                border-color: var(--primary);
             }
-
-            .btn:hover {
-                background: rgba(128, 128, 128, 0.15);
-                border-color: currentColor;
-                color: currentColor;
-                box-shadow: 0 0 12px rgba(128, 128, 128, 0.3);
+            .btn-magenta:hover {
+                background: var(--primary-dark);
+                box-shadow: var(--shadow-hover);
             }
             .btn.loading {
                 pointer-events: none;
@@ -172,8 +142,8 @@
                 display: inline-block;
                 width: 14px;
                 height: 14px;
-                border: 2px solid currentColor;
-                border-top-color: transparent;
+                border: 2px solid rgba(255,255,255,0.3);
+                border-top-color: #fff;
                 border-radius: 50%;
                 animation: spin 0.8s linear infinite;
                 vertical-align: middle;
@@ -184,42 +154,9 @@
                 cursor: not-allowed;
             }
             @keyframes spin {
-                to {
-                    transform: rotate(360deg);
-                }
-            }
-            .btn:hover {
-                background: rgba(128, 128, 128, 0.15);
-                border-color: currentColor;
-                color: currentColor;
-                box-shadow: 0 0 12px rgba(128, 128, 128, 0.3);
-            }
-            .btn.loading {
-                pointer-events: none;
-                opacity: 0.7;
-            }
-            .btn.loading .spinner {
-                display: inline-block;
-                width: 14px;
-                height: 14px;
-                border: 2px solid currentColor;
-                border-top-color: transparent;
-                border-radius: 50%;
-                animation: spin 0.8s linear infinite;
-                vertical-align: middle;
-                margin-right: 6px;
-            }
-            .btn:disabled {
-                opacity: 0.5;
-                cursor: not-allowed;
-            }
-            @keyframes spin {
-                to {
-                    transform: rotate(360deg);
-                }
+                to { transform: rotate(360deg); }
             }
 
-            /* ── LAYOUT ──────────────────────────────────────────────────────── */
             .main {
                 max-width: 1280px;
                 margin: 0 auto;
@@ -232,25 +169,23 @@
                 gap: 14px;
                 margin: 32px 0 16px;
             }
-
             .section-title {
-                font-size: 0.75rem;
-                letter-spacing: 4px;
-                color: var(--text);
+                font-size: 0.92rem;
+                font-weight: 600;
+                color: var(--text-secondary);
+                letter-spacing: 0.5px;
             }
-
             .section-line {
                 flex: 1;
                 height: 1px;
                 background: var(--border);
             }
 
-            /* ── CLIENT LINK BANNER ──────────────────────────────────────────── */
             #linkBanner {
                 display: none;
-                border: 1px solid var(--cyan);
-                background: rgba(0, 255, 255, 0.04);
-                box-shadow: 0 0 16px rgba(0, 255, 255, 0.1);
+                border: 1px solid var(--accent);
+                background: #e3f2fd;
+                border-radius: 6px;
                 padding: 14px 20px;
                 margin-bottom: 8px;
                 align-items: center;
@@ -261,180 +196,101 @@
                 display: flex;
             }
             #linkBanner .label {
-                color: var(--text);
-                font-size: 0.75rem;
-                letter-spacing: 2px;
+                color: var(--text-secondary);
+                font-size: 0.92rem;
+                font-weight: 500;
                 flex-shrink: 0;
             }
             #clientLinkText {
-                color: var(--cyan);
+                color: var(--primary);
                 flex: 1;
-                font-size: 0.85rem;
+                font-size: 0.95rem;
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;
             }
 
-            /* ── PENDING REQUEST CARDS ───────────────────────────────────────── */
             #pendingGrid {
                 display: grid;
                 grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
                 gap: 14px;
                 margin-bottom: 8px;
             }
-
             .pending-card {
-                border: 1px solid rgba(255, 230, 0, 0.3);
-                background: rgba(255, 230, 0, 0.02);
+                background: var(--surface);
+                border: 1px solid #ffe0b2;
+                border-radius: 8px;
                 padding: 18px 20px;
-                position: relative;
+                box-shadow: var(--shadow);
             }
-            .pending-card::before {
-                content: "";
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                height: 1px;
-                background: linear-gradient(
-                    90deg,
-                    transparent,
-                    var(--yellow),
-                    transparent
-                );
-                animation: scanline-y 2.5s linear infinite;
-            }
-            @keyframes scanline-y {
-                0% {
-                    opacity: 0;
-                    transform: scaleX(0.2) translateX(-250%);
-                }
-                50% {
-                    opacity: 1;
-                }
-                100% {
-                    opacity: 0;
-                    transform: scaleX(0.2) translateX(250%);
-                }
-            }
-
             .pending-name {
-                font-size: 0.9rem;
-                color: var(--yellow);
-                letter-spacing: 2px;
+                font-size: 0.95rem;
+                font-weight: 600;
+                color: #e65100;
                 margin-bottom: 12px;
             }
-
             .pending-action-row {
                 display: flex;
                 gap: 8px;
                 margin-top: 14px;
             }
 
-            /* ── AGENT CARDS ─────────────────────────────────────────────────── */
             #agentGrid {
                 display: grid;
                 grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
                 gap: 14px;
             }
-
             .agent-card {
+                background: var(--surface);
                 border: 1px solid var(--border);
-                background: var(--panel);
+                border-radius: 8px;
                 padding: 18px 20px;
-                position: relative;
-                transition: border-color 0.2s;
+                box-shadow: var(--shadow);
+                transition: box-shadow 0.2s, border-color 0.2s;
+            }
+            .agent-card:hover {
+                box-shadow: var(--shadow-hover);
             }
             .agent-card.running {
-                border-color: rgba(0, 255, 65, 0.4);
+                border-left: 3px solid var(--green);
             }
-            .agent-card.running::before {
-                content: "";
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                height: 1px;
-                background: linear-gradient(
-                    90deg,
-                    transparent,
-                    var(--green),
-                    transparent
-                );
-                animation: scanline 2s linear infinite;
-            }
-            @keyframes scanline {
-                0% {
-                    opacity: 0;
-                    transform: scaleX(0.2) translateX(-250%);
-                }
-                50% {
-                    opacity: 1;
-                }
-                100% {
-                    opacity: 0;
-                    transform: scaleX(0.2) translateX(250%);
-                }
-            }
-
             .agent-id {
-                font-size: 0.7rem;
-                letter-spacing: 3px;
-                color: var(--text);
+                font-size: 0.88rem;
+                font-weight: 600;
+                color: var(--text-secondary);
                 margin-bottom: 10px;
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;
             }
-
             .status-row {
                 display: flex;
                 align-items: center;
                 gap: 8px;
                 margin-bottom: 12px;
             }
-
             .status-dot {
-                width: 8px;
-                height: 8px;
+                width: 10px;
+                height: 10px;
                 border-radius: 50%;
                 background: var(--border);
                 flex-shrink: 0;
             }
             .status-dot.on {
                 background: var(--green);
-                box-shadow:
-                    0 0 6px var(--green),
-                    0 0 12px var(--green);
-                animation: pulse 2s ease-in-out infinite;
             }
-            @keyframes pulse {
-                0%,
-                100% {
-                    box-shadow:
-                        0 0 4px var(--green),
-                        0 0 8px var(--green);
-                }
-                50% {
-                    box-shadow:
-                        0 0 10px var(--green),
-                        0 0 24px var(--green);
-                }
-            }
-
             .status-text {
-                font-size: 0.75rem;
-                letter-spacing: 2px;
+                font-size: 0.92rem;
+                font-weight: 600;
                 color: var(--green);
             }
             .status-text.off {
-                color: var(--text);
+                color: var(--text-secondary);
             }
-
             .data-row {
                 display: flex;
                 justify-content: space-between;
-                font-size: 0.7rem;
+                font-size: 0.92rem;
                 margin-bottom: 5px;
                 gap: 8px;
             }
@@ -450,60 +306,52 @@
                 white-space: nowrap;
             }
             .data-val.found {
-                color: var(--cyan);
-                text-shadow: 0 0 8px var(--cyan);
+                color: var(--primary);
+                font-weight: 600;
             }
-
             .card-footer {
                 margin-top: 14px;
                 display: flex;
                 justify-content: flex-end;
             }
-
             .no-agents {
                 color: var(--dimtext);
-                font-size: 0.75rem;
-                letter-spacing: 2px;
+                font-size: 0.95rem;
                 padding: 20px 0;
             }
 
-            /* ── DEPLOY FORM ─────────────────────────────────────────────────── */
             .deploy-controls {
                 display: flex;
                 gap: 10px;
                 margin-bottom: 16px;
                 flex-wrap: wrap;
             }
-
             #userForms {
                 display: flex;
                 flex-direction: column;
                 gap: 12px;
             }
-
             .user-form {
+                background: var(--surface);
                 border: 1px solid var(--border);
-                background: var(--panel);
+                border-radius: 8px;
                 padding: 20px;
-                position: relative;
+                box-shadow: var(--shadow);
             }
-
             .form-agent-title {
-                font-size: 0.7rem;
-                letter-spacing: 3px;
-                color: var(--cyan);
+                font-size: 0.92rem;
+                font-weight: 600;
+                color: var(--primary);
                 margin-bottom: 16px;
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
             }
-
             .form-grid {
                 display: grid;
                 grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
                 gap: 12px;
             }
-
             .form-group {
                 display: flex;
                 flex-direction: column;
@@ -512,69 +360,63 @@
             .form-group.full {
                 grid-column: 1 / -1;
             }
-
             label {
-                font-size: 0.65rem;
-                color: var(--text);
-                letter-spacing: 2px;
-                text-transform: uppercase;
+                font-size: 0.88rem;
+                font-weight: 500;
+                color: var(--text-secondary);
             }
-
             input[type="text"],
             input[type="password"],
             input[type="email"],
             input[type="number"] {
-                background: #000;
+                background: #fff;
                 border: 1px solid var(--border);
-                border-bottom-color: #333;
-                color: var(--green);
-                font-family: "Share Tech Mono", monospace;
-                font-size: 0.85rem;
-                padding: 7px 10px;
+                border-radius: 4px;
+                color: var(--text);
+                font-family: inherit;
+                font-size: 0.95rem;
+                padding: 8px 12px;
                 outline: none;
                 width: 100%;
-                transition:
-                    border-color 0.15s,
-                    box-shadow 0.15s;
+                transition: border-color 0.15s;
             }
             input:focus {
-                border-color: var(--green);
-                box-shadow: 0 0 8px rgba(0, 255, 65, 0.2);
+                border-color: var(--primary);
+                box-shadow: 0 0 0 2px rgba(63,81,181,0.15);
             }
-
             .checkbox-row {
                 display: flex;
                 align-items: center;
-                gap: 10px;
+                gap: 8px;
                 margin-top: 4px;
             }
             .checkbox-row input[type="checkbox"] {
-                accent-color: var(--green);
-                width: 14px;
-                height: 14px;
+                accent-color: var(--primary);
+                width: 16px;
+                height: 16px;
             }
             .checkbox-row label {
                 margin: 0;
+                font-size: 0.92rem;
+                text-transform: none;
+                letter-spacing: 0;
             }
             .warn {
                 color: var(--red);
-                font-size: 0.6rem;
-                letter-spacing: 1px;
+                font-size: 0.82rem;
+                font-weight: 500;
             }
 
-            /* ── ACTION LINE ────────────────────────────────────────────────── */
             .action-line {
-                font-size: 0.68rem;
-                color: var(--cyan);
-                letter-spacing: 1px;
+                font-size: 0.92rem;
+                color: var(--text-secondary);
                 margin: 8px 0 12px;
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;
-                min-height: 1em;
+                min-height: 1.2em;
             }
 
-            /* ── LOG PANEL ───────────────────────────────────────────────────── */
             .log-panel {
                 display: none;
                 margin-top: 12px;
@@ -582,11 +424,9 @@
                 padding-top: 10px;
                 max-height: 200px;
                 overflow-y: auto;
-                scrollbar-width: thin;
-                scrollbar-color: var(--border) transparent;
             }
             .log-entry {
-                font-size: 0.64rem;
+                font-size: 0.88rem;
                 line-height: 1.8;
                 color: var(--text);
                 display: flex;
@@ -595,33 +435,33 @@
             .log-ts {
                 color: var(--dimtext);
                 flex-shrink: 0;
+                font-family: monospace;
             }
             .log-entry.highlight {
                 color: var(--green);
+                font-weight: 600;
             }
             .log-entry.warn {
-                color: var(--yellow);
+                color: var(--orange);
             }
             .log-entry.error {
                 color: var(--red);
             }
 
-            /* ── NOTIFICATION TOAST ──────────────────────────────────────────── */
             #toast {
                 position: fixed;
                 bottom: 24px;
                 right: 24px;
-                background: var(--surface);
-                border: 1px solid var(--green);
-                color: var(--green);
-                font-size: 0.75rem;
-                letter-spacing: 2px;
-                padding: 12px 20px;
+                background: #323232;
+                color: #fff;
+                font-size: 0.95rem;
+                padding: 14px 24px;
+                border-radius: 4px;
                 z-index: 10000;
-                box-shadow: 0 0 20px rgba(0, 255, 65, 0.2);
+                box-shadow: 0 3px 10px rgba(0,0,0,0.2);
                 opacity: 0;
                 transform: translateY(10px);
-                transition: all 0.2s;
+                transition: all 0.25s;
                 pointer-events: none;
                 max-width: 360px;
             }
@@ -630,16 +470,14 @@
                 transform: translateY(0);
             }
             #toast.error {
-                border-color: var(--red);
-                color: var(--red);
+                background: #d32f2f;
             }
 
-            /* ── SETTINGS MODAL ─────────────────────────────────────────────── */
             .modal {
                 display: none;
                 position: fixed;
                 inset: 0;
-                background: rgba(0, 0, 0, 0.9);
+                background: rgba(0,0,0,0.4);
                 z-index: 10000;
                 align-items: center;
                 justify-content: center;
@@ -648,30 +486,27 @@
                 display: flex;
             }
             .modal-content {
-                background: var(--panel);
-                border: 1px solid var(--border);
+                background: var(--surface);
+                border-radius: 8px;
                 width: 90%;
                 max-width: 480px;
                 max-height: 90vh;
                 overflow: hidden;
                 display: flex;
                 flex-direction: column;
+                box-shadow: 0 8px 32px rgba(0,0,0,0.15);
             }
             .modal-header {
-                padding: 14px 18px;
+                padding: 16px 20px;
                 border-bottom: 1px solid var(--border);
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
             }
             .modal-title {
-                color: var(--magenta);
-                font-size: 0.8rem;
-                letter-spacing: 2px;
-            }
-            .modal-close {
-                padding: 4px 10px;
-                font-size: 0.7rem;
+                font-size: 0.9rem;
+                font-weight: 600;
+                color: var(--text);
             }
             .modal-tabs {
                 display: flex;
@@ -681,21 +516,21 @@
                 flex: 1;
                 background: transparent;
                 border: none;
-                color: var(--text);
-                font-family: "Share Tech Mono", monospace;
-                font-size: 0.7rem;
-                letter-spacing: 2px;
+                color: var(--text-secondary);
+                font-family: inherit;
+                font-size: 0.92rem;
+                font-weight: 500;
                 padding: 12px;
                 cursor: pointer;
-                transition: all 0.15s;
+                transition: color 0.15s;
                 border-bottom: 2px solid transparent;
             }
             .modal-tab:hover {
-                color: var(--green);
+                color: var(--primary);
             }
             .modal-tab.active {
-                color: var(--magenta);
-                border-bottom-color: var(--magenta);
+                color: var(--primary);
+                border-bottom-color: var(--primary);
             }
             .modal-body {
                 padding: 20px;
@@ -714,35 +549,35 @@
         <!-- ── HEADER ─────────────────────────────────────────────────────── -->
         <header>
             <div class="brand">
-                <div class="brand-title">VISA_CTRL</div>
+                <div class="brand-title">Visa Monitor</div>
                 <div class="brand-sub">
-                    // MULTI-AGENT APPOINTMENT MONITOR //
+                    Multi-agent appointment monitor
                 </div>
             </div>
             <nav class="header-nav">
                 <button class="btn btn-cyan" id="genLinkBtn">
-                    ⬡ CLIENT LINK
+                    Client Link
                 </button>
-                <button class="btn btn-yellow" id="viewLogBtn">◰ LOGS</button>
+                <button class="btn btn-yellow" id="viewLogBtn">Logs</button>
                 <button class="btn btn-magenta" id="settingsBtn">
-                    ⚙ SETTINGS
+                    Settings
                 </button>
-                <button class="btn btn-red" id="killAllBtn">✕ KILL ALL</button>
-                <a class="btn btn-green" href="/logout">⏻ LOGOUT</a>
+                <button class="btn btn-red" id="killAllBtn">Stop All</button>
+                <a class="btn" href="/logout" style="background:transparent;border-color:var(--red);color:var(--red);">Logout</a>
             </nav>
         </header>
 
         <div class="main">
             <!-- Client link banner -->
             <div id="linkBanner">
-                <span class="label">CLIENT LINK:</span>
+                <span class="label">Client Link:</span>
                 <span id="clientLinkText"></span>
-                <button class="btn btn-cyan" id="copyLinkBtn">COPY</button>
+                <button class="btn btn-cyan" id="copyLinkBtn">Copy</button>
             </div>
 
             <!-- ── PENDING REQUESTS ───────────────────────────────────────────── -->
             <div class="section-header">
-                <span class="section-title">PENDING_REQUESTS</span>
+                <span class="section-title">Pending Requests</span>
                 <div class="section-line"></div>
                 <span
                     class="section-title"
@@ -754,30 +589,30 @@
 
             <div id="pendingGrid">
                 <p class="no-agents" style="color: var(--dimtext)">
-                    &gt; NO PENDING REQUESTS
+                    No pending requests
                 </p>
             </div>
 
             <!-- ── ACTIVE AGENTS ─────────────────────────────────────────────── -->
             <div class="section-header">
-                <span class="section-title">ACTIVE_AGENTS</span>
+                <span class="section-title">Active Agents</span>
                 <div class="section-line"></div>
                 <span class="section-title" id="agentCount">0 ONLINE</span>
             </div>
 
             <div id="agentGrid">
-                <p class="no-agents">&gt; NO AGENTS DEPLOYED</p>
+                <p class="no-agents">No agents deployed</p>
             </div>
 
             <!-- ── DEPLOY AGENTS ─────────────────────────────────────────────── -->
             <div class="section-header" style="margin-top: 40px">
-                <span class="section-title">DEPLOY_AGENTS</span>
+                <span class="section-title">Deploy Agents</span>
                 <div class="section-line"></div>
             </div>
 
             <div class="deploy-controls">
                 <button class="btn btn-green" id="addAgentBtn">
-                    + ADD AGENT
+                    + Add Agent
                 </button>
             </div>
 
@@ -803,7 +638,7 @@
         <div id="settingsModal" class="modal">
             <div class="modal-content">
                 <div class="modal-header">
-                    <span class="modal-title">// SETTINGS</span>
+                    <span class="modal-title">Settings</span>
                     <button
                         class="btn btn-red modal-close"
                         id="closeSettingsModal"
@@ -994,7 +829,7 @@
 
                 if (keys.length === 0) {
                     grid.innerHTML =
-                        '<p class="no-agents">&gt; NO AGENTS DEPLOYED</p>';
+                        '<p class="no-agents">No agents deployed</p>';
                     return;
                 }
 
@@ -1013,7 +848,7 @@
 
                         return `
                   <div class="agent-card ${running ? "running" : ""}">
-                    <div class="agent-id">&gt; ${uid}</div>
+                    <div class="agent-id">${uid}</div>
 
                     <div class="status-row">
                       <div class="status-dot ${running ? "on" : ""}"></div>
@@ -1036,10 +871,10 @@
                     </div>
 
                     <div class="card-footer" style="gap:8px;">
-                      <button class="btn btn-yellow" onclick="toggleLog('${uid}')"
-                        style="font-size:0.62rem;padding:5px 10px;">▤ LOGS</button>
-                      <button class="btn btn-red" onclick="stopAgent(this, '${uid}')"
-                        style="font-size:0.65rem;padding:5px 12px;">✕ STOP</button>
+                <button class="btn btn-yellow" onclick="toggleLog('${uid}')"
+                    style="font-size:0.78rem;padding:5px 10px;">Logs</button>
+                <button class="btn btn-red" onclick="stopAgent(this, '${uid}')"
+                    style="font-size:0.65rem;padding:5px 12px;">Stop</button>
                     </div>
 
                     <div class="log-panel" id="log-${uid}">
@@ -1104,7 +939,7 @@
 
                 if (keys.length === 0) {
                     grid.innerHTML =
-                        '<p class="no-agents" style="color:var(--dimtext);">&gt; NO PENDING REQUESTS</p>';
+                        '<p class="no-agents" style="color:var(--dimtext);">No pending requests</p>';
                     return;
                 }
 
@@ -1135,19 +970,19 @@
                     </div>
                     <div class="data-row">
                       <span class="data-key">LOCATIONS</span>
-                      <span class="data-val" style="font-size:0.62rem;">${escHtml((r.locations || []).join(", "))}</span>
+                      <span class="data-val" style="font-size:0.78rem;">${escHtml((r.locations || []).join(", "))}</span>
                     </div>
                     <div class="data-row">
                       <span class="data-key">URL</span>
-                      <span class="data-val" style="font-size:0.62rem;" title="${escHtml(r.appointment_url_full)}">
+                      <span class="data-val" style="font-size:0.78rem;" title="${escHtml(r.appointment_url_full)}">
                         ${escHtml(r.appointment_url_full.slice(0, 40))}…
                       </span>
                     </div>
                     <div class="pending-action-row">
                       <button class="btn btn-green" style="font-size:0.65rem;padding:6px 14px;"
-                        onclick="approveClient(this, '${token}')">✓ APPROVE</button>
+                        onclick="approveClient(this, '${token}')">Approve</button>
                       <button class="btn btn-red" style="font-size:0.65rem;padding:6px 14px;"
-                        onclick="rejectClient(this, '${token}')">✕ REJECT</button>
+                        onclick="rejectClient(this, '${token}')">Reject</button>
                     </div>
                   </div>`;
                     })
@@ -1157,7 +992,7 @@
             function approveClient(btn, token) {
                 btn.disabled = true;
                 btn.classList.add("loading");
-                btn.innerHTML = '<span class="spinner"></span>APPROVING...';
+                btn.innerHTML = '<span class="spinner"></span>Approving...';
                 fetch(`/admin/approve_client/${encodeURIComponent(token)}`, {
                     method: "POST",
                 })
@@ -1171,7 +1006,7 @@
                             toast(d.message || "APPROVE FAILED", true);
                             btn.disabled = false;
                             btn.classList.remove("loading");
-                            btn.innerHTML = "✓ APPROVE";
+                            btn.innerHTML = "Approve";
                         }
                     })
                     .catch(() => {
@@ -1185,7 +1020,7 @@
             function rejectClient(btn, token) {
                 btn.disabled = true;
                 btn.classList.add("loading");
-                btn.innerHTML = '<span class="spinner"></span>REJECTING...';
+                btn.innerHTML = '<span class="spinner"></span>Rejecting...';
                 const reason = prompt("Rejection reason (optional):") ?? "";
                 const fd = new FormData();
                 fd.append("reason", reason);
@@ -1202,7 +1037,7 @@
                         toast("REJECT FAILED", true);
                         btn.disabled = false;
                         btn.classList.remove("loading");
-                        btn.innerHTML = "✕ REJECT";
+                        btn.innerHTML = "Reject";
                     });
             }
 
@@ -1246,7 +1081,7 @@
                 .addEventListener("click", function () {
                     this.disabled = true;
                     this.classList.add("loading");
-                    this.innerHTML = '<span class="spinner"></span>KILLING...';
+                    this.innerHTML = '<span class="spinner"></span>Stopping...';
                     fetch("/stop_all_automation", { method: "POST" })
                         .then((r) => {
                             if (!r.ok) {
@@ -1306,17 +1141,17 @@
                     modal = document.createElement("div");
                     modal.id = "logModal";
                     modal.style.cssText =
-                        "position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;";
+                        "position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;";
                     modal.innerHTML = `
-                  <div style="background:#080808;border:1px solid #1c1c1c;width:90%;max-width:900px;height:80vh;display:flex;flex-direction:column;">
-                    <div style="padding:12px 16px;border-bottom:1px solid #1c1c1c;display:flex;justify-content:space-between;align-items:center;">
-                      <span style="color:#00ff41;font-family:'Share Tech Mono',monospace;letter-spacing:2px;">SYSTEM_LOGS</span>
+                  <div style="background:#fff;border-radius:8px;width:90%;max-width:900px;height:80vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,0.15);">
+                    <div style="padding:14px 20px;border-bottom:1px solid #e0e0e0;display:flex;justify-content:space-between;align-items:center;">
+                      <span style="font-weight:600;color:#212121;">System Logs</span>
                       <div style="display:flex;gap:8px;">
                         <a href="/download_log" class="btn btn-cyan" style="font-size:0.7rem;padding:4px 12px;text-decoration:none;">DOWNLOAD</a>
                         <button id="closeLogModal" class="btn btn-red" style="font-size:0.7rem;padding:4px 12px;">✕</button>
                       </div>
                     </div>
-                    <pre id="logContent" style="flex:1;overflow:auto;padding:16px;color:#777;font-family:'Share Tech Mono',monospace;font-size:0.75rem;line-height:1.4;margin:0;white-space:pre-wrap;word-break:break-all;"></pre>
+                    <pre id="logContent" style="flex:1;overflow:auto;padding:16px;color:#212121;font-family:monospace;font-size:0.78rem;line-height:1.5;margin:0;white-space:pre-wrap;word-break:break-all;"></pre>
                   </div>`;
                     document.body.appendChild(modal);
                     document
@@ -1371,7 +1206,7 @@
                 div.dataset.uid = uid;
                 div.innerHTML = `
                 <div class="form-agent-title">
-                  <span>&gt; AGENT_${String(agentCount).padStart(3, "0")}</span>
+                  <span>Agent ${String(agentCount).padStart(3, "0")}</span>
                   <button class="btn btn-red" style="font-size:0.6rem;padding:4px 10px;"
                     onclick="this.closest('.user-form').remove()">✕ REMOVE</button>
                 </div>
@@ -1441,7 +1276,7 @@
 
                     btn.disabled = true;
                     btn.classList.add("loading");
-                    btn.innerHTML = '<span class="spinner"></span>LAUNCHING...';
+                    btn.innerHTML = '<span class="spinner"></span>Launching...';
 
                     const usersData = {};
                     forms.forEach((form) => {
