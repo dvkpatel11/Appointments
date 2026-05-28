@@ -124,4 +124,6 @@ DEFAULT_SETTINGS = {
 }
 
 MAX_ACTION_LOG_ENTRIES = 100
-PENDING_LINK_TTL_SECONDS = 600  # 10 minutes
+PENDING_LINK_TTL_SECONDS = 1800  # 30 minutes (was 600 — users need time to switch to Telegram)
+HANG_TIMEOUT_SECONDS = 900  # 15 min — if agent state hasn't updated, consider it hung
+NAVIGATE_MAX_RETRIES = 5  # max recursive retries for navigate_to_appointments

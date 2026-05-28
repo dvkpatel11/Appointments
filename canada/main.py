@@ -85,7 +85,10 @@ class VisaAutomation:
         self._logger = logger
         self.playwright = sync_playwright().start()
         self.browser = self.playwright.chromium.launch(headless=True)
-        self.screenshots_folder = str(int(time.time()))
+        folder_suffix = str(int(time.time()))
+        if user_id:
+            folder_suffix = f"{user_id}_{folder_suffix}"
+        self.screenshots_folder = folder_suffix
         Path(SCREENSHOTS_BASE, self.screenshots_folder).mkdir(
             parents=True, exist_ok=True
         )
@@ -181,6 +184,7 @@ class VisaAutomation:
             self._log("Attempting to log in")
             self.current_action = "LOGIN"
             self.go_to_page(self.login_url)
+            self._log_url("login_page_loaded")
             self.capture_debug_screenshot("login_page")
 
             self.page.get_by_label(self.s["username"]).fill(username)
@@ -203,6 +207,7 @@ class VisaAutomation:
                 ).click()
                 self._log("Clicked continue button", "debug")
 
+            self._log_url("after_login")
             self._log("Login successful")
             self.current_action = "IDLE"
 
@@ -217,12 +222,13 @@ class VisaAutomation:
                 press_ok=True,
             )
 
-    def navigate_to_appointments(self, appointment_id):
+    def navigate_to_appointments(self, appointment_id, _retries=0):
         try:
             self.current_action = "NAVIGATE"
             self._log(f"Navigating to appointments page for ID: {appointment_id}")
             self.page.goto(self.appointment_url.format(appointment_id))
             self.page.wait_for_load_state("networkidle")
+            self._log_url("after_goto_appointments")
 
             consent = self.page.locator('label:has-text("I confirm that I have read")')
             if consent.count() > 0:
@@ -232,12 +238,19 @@ class VisaAutomation:
                 self.page.get_by_role("button", name="Continue").click()
                 self.page.wait_for_load_state("networkidle")
                 self._log("Confirmed consent and continued")
+                self._log_url("after_consent")
 
             understand = self.page.locator('label:has-text("I understand")')
             if understand.count() > 0:
                 self._log("Found 'I understand' checkbox, clicking...")
                 understand.click()
                 time.sleep(0.5)
+                continue_btn = self.page.get_by_text("Continue").first
+                if continue_btn.count() > 0:
+                    continue_btn.click()
+                    self.page.wait_for_load_state("networkidle")
+                    self._log("Clicked Continue after 'I understand'")
+                    self._log_url("after_understand")
                 self.capture_debug_screenshot("understand_checked")
 
             limit = self.page.locator("#confirmed_limit_message")
@@ -251,6 +264,7 @@ class VisaAutomation:
                     continue_btn.click()
                     self.page.wait_for_load_state("networkidle")
                     self._log("Clicked Continue after limit confirmation")
+                    self._log_url("after_limit_confirmation")
 
             # Handle multi-applicant selection page
             applicant_checkboxes = self.page.locator(self.s["applicants_checkbox"])
@@ -268,16 +282,24 @@ class VisaAutomation:
                     continue_btn.click()
                     self.page.wait_for_load_state("networkidle")
                     self._log("Clicked Continue after applicant selection")
+                    self._log_url("after_applicant_selection")
                 self.capture_debug_screenshot("after_applicant_selection")
 
             self.capture_debug_screenshot("appointments_page")
+            self._log_url("appointments_page_final")
             self._log("Successfully navigated to appointments page")
             self.current_action = "CHECKING"
         except Exception as e:
             self._log(f"Failed to navigate to appointments: {str(e)}", "error")
             self.capture_debug_screenshot("navigation_error")
+            if _retries >= config.NAVIGATE_MAX_RETRIES:
+                self._log(f"Navigation failed after {_retries} retries — giving up", "error")
+                self.current_action = "IDLE"
+                raise
+            next_retry = _retries + 1
+            self._log(f"Retrying navigation ({next_retry}/{config.NAVIGATE_MAX_RETRIES}) in 120s")
             time.sleep(120)
-            self.navigate_to_appointments(appointment_id)
+            self.navigate_to_appointments(appointment_id, _retries=next_retry)
 
     def check_availability(self):
         self._log("Checking availability")
@@ -404,6 +426,7 @@ class VisaAutomation:
             self._log(f"Checking availability at {location}")
             self.capture_debug_screenshot(f"before_location_{location}")
             self.select_location(location)
+            self._log_url(f"after_select_location_{location}")
 
             if self.is_date_available():
                 availability_list.append(True)
@@ -453,6 +476,7 @@ class VisaAutomation:
                     else:
                         self.page.get_by_text(self.s["next_button"]).click()
                         self._log("Clicked next button", "debug")
+                        self._log_url("after_calendar_next")
                         time.sleep(0.2)
 
                 self.page.keyboard.press("Escape")
@@ -549,6 +573,7 @@ class VisaAutomation:
         try:
             self.current_action = "RESCHEDULING"
             self._log(f"Attempting to reschedule appointment at {location}")
+            self._log_url("before_reschedule")
             self.capture_debug_screenshot("before_reschedule")
 
             # Handle multiple applicants: uncheck all by default
@@ -575,9 +600,11 @@ class VisaAutomation:
 
             self.page.get_by_text("Reschedule").last.click()
             self._log("Clicked Reschedule button")
+            self._log_url("after_reschedule_click")
 
             self.page.get_by_text("Confirm").last.click()
             self._log("Clicked Confirm button")
+            self._log_url("after_confirm_reschedule")
 
             time.sleep(5)
 
