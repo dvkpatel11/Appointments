@@ -411,20 +411,14 @@ def client_submit():
             return jsonify({"status": "rejected",
                             "reason": token_data.get("reject_reason", "Request was not approved.")})
 
-        appointment_url_full = request.form.get("appointment_url", "").strip()
-        match = re.search(r"/schedule/(\w+)/", appointment_url_full)
-        if not match:
+        appointment_id = request.form.get("appointment_id", "").strip()
+        if not re.match(r"^\w+$", appointment_id):
             return jsonify({
                 "status": "error",
-                "message": "Invalid appointment URL. Expected: .../schedule/12345678/appointment",
+                "message": "Invalid appointment ID. Got: " + appointment_id,
             }), 400
 
-        appointment_id = match.group(1)
-        appointment_url_template = re.sub(
-            r"/schedule/\w+/appointment",
-            "/schedule/{}/appointment",
-            appointment_url_full,
-        )
+        appointment_url_template = config.APPOINTMENT_URL_TEMPLATE
 
         raw_locs = request.form.get("preferred_locations", "")
         try:
@@ -438,12 +432,12 @@ def client_submit():
             "telegram_chat_id": request.form.get("telegram_chat_id", "").strip() or None,
             "request": {
                 "name": request.form.get("name", "Client"),
-                "email": request.form.get("email", "").strip(),
+                "email": request.form.get("username", "").strip(),
                 "username": request.form.get("username", "").strip(),
                 "password": request.form.get("password", ""),
                 "appointment_id": appointment_id,
                 "appointment_url": appointment_url_template,
-                "appointment_url_full": appointment_url_full,
+                "appointment_url_full": appointment_url_template.format(appointment_id),
                 "reschedule": request.form.get("reschedule") == "true",
                 "preferred_locations": preferred_locations,
             },

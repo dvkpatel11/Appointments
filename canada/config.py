@@ -29,6 +29,7 @@ DB_PATH = "canada/visactrl.db"
 # ── US Visa Portal — Canada ───────────────────────────────────────────────────
 
 LOGIN_URL = "https://ais.usvisa-info.com/en-ca/niv/users/sign_in"
+APPOINTMENT_URL_TEMPLATE = "https://ais.usvisa-info.com/en-ca/niv/schedule/{}/appointment"
 
 VISA_LOCATIONS = {
     "Toronto": (
