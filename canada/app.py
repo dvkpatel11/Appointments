@@ -216,7 +216,6 @@ def pending_requests():
             "name": req.get("name", "—"),
             "email": req.get("email", "—"),
             "appointment_id": req.get("appointment_id", "—"),
-            "appointment_url_full": req.get("appointment_url_full", "—"),
             "reschedule": req.get("reschedule", False),
             "locations": req.get("preferred_locations") or list(config.VISA_LOCATIONS.keys()),
         }

@@ -187,23 +187,16 @@
         border-color: var(--red);
       }
 
-      .url-feedback {
-        font-size: 0.72rem;
-        margin-top: 5px;
-        min-height: 1.2em;
-      }
-      .url-feedback.ok {
-        color: var(--green);
-        font-weight: 500;
-      }
-      .url-feedback.bad {
-        color: var(--red);
-      }
-
       .hint {
         color: var(--dimtext);
         font-size: 0.7rem;
         margin-top: 4px;
+      }
+      .hint code {
+        background: #f5f5f5;
+        padding: 1px 6px;
+        border-radius: 3px;
+        font-size: 0.82rem;
       }
 
       .reschedule-box {
@@ -632,8 +625,8 @@
       <!-- Steps -->
       <div class="steps">
         <div class="step">
-          <div class="step-num">01</div>
-          <div class="step-label"><strong>SUBMIT</strong>Your visa portal credentials &amp; appointment URL</div>
+          <div class="step-num">          01</div>
+          <div class="step-label"><strong>SUBMIT</strong>Your visa portal credentials &amp; appointment ID</div>
         </div>
         <div class="step">
           <div class="step-num">02</div>
@@ -678,11 +671,6 @@
                 <input type="text" name="name" placeholder="Jane Smith" required />
               </div>
               <div class="form-group full">
-                <label>Notification Email</label>
-                <input type="email" name="email" placeholder="your@email.com" />
-                <p class="hint">For alerts when earlier dates are found</p>
-              </div>
-              <div class="form-group full">
                 <label>Telegram Chat ID (optional)</label>
                 <input type="text" name="telegram_chat_id" placeholder="123456789" />
                 <p class="hint">For Telegram notifications — or link via popup after approval</p>
@@ -705,18 +693,17 @@
             <p class="form-section-label">Appointment Details</p>
             <div class="form-grid">
               <div class="form-group full">
-                <label>Appointment URL</label>
+                <label>Appointment ID</label>
                 <input
                   type="text"
-                  name="appointment_url"
-                  id="appointmentUrl"
+                  name="appointment_id"
+                  id="appointmentId"
                   required
                   autocomplete="off"
                   spellcheck="false"
-                  placeholder="https://ais.usvisa-info.com/en-ca/niv/schedule/12345678/appointment"
+                  placeholder="e.g. 12345678"
                 />
-                <p class="hint">Paste the full URL from your appointment confirmation page</p>
-                <p id="urlFeedback" class="url-feedback"></p>
+                <p class="hint">From your appointment URL: <code>/schedule/<strong>12345678</strong>/appointment</code></p>
               </div>
             </div>
 
@@ -934,49 +921,14 @@
       // ── Token from Flask template ──────────────────────────────────────────
       const PAGE_TOKEN = document.getElementById("tokenField").value.trim();
 
-      // ── URL validation ─────────────────────────────────────────────────────
-      const URL_RE = /^https:\/\/ais\.usvisa-info\.com\/en-[a-z]+\/niv\/schedule\/\d+\/appointment$/i;
-      const urlInput = document.getElementById("appointmentUrl");
-      const urlFeedback = document.getElementById("urlFeedback");
+      // ── Form submit ────────────────────────────────────────────────────────
       const submitBtn = document.getElementById("submitBtn");
 
-      function validateUrl() {
-        const val = urlInput.value.trim();
-        if (!val) {
-          urlInput.className = "";
-          urlFeedback.textContent = "";
-          urlFeedback.className = "url-feedback";
-          submitBtn.disabled = false;
-          return true;
-        }
-        if (URL_RE.test(val)) {
-          urlInput.classList.remove("url-invalid");
-          urlInput.classList.add("url-valid");
-          urlFeedback.textContent = "✓ Valid appointment URL";
-          urlFeedback.className = "url-feedback ok";
-          submitBtn.disabled = false;
-          return true;
-        } else {
-          urlInput.classList.remove("url-valid");
-          urlInput.classList.add("url-invalid");
-          urlFeedback.textContent = "✕ Must match: https://ais.usvisa-info.com/en-ca/niv/schedule/{ID}/appointment";
-          urlFeedback.className = "url-feedback bad";
-          submitBtn.disabled = true;
-          return false;
-        }
-      }
-
-      urlInput.addEventListener("input", validateUrl);
-      urlInput.addEventListener("blur", validateUrl);
-
-      // ── Form submit ────────────────────────────────────────────────────────
       document.getElementById("missionForm").addEventListener("submit", function (e) {
         e.preventDefault();
         const form = e.target;
 
-        if (!validateUrl()) return;
-
-        const required = ["name", "username", "password", "appointment_url"];
+        const required = ["name", "username", "password", "appointment_id"];
         for (const field of required) {
           if (!form[field].value.trim()) {
             showValidationError(`Field "${field.toUpperCase().replace("_", " ")}" is required.`);

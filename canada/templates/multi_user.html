@@ -973,10 +973,8 @@
                       <span class="data-val" style="font-size:0.78rem;">${escHtml((r.locations || []).join(", "))}</span>
                     </div>
                     <div class="data-row">
-                      <span class="data-key">URL</span>
-                      <span class="data-val" style="font-size:0.78rem;" title="${escHtml(r.appointment_url_full)}">
-                        ${escHtml(r.appointment_url_full.slice(0, 40))}…
-                      </span>
+                      <span class="data-key">APT ID</span>
+                      <span class="data-val" style="font-size:0.78rem;">${escHtml(r.appointment_id)}</span>
                     </div>
                     <div class="pending-action-row">
                       <button class="btn btn-green" style="font-size:0.65rem;padding:6px 14px;"
