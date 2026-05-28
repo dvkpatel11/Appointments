@@ -139,6 +139,14 @@ class VisaAutomation:
         else:
             print(f"[{level.upper()}] {msg}")
 
+    def _log_url(self, label: str):
+        """Log the current page URL for debugging."""
+        try:
+            url = self.page.url
+            self._log(f"📍 [{label}] URL: {url}")
+        except Exception:
+            self._log(f"📍 [{label}] URL: <unreachable — page closed or navigated away>", "warn")
+
     def capture_debug_screenshot(self, name: str):
         self.debug_screenshot_counter += 1
         screenshot_name = f"{self.debug_screenshot_counter:03d}_{name}"
