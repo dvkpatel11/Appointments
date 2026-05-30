@@ -132,6 +132,7 @@ class VisaAutomation:
         self.preferred_locations = preferred_locations
         self.preferred_date_from = preferred_date_from
         self.preferred_date_to = preferred_date_to
+        self._shutting_down = False
 
     def _log(self, msg, level="info"):
         ts = datetime.now().strftime("%H:%M:%S")
@@ -139,7 +140,7 @@ class VisaAutomation:
         self.action_log.append(entry)
         if len(self.action_log) > config.MAX_ACTION_LOG_ENTRIES:
             self.action_log = self.action_log[-config.MAX_ACTION_LOG_ENTRIES:]
-        if self.user_id:
+        if self.user_id and not self._shutting_down:
             state.save_state(self.user_id, self)
         if self._logger:
             getattr(self._logger, level)(msg)
@@ -595,6 +596,7 @@ class VisaAutomation:
         finally:
             self.is_running = False
             self.close_browser()
+            self._shutting_down = True
             self._log("Automation stopped")
 
     def _send_notifications(self, message):

@@ -276,7 +276,11 @@ def start_automation():
                   instance.appointment_url, instance.notification_email, instance.browsers,
                   instance.check, instance.reschedule, instance.telegram_chat_id, instance.send_telegram,
                   instance.phone_number, instance.send_sms),
-            kwargs={"preferred_locations": instance.preferred_locations},
+            kwargs={
+                "preferred_locations": instance.preferred_locations,
+                "preferred_date_from": instance.preferred_date_from,
+                "preferred_date_to": instance.preferred_date_to,
+            },
         )
         process.start()
         instance.is_running = True
@@ -309,12 +313,14 @@ def start_multi_automation():
                 notification_email=data.get("notification_email"),
                 browsers=int(data.get("browsers", 1)),
                 check=int(data.get("check", 12)),
-                reschedule=bool(data.get("reschedule", False)),
+                reschedule=data.get("reschedule", False) == "true",
                 telegram_chat_id=data.get("telegram_chat_id"),
-                send_telegram=bool(data.get("send_telegram", False)),
+                send_telegram=data.get("send_telegram", False) == "true",
                 phone_number=data.get("phone_number"),
-                send_sms=bool(data.get("send_sms", False)),
+                send_sms=data.get("send_sms", False) == "true",
                 preferred_locations=data.get("preferred_locations"),
+                preferred_date_from=data.get("preferred_date_from", "").strip() or None,
+                preferred_date_to=data.get("preferred_date_to", "").strip() or None,
             )
             automation_instances[user_id] = instance
             process = multiprocessing.Process(
@@ -323,7 +329,11 @@ def start_multi_automation():
                       instance.appointment_url, instance.notification_email, instance.browsers,
                       instance.check, instance.reschedule, instance.telegram_chat_id, instance.send_telegram,
                       instance.phone_number, instance.send_sms),
-                kwargs={"preferred_locations": instance.preferred_locations},
+                kwargs={
+                    "preferred_locations": instance.preferred_locations,
+                    "preferred_date_from": instance.preferred_date_from,
+                    "preferred_date_to": instance.preferred_date_to,
+                },
             )
             process.start()
             instance.is_running = True
@@ -347,7 +357,11 @@ def stop_automation():
         if proc and proc.is_alive():
             proc.terminate()
             proc.join(timeout=5)
+            if proc.is_alive():
+                proc.kill()
+                proc.join(timeout=3)
         automation_processes.pop(user_id, None)
+        automation_instances.pop(user_id, None)
         state.delete_state(user_id)
         return jsonify({"status": f"TERMINATED // {user_id}"})
     return jsonify({"status": f"NOT_RUNNING // {user_id}"})
@@ -366,7 +380,11 @@ def client_stop(token):
         if proc and proc.is_alive():
             proc.terminate()
             proc.join(timeout=5)
+            if proc.is_alive():
+                proc.kill()
+                proc.join(timeout=3)
         automation_processes.pop(user_id, None)
+        automation_instances.pop(user_id, None)
         state.delete_state(user_id)
 
     db.save_client_token(token, {"state": "issued", "user_id": None})
@@ -384,7 +402,11 @@ def stop_all_automation():
             if proc and proc.is_alive():
                 proc.terminate()
                 proc.join(timeout=5)
+                if proc.is_alive():
+                    proc.kill()
+                    proc.join(timeout=3)
             automation_processes.pop(uid, None)
+            automation_instances.pop(uid, None)
             state.delete_state(uid)
     return jsonify({"status": "ALL_TERMINATED"})
 
@@ -870,6 +892,8 @@ def _build_instance_from_form(form):
         phone_number=form.get("phone_number"),
         send_sms=form.get("send_sms") == "true",
         preferred_locations=preferred_locations,
+        preferred_date_from=form.get("preferred_date_from", "").strip() or None,
+        preferred_date_to=form.get("preferred_date_to", "").strip() or None,
     )
 
 
