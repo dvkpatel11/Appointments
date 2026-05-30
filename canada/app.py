@@ -2,6 +2,7 @@ import json
 import os
 import re
 import secrets
+import signal
 import uuid
 import threading
 import multiprocessing
@@ -50,6 +51,16 @@ automation_instances = {}
 automation_processes = {}
 
 
+def _pid_alive(pid):
+    if not pid:
+        return False
+    try:
+        os.kill(int(pid), 0)
+        return True
+    except (OSError, ValueError):
+        return False
+
+
 def _launch_agent(token, token_data):
     """Create, start, and register an automation subprocess for an approved token.
 
@@ -96,7 +107,8 @@ def _launch_agent(token, token_data):
         process.start()
         instance.is_running = True
         automation_processes[token] = process
-        app.logger.info(f"Launched agent {token[:12]}…")
+        db.save_client_token(token, {"agent_pid": process.pid})
+        app.logger.info(f"Launched agent {token[:12]}… (pid={process.pid})")
         return True
     except Exception as e:
         app.logger.error(f"Failed to launch agent {token[:12]}…: {e}")
@@ -106,8 +118,10 @@ def _launch_agent(token, token_data):
 
 
 def resume_approved_agents():
-    """On startup, relaunch any approved agents that went down (crash/restart)."""
+    """On startup, relaunch approved agents whose recorded PID is dead."""
     for token, data in db.get_client_tokens_by_state("approved").items():
+        if _pid_alive(data.get("agent_pid")):
+            continue
         _launch_agent(token, data)
 
 
@@ -285,6 +299,7 @@ def start_automation():
         process.start()
         instance.is_running = True
         automation_processes[user_id] = process
+        db.save_client_token(user_id, {"agent_pid": process.pid})
         return jsonify({"status": f"ONLINE // {user_id}"})
     except (ValueError, TypeError) as e:
         return jsonify({"status": f"ERROR // {e}"}), 400
@@ -363,6 +378,7 @@ def stop_automation():
         automation_processes.pop(user_id, None)
         automation_instances.pop(user_id, None)
         state.delete_state(user_id)
+        db.save_client_token(user_id, {"agent_pid": None})
         return jsonify({"status": f"TERMINATED // {user_id}"})
     return jsonify({"status": f"NOT_RUNNING // {user_id}"})
 
@@ -387,7 +403,7 @@ def client_stop(token):
         automation_instances.pop(user_id, None)
         state.delete_state(user_id)
 
-    db.save_client_token(token, {"state": "issued", "user_id": None})
+    db.save_client_token(token, {"state": "issued", "user_id": None, "agent_pid": None})
     app.logger.info(f"Client {token[:12]}… stopped their automation")
     return jsonify({"status": "stopped", "message": "Monitoring stopped. You can submit a new request if needed."})
 
@@ -408,6 +424,7 @@ def stop_all_automation():
             automation_processes.pop(uid, None)
             automation_instances.pop(uid, None)
             state.delete_state(uid)
+            db.save_client_token(uid, {"agent_pid": None})
     return jsonify({"status": "ALL_TERMINATED"})
 
 
@@ -417,10 +434,13 @@ def get_status():
     user_id = request.args.get("user_id", "default")
     if not sanitize_user_id(user_id):
         return jsonify({"status": "ERROR // invalid user_id"}), 400
-    if user_id not in automation_instances:
-        return jsonify({"status": "NO_INSTANCE"})
-    inst = automation_instances[user_id]
-    return jsonify(state.serialize_automation(inst))
+    if user_id in automation_instances:
+        inst = automation_instances[user_id]
+        return jsonify(state.serialize_automation(inst))
+    s = state.load_state(user_id)
+    if s:
+        return jsonify({"status": "ONLINE", **s})
+    return jsonify({"status": "NO_INSTANCE"})
 
 
 @app.route("/get_all_status")
@@ -435,6 +455,12 @@ def get_all_status():
             inst = automation_instances.get(uid)
             if inst:
                 result[uid] = state.serialize_automation(inst)
+    for token, data in db.get_client_tokens_by_state("approved").items():
+        if token in result:
+            continue
+        s = state.load_state(token)
+        if s:
+            result[token] = s
     return jsonify(result)
 
 
@@ -846,16 +872,19 @@ def _cleanup_stale():
                 pass
 
     # ── Phase 2: restart dead processes from approved tokens ──────────────────
-    dead = [uid for uid, p in list(automation_processes.items())
-            if not p.is_alive()]
-    for uid in dead:
+    # Check all approved tokens from DB, not just our in-memory processes.
+    for uid, token_data in db.get_client_tokens_by_state("approved").items():
+        if uid in automation_processes and automation_processes[uid].is_alive():
+            continue
+        if _pid_alive(token_data.get("agent_pid")):
+            automation_processes.pop(uid, None)
+            automation_instances.pop(uid, None)
+            continue
         automation_processes.pop(uid, None)
         automation_instances.pop(uid, None)
         state.delete_state(uid)
-        app.logger.info(f"Agent {uid[:12]}… died — attempting crash recovery")
-        token_data = db.get_client_token(uid)
-        if token_data and token_data.get("state") == "approved":
-            _launch_agent(uid, token_data)
+        app.logger.info(f"Agent {uid[:12]}… dead — crash recovery")
+        _launch_agent(uid, token_data)
 
     # ── Phase 3: clean up orphaned instances ──────────────────────────────────
     orphaned = [uid for uid, inst in list(automation_instances.items())

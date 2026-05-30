@@ -91,6 +91,12 @@ def init_db():
             pass
 
     with cursor() as cur:
+        try:
+            cur.execute("ALTER TABLE client_tokens ADD COLUMN agent_pid INTEGER")
+        except sqlite3.OperationalError:
+            pass
+
+    with cursor() as cur:
         if os.path.exists(config.SETTINGS_FILE):
             try:
                 with open(config.SETTINGS_FILE) as f:
@@ -176,7 +182,7 @@ def get_client_tokens_by_state(state):
 def save_client_token(token, data):
     existing = get_client_token(token) or {}
     merged = dict(existing)
-    for key in ("state", "user_id", "reject_reason", "notification_email", "telegram_chat_id", "phone_number"):
+    for key in ("state", "user_id", "reject_reason", "notification_email", "telegram_chat_id", "phone_number", "agent_pid"):
         if key in data:
             merged[key] = data[key]
     if "request" in data:
@@ -185,8 +191,8 @@ def save_client_token(token, data):
         cur.execute(
             """INSERT OR REPLACE INTO client_tokens
                (token, state, user_id, request_data, reject_reason,
-                notification_email, telegram_chat_id, phone_number, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)""",
+                notification_email, telegram_chat_id, phone_number, agent_pid, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)""",
             (token,
              merged.get("state", "issued"),
              merged.get("user_id"),
@@ -194,7 +200,8 @@ def save_client_token(token, data):
              merged.get("reject_reason"),
              merged.get("notification_email"),
              merged.get("telegram_chat_id"),
-             merged.get("phone_number"))
+             merged.get("phone_number"),
+             merged.get("agent_pid"))
         )
 
 
@@ -206,6 +213,7 @@ def _row_to_client_token(row):
         "notification_email": row["notification_email"],
         "telegram_chat_id": row["telegram_chat_id"],
         "phone_number": row["phone_number"],
+        "agent_pid": row["agent_pid"],
     }
     if row["request_data"]:
         try:
