@@ -41,7 +41,8 @@ def run_in_subprocess(user_id, username, password, appointment_id, appointment_u
                       notification_email=None, browsers=1, check=12, reschedule=False,
                       telegram_chat_id=None, send_telegram=False,
                       phone_number=None, send_sms=False,
-                      preferred_locations=None):
+                      preferred_locations=None,
+                      preferred_date_from=None, preferred_date_to=None):
     """Entry point for multiprocessing — runs Playwright in separate process."""
     logger = setup_logger("canada_app", "app.log")
     instance = VisaAutomation(
@@ -60,6 +61,8 @@ def run_in_subprocess(user_id, username, password, appointment_id, appointment_u
         logger=logger,
         user_id=user_id,
         preferred_locations=preferred_locations,
+        preferred_date_from=preferred_date_from,
+        preferred_date_to=preferred_date_to,
     )
     instance.run()
 
@@ -81,11 +84,16 @@ class VisaAutomation:
         logger=None,
         user_id=None,
         preferred_locations=None,
+        preferred_date_from=None,
+        preferred_date_to=None,
     ):
         self._logger = logger
         self.playwright = sync_playwright().start()
         self.browser = self.playwright.chromium.launch(headless=True)
-        self.screenshots_folder = str(int(time.time()))
+        folder_suffix = str(int(time.time()))
+        if user_id:
+            folder_suffix = f"{user_id}_{folder_suffix}"
+        self.screenshots_folder = folder_suffix
         Path(SCREENSHOTS_BASE, self.screenshots_folder).mkdir(
             parents=True, exist_ok=True
         )
@@ -122,6 +130,8 @@ class VisaAutomation:
         self.debug_screenshot_counter = 0
         self.user_agents = config.USER_AGENTS
         self.preferred_locations = preferred_locations
+        self.preferred_date_from = preferred_date_from
+        self.preferred_date_to = preferred_date_to
 
     def _log(self, msg, level="info"):
         ts = datetime.now().strftime("%H:%M:%S")
@@ -135,6 +145,14 @@ class VisaAutomation:
             getattr(self._logger, level)(msg)
         else:
             print(f"[{level.upper()}] {msg}")
+
+    def _log_url(self, label: str):
+        """Log the current page URL for debugging."""
+        try:
+            url = self.page.url
+            self._log(f"📍 [{label}] URL: {url}")
+        except Exception:
+            self._log(f"📍 [{label}] URL: <unreachable — page closed or navigated away>", "warn")
 
     def capture_debug_screenshot(self, name: str):
         self.debug_screenshot_counter += 1
@@ -181,6 +199,7 @@ class VisaAutomation:
             self._log("Attempting to log in")
             self.current_action = "LOGIN"
             self.go_to_page(self.login_url)
+            self._log_url("login_page_loaded")
             self.capture_debug_screenshot("login_page")
 
             self.page.get_by_label(self.s["username"]).fill(username)
@@ -203,7 +222,9 @@ class VisaAutomation:
                 ).click()
                 self._log("Clicked continue button", "debug")
 
+            self._log_url("after_login")
             self._log("Login successful")
+            self.capture_debug_screenshot("login_success")
             self.current_action = "IDLE"
 
         except Exception as e:
@@ -217,12 +238,13 @@ class VisaAutomation:
                 press_ok=True,
             )
 
-    def navigate_to_appointments(self, appointment_id):
+    def navigate_to_appointments(self, appointment_id, _retries=0):
         try:
             self.current_action = "NAVIGATE"
             self._log(f"Navigating to appointments page for ID: {appointment_id}")
             self.page.goto(self.appointment_url.format(appointment_id))
             self.page.wait_for_load_state("networkidle")
+            self._log_url("after_goto_appointments")
 
             consent = self.page.locator('label:has-text("I confirm that I have read")')
             if consent.count() > 0:
@@ -232,12 +254,19 @@ class VisaAutomation:
                 self.page.get_by_role("button", name="Continue").click()
                 self.page.wait_for_load_state("networkidle")
                 self._log("Confirmed consent and continued")
+                self._log_url("after_consent")
 
             understand = self.page.locator('label:has-text("I understand")')
             if understand.count() > 0:
                 self._log("Found 'I understand' checkbox, clicking...")
                 understand.click()
                 time.sleep(0.5)
+                continue_btn = self.page.get_by_text("Continue").first
+                if continue_btn.count() > 0:
+                    continue_btn.click()
+                    self.page.wait_for_load_state("networkidle")
+                    self._log("Clicked Continue after 'I understand'")
+                    self._log_url("after_understand")
                 self.capture_debug_screenshot("understand_checked")
 
             limit = self.page.locator("#confirmed_limit_message")
@@ -251,6 +280,7 @@ class VisaAutomation:
                     continue_btn.click()
                     self.page.wait_for_load_state("networkidle")
                     self._log("Clicked Continue after limit confirmation")
+                    self._log_url("after_limit_confirmation")
 
             # Handle multi-applicant selection page
             applicant_checkboxes = self.page.locator(self.s["applicants_checkbox"])
@@ -268,16 +298,24 @@ class VisaAutomation:
                     continue_btn.click()
                     self.page.wait_for_load_state("networkidle")
                     self._log("Clicked Continue after applicant selection")
+                    self._log_url("after_applicant_selection")
                 self.capture_debug_screenshot("after_applicant_selection")
 
             self.capture_debug_screenshot("appointments_page")
+            self._log_url("appointments_page_final")
             self._log("Successfully navigated to appointments page")
             self.current_action = "CHECKING"
         except Exception as e:
             self._log(f"Failed to navigate to appointments: {str(e)}", "error")
             self.capture_debug_screenshot("navigation_error")
+            if _retries >= config.NAVIGATE_MAX_RETRIES:
+                self._log(f"Navigation failed after {_retries} retries — giving up", "error")
+                self.current_action = "IDLE"
+                raise
+            next_retry = _retries + 1
+            self._log(f"Retrying navigation ({next_retry}/{config.NAVIGATE_MAX_RETRIES}) in 120s")
             time.sleep(120)
-            self.navigate_to_appointments(appointment_id)
+            self.navigate_to_appointments(appointment_id, _retries=next_retry)
 
     def check_availability(self):
         self._log("Checking availability")
@@ -378,6 +416,7 @@ class VisaAutomation:
             time.sleep(0.5)
 
             self._log(f"Selected {location}")
+            self.capture_debug_screenshot(f"location_selected_{location}")
         except Exception as e:
             self._log(f"Error selecting {location}: {str(e)}", "error")
             self.capture_debug_screenshot(f"location_error_{location}")
@@ -404,6 +443,7 @@ class VisaAutomation:
             self._log(f"Checking availability at {location}")
             self.capture_debug_screenshot(f"before_location_{location}")
             self.select_location(location)
+            self._log_url(f"after_select_location_{location}")
 
             if self.is_date_available():
                 availability_list.append(True)
@@ -427,9 +467,33 @@ class VisaAutomation:
 
                     if result:
                         formatted_found_date = self.new_date.strftime("%Y-%m-%d")
-                        message = (
-                            f"Date available at {location} on {formatted_found_date}"
-                        )
+
+                        # Check preferred date window
+                        if self.preferred_date_from or self.preferred_date_to:
+                            in_window = True
+                            window_msg = "preferred window: "
+                            if self.preferred_date_from:
+                                window_msg += f"from {self.preferred_date_from}"
+                                if self.new_date < datetime.strptime(self.preferred_date_from, "%Y-%m-%d"):
+                                    in_window = False
+                            if self.preferred_date_to:
+                                if self.preferred_date_from:
+                                    window_msg += " "
+                                window_msg += f"to {self.preferred_date_to}"
+                                if self.new_date > datetime.strptime(self.preferred_date_to, "%Y-%m-%d"):
+                                    in_window = False
+                            window_msg = f" ({window_msg})"
+
+                            if not in_window:
+                                self._log(f"Date found at {location} on {formatted_found_date} — outside{window_msg}, skipping")
+                                self.page.keyboard.press("Escape")
+                                continue_check = False
+                                break
+
+                            message = f"Date available at {location} on {formatted_found_date}{window_msg}"
+                        else:
+                            message = f"Date available at {location} on {formatted_found_date}"
+
                         self._log(message)
                         self.capture_debug_screenshot(f"date_found_{location}")
 
@@ -440,7 +504,15 @@ class VisaAutomation:
                         ):
                             if self.new_date < self.current_date:
                                 self._log(f"Earlier date found at {location}!")
-                                msg = f"Earlier date found at {location}: {self.new_date.strftime('%Y-%m-%d')}"
+                                window_hint = ""
+                                if self.preferred_date_from or self.preferred_date_to:
+                                    parts = []
+                                    if self.preferred_date_from:
+                                        parts.append(f"after {self.preferred_date_from}")
+                                    if self.preferred_date_to:
+                                        parts.append(f"before {self.preferred_date_to}")
+                                    window_hint = f" (within preferred window: {' and '.join(parts)})"
+                                msg = f"Earlier date found at {location}: {self.new_date.strftime('%Y-%m-%d')}{window_hint}"
                                 self._send_notifications(msg)
 
                         if self.reschedule:
@@ -453,6 +525,7 @@ class VisaAutomation:
                     else:
                         self.page.get_by_text(self.s["next_button"]).click()
                         self._log("Clicked next button", "debug")
+                        self._log_url("after_calendar_next")
                         time.sleep(0.2)
 
                 self.page.keyboard.press("Escape")
@@ -549,6 +622,7 @@ class VisaAutomation:
         try:
             self.current_action = "RESCHEDULING"
             self._log(f"Attempting to reschedule appointment at {location}")
+            self._log_url("before_reschedule")
             self.capture_debug_screenshot("before_reschedule")
 
             # Handle multiple applicants: uncheck all by default
@@ -575,9 +649,11 @@ class VisaAutomation:
 
             self.page.get_by_text("Reschedule").last.click()
             self._log("Clicked Reschedule button")
+            self._log_url("after_reschedule_click")
 
             self.page.get_by_text("Confirm").last.click()
             self._log("Clicked Confirm button")
+            self._log_url("after_confirm_reschedule")
 
             time.sleep(5)
 

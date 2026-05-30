@@ -16,6 +16,7 @@ MIN_SLEEP_BEFORE_RETRY = 30
 MAX_SLEEP_BEFORE_RETRY = 60
 MIN_WAIT_BETWEEN_CHECKS = 30
 MAX_WAIT_BETWEEN_CHECKS = 60
+PREFERRED_DATE_RANGE_MIN_DAYS = 30
 
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
@@ -29,6 +30,7 @@ DB_PATH = "canada/visactrl.db"
 # ── US Visa Portal — Canada ───────────────────────────────────────────────────
 
 LOGIN_URL = "https://ais.usvisa-info.com/en-ca/niv/users/sign_in"
+APPOINTMENT_URL_TEMPLATE = "https://ais.usvisa-info.com/en-ca/niv/schedule/{}/appointment"
 
 VISA_LOCATIONS = {
     "Toronto": (
@@ -124,4 +126,6 @@ DEFAULT_SETTINGS = {
 }
 
 MAX_ACTION_LOG_ENTRIES = 100
-PENDING_LINK_TTL_SECONDS = 600  # 10 minutes
+PENDING_LINK_TTL_SECONDS = 1800  # 30 minutes (was 600 — users need time to switch to Telegram)
+HANG_TIMEOUT_SECONDS = 900  # 15 min — if agent state hasn't updated, consider it hung
+NAVIGATE_MAX_RETRIES = 5  # max recursive retries for navigate_to_appointments

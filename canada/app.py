@@ -50,47 +50,65 @@ automation_instances = {}
 automation_processes = {}
 
 
+def _launch_agent(token, token_data):
+    """Create, start, and register an automation subprocess for an approved token.
+
+    Returns True on success, False on failure.
+    """
+    req = (token_data.get("request") or {})
+    if not req.get("username") or not req.get("password"):
+        return False
+    if token in automation_instances and automation_instances[token].is_running:
+        return False
+    try:
+        instance = VisaAutomation(
+            username=req["username"],
+            password=req["password"],
+            appointment_id=req.get("appointment_id"),
+            appointment_url=req.get("appointment_url"),
+            notification_email=token_data.get("notification_email") or req.get("email"),
+            browsers=1,
+            check=12,
+            reschedule=req.get("reschedule", False),
+            telegram_chat_id=token_data.get("telegram_chat_id"),
+            send_telegram=bool(token_data.get("telegram_chat_id")),
+            phone_number=token_data.get("phone_number"),
+            send_sms=bool(token_data.get("phone_number")),
+            preferred_locations=req.get("preferred_locations"),
+            preferred_date_from=req.get("preferred_date_from"),
+            preferred_date_to=req.get("preferred_date_to"),
+        )
+        automation_instances[token] = instance
+        process = multiprocessing.Process(
+            target=run_in_subprocess,
+            args=(token, instance.username, instance.password,
+                  instance.appointment_id, instance.appointment_url,
+                  instance.notification_email, instance.browsers,
+                  instance.check, instance.reschedule,
+                  instance.telegram_chat_id, instance.send_telegram,
+                  instance.phone_number, instance.send_sms),
+            kwargs={
+                "preferred_locations": instance.preferred_locations,
+                "preferred_date_from": instance.preferred_date_from,
+                "preferred_date_to": instance.preferred_date_to,
+            },
+        )
+        process.start()
+        instance.is_running = True
+        automation_processes[token] = process
+        app.logger.info(f"Launched agent {token[:12]}…")
+        return True
+    except Exception as e:
+        app.logger.error(f"Failed to launch agent {token[:12]}…: {e}")
+        automation_instances.pop(token, None)
+        automation_processes.pop(token, None)
+        return False
+
+
 def resume_approved_agents():
     """On startup, relaunch any approved agents that went down (crash/restart)."""
     for token, data in db.get_client_tokens_by_state("approved").items():
-        req = data.get("request") or {}
-        if not req.get("username") or not req.get("password"):
-            continue
-        if token in automation_instances and automation_instances[token].is_running:
-            continue
-        try:
-            instance = VisaAutomation(
-                username=req["username"],
-                password=req["password"],
-                appointment_id=req.get("appointment_id"),
-                appointment_url=req.get("appointment_url"),
-                notification_email=data.get("notification_email") or req.get("email"),
-                browsers=1,
-                check=12,
-                reschedule=req.get("reschedule", False),
-                telegram_chat_id=data.get("telegram_chat_id"),
-                send_telegram=bool(data.get("telegram_chat_id")),
-                phone_number=data.get("phone_number"),
-                send_sms=bool(data.get("phone_number")),
-                preferred_locations=req.get("preferred_locations"),
-            )
-            automation_instances[token] = instance
-            process = multiprocessing.Process(
-                target=run_in_subprocess,
-                args=(token, instance.username, instance.password,
-                      instance.appointment_id, instance.appointment_url,
-                      instance.notification_email, instance.browsers,
-                      instance.check, instance.reschedule,
-                      instance.telegram_chat_id, instance.send_telegram,
-                      instance.phone_number, instance.send_sms),
-                kwargs={"preferred_locations": instance.preferred_locations},
-            )
-            process.start()
-            instance.is_running = True
-            automation_processes[token] = process
-            app.logger.info(f"Resumed agent {token[:12]}…")
-        except Exception as e:
-            app.logger.error(f"Failed to resume agent {token[:12]}…: {e}")
+        _launch_agent(token, data)
 
 
 # Resume approved agents on startup
@@ -204,7 +222,6 @@ def pending_requests():
             "name": req.get("name", "—"),
             "email": req.get("email", "—"),
             "appointment_id": req.get("appointment_id", "—"),
-            "appointment_url_full": req.get("appointment_url_full", "—"),
             "reschedule": req.get("reschedule", False),
             "locations": req.get("preferred_locations") or list(config.VISA_LOCATIONS.keys()),
         }
@@ -218,47 +235,15 @@ def approve_client(token):
     if not token_data or token_data["state"] != "pending":
         return jsonify({"status": "error", "message": "No pending request for this token"}), 400
 
-    req = token_data.get("request", {})
-    user_id = token
-
-    if user_id in automation_instances and automation_instances[user_id].is_running:
-        db.save_client_token(token, {"state": "approved", "user_id": user_id})
+    if token in automation_instances and automation_instances[token].is_running:
+        db.save_client_token(token, {"state": "approved", "user_id": token})
         return jsonify({"status": "already_running"})
 
-    try:
-        instance = VisaAutomation(
-            username=req.get("username"),
-            password=req.get("password"),
-            appointment_id=req.get("appointment_id"),
-            appointment_url=req.get("appointment_url"),
-            notification_email=req.get("email"),
-            browsers=1,
-            check=12,
-            reschedule=req.get("reschedule", False),
-            telegram_chat_id=token_data.get("telegram_chat_id"),
-            send_telegram=bool(token_data.get("telegram_chat_id")),
-            phone_number=token_data.get("phone_number"),
-            send_sms=bool(token_data.get("phone_number")),
-            preferred_locations=req.get("preferred_locations"),
-        )
-        automation_instances[user_id] = instance
-        process = multiprocessing.Process(
-            target=run_in_subprocess,
-            args=(user_id, instance.username, instance.password, instance.appointment_id,
-                  instance.appointment_url, instance.notification_email, instance.browsers,
-                  instance.check, instance.reschedule, instance.telegram_chat_id, instance.send_telegram,
-                  instance.phone_number, instance.send_sms),
-            kwargs={"preferred_locations": instance.preferred_locations},
-        )
-        process.start()
-        instance.is_running = True
-        automation_processes[user_id] = process
+    if _launch_agent(token, token_data):
+        db.save_client_token(token, {"state": "approved", "user_id": token})
+        return jsonify({"status": "approved", "user_id": token})
 
-        return jsonify({"status": "approved", "user_id": user_id})
-
-    except Exception as e:
-        app.logger.error(f"approve_client error for {token}: {e}", exc_info=True)
-        return jsonify({"status": "error", "message": str(e)}), 500
+    return jsonify({"status": "error", "message": "Failed to launch agent — check server logs"}), 500
 
 
 @app.route("/admin/reject_client/<token>", methods=["POST"])
@@ -368,6 +353,27 @@ def stop_automation():
     return jsonify({"status": f"NOT_RUNNING // {user_id}"})
 
 
+@app.route("/client_stop/<token>", methods=["POST"])
+def client_stop(token):
+    token_data = db.get_client_token(token)
+    if not token_data:
+        return jsonify({"status": "error", "message": "Token not found"}), 404
+
+    user_id = token
+    if user_id in automation_instances and automation_instances[user_id].is_running:
+        automation_instances[user_id].stop()
+        proc = automation_processes.get(user_id)
+        if proc and proc.is_alive():
+            proc.terminate()
+            proc.join(timeout=5)
+        automation_processes.pop(user_id, None)
+        state.delete_state(user_id)
+
+    db.save_client_token(token, {"state": "issued", "user_id": None})
+    app.logger.info(f"Client {token[:12]}… stopped their automation")
+    return jsonify({"status": "stopped", "message": "Monitoring stopped. You can submit a new request if needed."})
+
+
 @app.route("/stop_all_automation", methods=["POST"])
 @login_required
 def stop_all_automation():
@@ -431,20 +437,14 @@ def client_submit():
             return jsonify({"status": "rejected",
                             "reason": token_data.get("reject_reason", "Request was not approved.")})
 
-        appointment_url_full = request.form.get("appointment_url", "").strip()
-        match = re.search(r"/schedule/(\w+)/", appointment_url_full)
-        if not match:
+        appointment_id = request.form.get("appointment_id", "").strip()
+        if not re.match(r"^\w+$", appointment_id):
             return jsonify({
                 "status": "error",
-                "message": "Invalid appointment URL. Expected: .../schedule/12345678/appointment",
+                "message": "Invalid appointment ID. Got: " + appointment_id,
             }), 400
 
-        appointment_id = match.group(1)
-        appointment_url_template = re.sub(
-            r"/schedule/\w+/appointment",
-            "/schedule/{}/appointment",
-            appointment_url_full,
-        )
+        appointment_url_template = config.APPOINTMENT_URL_TEMPLATE
 
         raw_locs = request.form.get("preferred_locations", "")
         try:
@@ -458,14 +458,16 @@ def client_submit():
             "telegram_chat_id": request.form.get("telegram_chat_id", "").strip() or None,
             "request": {
                 "name": request.form.get("name", "Client"),
-                "email": request.form.get("email", "").strip(),
+                "email": request.form.get("username", "").strip(),
                 "username": request.form.get("username", "").strip(),
                 "password": request.form.get("password", ""),
                 "appointment_id": appointment_id,
                 "appointment_url": appointment_url_template,
-                "appointment_url_full": appointment_url_full,
+                "appointment_url_full": appointment_url_template.format(appointment_id),
                 "reschedule": request.form.get("reschedule") == "true",
                 "preferred_locations": preferred_locations,
+                "preferred_date_from": request.form.get("preferred_date_from", "").strip() or None,
+                "preferred_date_to": request.form.get("preferred_date_to", "").strip() or None,
             },
             "reject_reason": None,
         })
@@ -785,18 +787,55 @@ def client_update_notif():
 
 # ── Periodic cleanup (called before every request) ────────────────────────────
 
+HANG_TIMEOUT = config.HANG_TIMEOUT_SECONDS
+
+
 def _cleanup_stale():
     db.delete_stale_pending_links(config.PENDING_LINK_TTL_SECONDS)
 
-    # Remove instances whose process has died (finished or crashed)
+    now = datetime.utcnow()
+
+    # ── Phase 1: detect and terminate hung processes ─────────────────────────
+    for uid, p in list(automation_processes.items()):
+        if not p.is_alive():
+            continue
+        state_row = db.load_automation_state(uid)
+        if state_row and state_row.get("updated_at"):
+            try:
+                updated = state_row["updated_at"]
+                if isinstance(updated, str):
+                    updated = datetime.fromisoformat(updated)
+                age = (now - updated).total_seconds()
+                if age > HANG_TIMEOUT:
+                    app.logger.warning(f"Agent {uid[:12]}… hung (state age={age:.0f}s) — terminating")
+                    p.terminate()
+                    p.join(timeout=5)
+                    if p.is_alive():
+                        p.kill()
+                        p.join(timeout=3)
+                    automation_processes.pop(uid, None)
+                    automation_instances.pop(uid, None)
+                    state.delete_state(uid)
+                    token_data = db.get_client_token(uid)
+                    if token_data and token_data.get("state") == "approved":
+                        app.logger.info(f"Recovering hung agent {uid[:12]}…")
+                        _launch_agent(uid, token_data)
+            except (ValueError, TypeError, AttributeError):
+                pass
+
+    # ── Phase 2: restart dead processes from approved tokens ──────────────────
     dead = [uid for uid, p in list(automation_processes.items())
             if not p.is_alive()]
     for uid in dead:
         automation_processes.pop(uid, None)
         automation_instances.pop(uid, None)
         state.delete_state(uid)
+        app.logger.info(f"Agent {uid[:12]}… died — attempting crash recovery")
+        token_data = db.get_client_token(uid)
+        if token_data and token_data.get("state") == "approved":
+            _launch_agent(uid, token_data)
 
-    # Remove orphaned instances with no process and not running
+    # ── Phase 3: clean up orphaned instances ──────────────────────────────────
     orphaned = [uid for uid, inst in list(automation_instances.items())
                 if uid not in automation_processes and not inst.is_running]
     for uid in orphaned:
@@ -845,17 +884,6 @@ def _load_state(user_id):
             pass
     return None
 
-
-pending_links = {}
-import time
-
-def _cleanup_pending_links():
-    """Remove stale pending links older than 10 minutes."""
-    global pending_links
-    now = time.time()
-    stale = [k for k, v in pending_links.items() if now - v["created"] > 600]
-    for k in stale:
-        del pending_links[k]
 
 if __name__ == "__main__":
     debug = os.environ.get("FLASK_DEBUG", "false").lower() == "true"
