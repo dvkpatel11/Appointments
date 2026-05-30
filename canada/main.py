@@ -41,7 +41,8 @@ def run_in_subprocess(user_id, username, password, appointment_id, appointment_u
                       notification_email=None, browsers=1, check=12, reschedule=False,
                       telegram_chat_id=None, send_telegram=False,
                       phone_number=None, send_sms=False,
-                      preferred_locations=None):
+                      preferred_locations=None,
+                      preferred_date_from=None, preferred_date_to=None):
     """Entry point for multiprocessing — runs Playwright in separate process."""
     logger = setup_logger("canada_app", "app.log")
     instance = VisaAutomation(
@@ -60,6 +61,8 @@ def run_in_subprocess(user_id, username, password, appointment_id, appointment_u
         logger=logger,
         user_id=user_id,
         preferred_locations=preferred_locations,
+        preferred_date_from=preferred_date_from,
+        preferred_date_to=preferred_date_to,
     )
     instance.run()
 
@@ -81,6 +84,8 @@ class VisaAutomation:
         logger=None,
         user_id=None,
         preferred_locations=None,
+        preferred_date_from=None,
+        preferred_date_to=None,
     ):
         self._logger = logger
         self.playwright = sync_playwright().start()
@@ -125,6 +130,8 @@ class VisaAutomation:
         self.debug_screenshot_counter = 0
         self.user_agents = config.USER_AGENTS
         self.preferred_locations = preferred_locations
+        self.preferred_date_from = preferred_date_from
+        self.preferred_date_to = preferred_date_to
 
     def _log(self, msg, level="info"):
         ts = datetime.now().strftime("%H:%M:%S")
@@ -217,6 +224,7 @@ class VisaAutomation:
 
             self._log_url("after_login")
             self._log("Login successful")
+            self.capture_debug_screenshot("login_success")
             self.current_action = "IDLE"
 
         except Exception as e:
@@ -408,6 +416,7 @@ class VisaAutomation:
             time.sleep(0.5)
 
             self._log(f"Selected {location}")
+            self.capture_debug_screenshot(f"location_selected_{location}")
         except Exception as e:
             self._log(f"Error selecting {location}: {str(e)}", "error")
             self.capture_debug_screenshot(f"location_error_{location}")
@@ -458,9 +467,33 @@ class VisaAutomation:
 
                     if result:
                         formatted_found_date = self.new_date.strftime("%Y-%m-%d")
-                        message = (
-                            f"Date available at {location} on {formatted_found_date}"
-                        )
+
+                        # Check preferred date window
+                        if self.preferred_date_from or self.preferred_date_to:
+                            in_window = True
+                            window_msg = "preferred window: "
+                            if self.preferred_date_from:
+                                window_msg += f"from {self.preferred_date_from}"
+                                if self.new_date < datetime.strptime(self.preferred_date_from, "%Y-%m-%d"):
+                                    in_window = False
+                            if self.preferred_date_to:
+                                if self.preferred_date_from:
+                                    window_msg += " "
+                                window_msg += f"to {self.preferred_date_to}"
+                                if self.new_date > datetime.strptime(self.preferred_date_to, "%Y-%m-%d"):
+                                    in_window = False
+                            window_msg = f" ({window_msg})"
+
+                            if not in_window:
+                                self._log(f"Date found at {location} on {formatted_found_date} — outside{window_msg}, skipping")
+                                self.page.keyboard.press("Escape")
+                                continue_check = False
+                                break
+
+                            message = f"Date available at {location} on {formatted_found_date}{window_msg}"
+                        else:
+                            message = f"Date available at {location} on {formatted_found_date}"
+
                         self._log(message)
                         self.capture_debug_screenshot(f"date_found_{location}")
 
@@ -471,7 +504,15 @@ class VisaAutomation:
                         ):
                             if self.new_date < self.current_date:
                                 self._log(f"Earlier date found at {location}!")
-                                msg = f"Earlier date found at {location}: {self.new_date.strftime('%Y-%m-%d')}"
+                                window_hint = ""
+                                if self.preferred_date_from or self.preferred_date_to:
+                                    parts = []
+                                    if self.preferred_date_from:
+                                        parts.append(f"after {self.preferred_date_from}")
+                                    if self.preferred_date_to:
+                                        parts.append(f"before {self.preferred_date_to}")
+                                    window_hint = f" (within preferred window: {' and '.join(parts)})"
+                                msg = f"Earlier date found at {location}: {self.new_date.strftime('%Y-%m-%d')}{window_hint}"
                                 self._send_notifications(msg)
 
                         if self.reschedule:

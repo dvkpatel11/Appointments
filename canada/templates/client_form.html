@@ -212,6 +212,49 @@
         color: var(--red);
         margin-bottom: 10px;
       }
+
+      .date-window-box {
+        border: 1px solid #e0e0e0;
+        background: #fafafa;
+        border-radius: 6px;
+        padding: 14px;
+        margin-top: 20px;
+      }
+      .date-window-header {
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        margin-bottom: 4px;
+      }
+      .date-window-desc {
+        font-size: 0.75rem;
+        color: var(--dimtext);
+        margin-bottom: 12px;
+        line-height: 1.5;
+      }
+      .date-window-grid {
+        display: flex;
+        gap: 12px;
+      }
+      .date-window-grid .form-group {
+        flex: 1;
+        margin: 0;
+      }
+      .date-window-grid .form-group label {
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        margin-bottom: 4px;
+      }
+      .date-window-grid .form-group input {
+        width: 100%;
+      }
+      .date-window-feedback {
+        font-size: 0.75rem;
+        margin-top: 8px;
+        min-height: 1.2em;
+        color: var(--red);
+      }
       .checkbox-row {
         display: flex;
         align-items: flex-start;
@@ -578,27 +621,6 @@
         color: var(--text-secondary);
         margin-bottom: 12px;
       }
-      #screenshotImg {
-        max-width: 100%;
-        border: 1px solid var(--border);
-        border-radius: 4px;
-        display: none;
-      }
-      #screenshotSpinner {
-        color: var(--text-secondary);
-        font-size: 0.8rem;
-      }
-
-      #urlValidationError {
-        display: none;
-        margin-top: 12px;
-        padding: 12px 16px;
-        border: 1px solid var(--red);
-        background: #ffebee;
-        border-radius: 6px;
-        color: var(--red);
-        font-size: 0.8rem;
-      }
 
       .blink {
         animation: blink 1s step-end infinite;
@@ -718,6 +740,23 @@
               <label><input type="checkbox" name="location" value="Montreal" checked /> Montreal</label>
             </div>
 
+            <!-- Preferred Date Window -->
+            <div class="date-window-box">
+              <p class="date-window-header">Preferred Reschedule Window</p>
+              <p class="date-window-desc">Only reschedule if an earlier date falls within this range (minimum 30 days).</p>
+              <div class="date-window-grid">
+                <div class="form-group">
+                  <label>From</label>
+                  <input type="date" name="preferred_date_from" id="prefDateFrom" />
+                </div>
+                <div class="form-group">
+                  <label>To</label>
+                  <input type="date" name="preferred_date_to" id="prefDateTo" />
+                </div>
+              </div>
+              <p id="dateWindowFeedback" class="date-window-feedback"></p>
+            </div>
+
             <!-- Reschedule -->
             <div class="reschedule-box">
               <p class="reschedule-header">Auto-Reschedule</p>
@@ -818,13 +857,16 @@
           </div>
 
           <div class="action-bar" id="mActionBar">—</div>
+
+          <div style="margin-top:16px;display:flex;gap:10px;">
+            <button class="btn-popup" id="clientStopBtn" style="color:var(--red);border-color:var(--red);font-size:0.75rem;padding:8px 18px;">Stop Monitoring</button>
+          </div>
         </div>
 
-        <!-- Appointment screenshot -->
-        <div class="screenshot-section">
-          <p class="screenshot-label">Appointment Page (captured at login)</p>
-          <div id="screenshotSpinner"><span class="blink">▮</span> Loading screenshot...</div>
-          <img id="screenshotImg" src="" alt="Appointment page" />
+        <!-- Appointment screenshot (shown once when available) -->
+        <div id="screenshotSection" class="screenshot-section" style="display:none">
+          <p class="screenshot-label">Appointment Page</p>
+          <img id="screenshotImg" src="" alt="Appointment page" style="max-width:100%;border:1px solid var(--border);border-radius:4px;" />
         </div>
 
         <!-- Notifications -->
@@ -921,6 +963,29 @@
       // ── Token from Flask template ──────────────────────────────────────────
       const PAGE_TOKEN = document.getElementById("tokenField").value.trim();
 
+      // ── Real-time date window validation ──────────────────────────────────
+      function validateDateWindow() {
+        const from = document.getElementById("prefDateFrom").value;
+        const to = document.getElementById("prefDateTo").value;
+        const fb = document.getElementById("dateWindowFeedback");
+        if (from && to) {
+          const fromMs = new Date(from).getTime();
+          const toMs = new Date(to).getTime();
+          if (toMs <= fromMs) {
+            fb.textContent = "The 'To' date must be after the 'From' date.";
+            return;
+          }
+          const diffDays = (toMs - fromMs) / (1000 * 86400);
+          if (diffDays < 30) {
+            fb.textContent = "The date range must be at least 30 days.";
+            return;
+          }
+        }
+        fb.textContent = "";
+      }
+      document.getElementById("prefDateFrom").addEventListener("change", validateDateWindow);
+      document.getElementById("prefDateTo").addEventListener("change", validateDateWindow);
+
       // ── Form submit ────────────────────────────────────────────────────────
       const submitBtn = document.getElementById("submitBtn");
 
@@ -934,6 +999,24 @@
             showValidationError(`Field "${field.toUpperCase().replace("_", " ")}" is required.`);
             return;
           }
+        }
+
+        // Validate preferred date window
+        const dateFrom = form.preferred_date_from.value;
+        const dateTo = form.preferred_date_to.value;
+        if (dateFrom && dateTo) {
+          const fromMs = new Date(dateFrom).getTime();
+          const toMs = new Date(dateTo).getTime();
+          if (toMs <= fromMs) {
+            document.getElementById("dateWindowFeedback").textContent = "The 'To' date must be after the 'From' date.";
+            return;
+          }
+          const diffDays = (toMs - fromMs) / (1000 * 86400);
+          if (diffDays < 30) {
+            document.getElementById("dateWindowFeedback").textContent = "The date range must be at least 30 days.";
+            return;
+          }
+          document.getElementById("dateWindowFeedback").textContent = "";
         }
 
         submitBtn.classList.add("loading");
@@ -993,7 +1076,6 @@
         document.getElementById("pendingPanel").style.display = "none";
         document.getElementById("monitorPanel").style.display = "block";
         document.getElementById("monitorPanel").scrollIntoView({ behavior: "smooth" });
-        pollScreenshot(PAGE_TOKEN, 0);
       }
 
       window.clientNotificationEmail = null;
@@ -1243,29 +1325,51 @@
             .join("");
           if (atBottom) panel.scrollTop = panel.scrollHeight;
         }
+
+        // Show screenshot once when available (piggybacks on status poll)
+        if (!window._screenshotFetched && d.appointments_page_screenshot) {
+          window._screenshotFetched = true;
+          fetch(`/client_screenshot/${encodeURIComponent(PAGE_TOKEN)}`)
+            .then(r => r.json())
+            .then(sd => {
+              if (sd.status === "ready") {
+                document.getElementById("screenshotImg").src = sd.image_url;
+                document.getElementById("screenshotSection").style.display = "";
+              }
+            })
+            .catch(() => {});
+        }
       }
 
-      // ── Screenshot polling ─────────────────────────────────────────────────
-      function pollScreenshot(userId, attempts) {
-        if (attempts > 40) {
-          document.getElementById("screenshotSpinner").textContent =
-            "Screenshot unavailable — check your email for updates.";
-          return;
-        }
-        fetch(`/client_screenshot/${encodeURIComponent(userId)}`)
-          .then((r) => r.json())
-          .then((d) => {
-            if (d.status === "ready") {
-              const img = document.getElementById("screenshotImg");
-              img.src = d.image_url;
-              img.style.display = "block";
-              document.getElementById("screenshotSpinner").style.display = "none";
+      // ── Client stop button ──────────────────────────────────────────────────
+      document.getElementById("clientStopBtn").addEventListener("click", function() {
+        if (!confirm("Stop monitoring? You can submit a new request later if needed.")) return;
+        const btn = this;
+        btn.textContent = "STOPPING...";
+        btn.disabled = true;
+        fetch(`/client_stop/${encodeURIComponent(PAGE_TOKEN)}`, { method: "POST" })
+          .then(r => r.json())
+          .then(d => {
+            if (d.status === "stopped") {
+              if (_pollInterval) { clearInterval(_pollInterval); _pollInterval = null; }
+              document.getElementById("mStatusDot").className = "status-dot stopped";
+              document.getElementById("mStatusText").textContent = "STOPPED";
+              document.getElementById("mStatusText").className = "monitor-status-text stopped";
+              btn.textContent = "STOPPED";
+              btn.style.borderColor = "var(--text-secondary)";
+              btn.style.color = "var(--text-secondary)";
             } else {
-              setTimeout(() => pollScreenshot(userId, attempts + 1), 3000);
+              btn.textContent = "FAILED";
+              btn.disabled = false;
+              setTimeout(() => btn.textContent = "Stop Monitoring", 3000);
             }
           })
-          .catch(() => setTimeout(() => pollScreenshot(userId, attempts + 1), 5000));
-      }
+          .catch(() => {
+            btn.textContent = "ERROR";
+            btn.disabled = false;
+            setTimeout(() => btn.textContent = "Stop Monitoring", 3000);
+          });
+      });
 
       // ── Validation error ───────────────────────────────────────────────────
       function showValidationError(msg) {

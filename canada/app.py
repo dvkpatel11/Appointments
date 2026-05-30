@@ -75,6 +75,8 @@ def _launch_agent(token, token_data):
             phone_number=token_data.get("phone_number"),
             send_sms=bool(token_data.get("phone_number")),
             preferred_locations=req.get("preferred_locations"),
+            preferred_date_from=req.get("preferred_date_from"),
+            preferred_date_to=req.get("preferred_date_to"),
         )
         automation_instances[token] = instance
         process = multiprocessing.Process(
@@ -85,7 +87,11 @@ def _launch_agent(token, token_data):
                   instance.check, instance.reschedule,
                   instance.telegram_chat_id, instance.send_telegram,
                   instance.phone_number, instance.send_sms),
-            kwargs={"preferred_locations": instance.preferred_locations},
+            kwargs={
+                "preferred_locations": instance.preferred_locations,
+                "preferred_date_from": instance.preferred_date_from,
+                "preferred_date_to": instance.preferred_date_to,
+            },
         )
         process.start()
         instance.is_running = True
@@ -347,6 +353,27 @@ def stop_automation():
     return jsonify({"status": f"NOT_RUNNING // {user_id}"})
 
 
+@app.route("/client_stop/<token>", methods=["POST"])
+def client_stop(token):
+    token_data = db.get_client_token(token)
+    if not token_data:
+        return jsonify({"status": "error", "message": "Token not found"}), 404
+
+    user_id = token
+    if user_id in automation_instances and automation_instances[user_id].is_running:
+        automation_instances[user_id].stop()
+        proc = automation_processes.get(user_id)
+        if proc and proc.is_alive():
+            proc.terminate()
+            proc.join(timeout=5)
+        automation_processes.pop(user_id, None)
+        state.delete_state(user_id)
+
+    db.save_client_token(token, {"state": "issued", "user_id": None})
+    app.logger.info(f"Client {token[:12]}… stopped their automation")
+    return jsonify({"status": "stopped", "message": "Monitoring stopped. You can submit a new request if needed."})
+
+
 @app.route("/stop_all_automation", methods=["POST"])
 @login_required
 def stop_all_automation():
@@ -439,6 +466,8 @@ def client_submit():
                 "appointment_url_full": appointment_url_template.format(appointment_id),
                 "reschedule": request.form.get("reschedule") == "true",
                 "preferred_locations": preferred_locations,
+                "preferred_date_from": request.form.get("preferred_date_from", "").strip() or None,
+                "preferred_date_to": request.form.get("preferred_date_to", "").strip() or None,
             },
             "reject_reason": None,
         })

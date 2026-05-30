@@ -16,6 +16,7 @@ MIN_SLEEP_BEFORE_RETRY = 30
 MAX_SLEEP_BEFORE_RETRY = 60
 MIN_WAIT_BETWEEN_CHECKS = 30
 MAX_WAIT_BETWEEN_CHECKS = 60
+PREFERRED_DATE_RANGE_MIN_DAYS = 30
 
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
