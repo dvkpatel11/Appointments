@@ -1,0 +1,1404 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Visa Appointment Monitor</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --primary: #3f51b5;
+        --primary-dark: #303f9f;
+        --accent: #2196f3;
+        --green: #4caf50;
+        --red: #f44336;
+        --orange: #ff9800;
+        --bg: #fafafa;
+        --surface: #ffffff;
+        --panel: #ffffff;
+        --border: #e0e0e0;
+        --text: #212121;
+        --text-secondary: #757575;
+        --dimtext: #9e9e9e;
+        --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+        --shadow-hover: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.06);
+      }
+
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        min-height: 100vh;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        padding: 40px 16px 80px;
+        overflow-x: hidden;
+      }
+
+      .wrapper {
+        width: min(720px, 100%);
+      }
+
+      .page-header {
+        margin-bottom: 32px;
+      }
+
+      .sys-badge {
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        margin-bottom: 8px;
+      }
+
+      .page-title {
+        font-size: clamp(1.6rem, 6vw, 2.2rem);
+        font-weight: 700;
+        color: var(--primary);
+        line-height: 1.2;
+        letter-spacing: -0.5px;
+      }
+
+      .page-desc {
+        margin-top: 16px;
+        color: var(--text-secondary);
+        font-size: 0.85rem;
+        line-height: 1.7;
+        border-left: 3px solid var(--primary);
+        padding-left: 16px;
+      }
+
+      .page-desc span {
+        color: var(--primary);
+        font-weight: 600;
+      }
+
+      .steps {
+        display: flex;
+        gap: 0;
+        margin: 28px 0;
+        flex-wrap: wrap;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: var(--shadow);
+      }
+
+      .step {
+        flex: 1;
+        min-width: 140px;
+        padding: 16px;
+        background: var(--surface);
+        border-right: 1px solid var(--border);
+      }
+      .step:last-child {
+        border-right: none;
+      }
+
+      .step-num {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: var(--primary);
+        margin-bottom: 4px;
+      }
+      .step-label {
+        font-size: 0.72rem;
+        color: var(--text-secondary);
+        line-height: 1.5;
+      }
+      .step-label strong {
+        color: var(--text);
+        font-weight: 600;
+        display: block;
+        margin-bottom: 2px;
+      }
+
+      .form-panel {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 28px;
+        box-shadow: var(--shadow);
+      }
+
+      .form-section-label {
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: var(--primary);
+        margin: 24px 0 12px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid var(--border);
+        letter-spacing: 0.3px;
+      }
+      .form-section-label:first-of-type {
+        margin-top: 0;
+      }
+
+      .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: 16px;
+      }
+
+      .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+      .form-group.full {
+        grid-column: 1 / -1;
+      }
+
+      label {
+        font-size: 0.72rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+      }
+
+      input[type="text"],
+      input[type="password"],
+      input[type="email"] {
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        color: var(--text);
+        font-family: inherit;
+        font-size: 0.88rem;
+        padding: 9px 12px;
+        outline: none;
+        width: 100%;
+        transition: border-color 0.15s;
+      }
+      input:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 2px rgba(63,81,181,0.15);
+      }
+
+      input.url-valid {
+        border-color: var(--green);
+      }
+      input.url-invalid {
+        border-color: var(--red);
+      }
+
+      .hint {
+        color: var(--dimtext);
+        font-size: 0.7rem;
+        margin-top: 4px;
+      }
+      .hint code {
+        background: #f5f5f5;
+        padding: 1px 6px;
+        border-radius: 3px;
+        font-size: 0.82rem;
+      }
+
+      .reschedule-box {
+        border: 1px solid #ffcdd2;
+        background: #ffebee;
+        border-radius: 6px;
+        padding: 14px;
+        margin-top: 20px;
+      }
+      .reschedule-header {
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: var(--red);
+        margin-bottom: 10px;
+      }
+
+      .date-window-box {
+        border: 1px solid #e0e0e0;
+        background: #fafafa;
+        border-radius: 6px;
+        padding: 14px;
+        margin-top: 20px;
+      }
+      .date-window-header {
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        margin-bottom: 4px;
+      }
+      .date-window-desc {
+        font-size: 0.75rem;
+        color: var(--dimtext);
+        margin-bottom: 12px;
+        line-height: 1.5;
+      }
+      .date-window-grid {
+        display: flex;
+        gap: 12px;
+      }
+      .date-window-grid .form-group {
+        flex: 1;
+        margin: 0;
+      }
+      .date-window-grid .form-group label {
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        margin-bottom: 4px;
+      }
+      .date-window-grid .form-group input {
+        width: 100%;
+      }
+      .date-window-feedback {
+        font-size: 0.75rem;
+        margin-top: 8px;
+        min-height: 1.2em;
+        color: var(--red);
+      }
+      .checkbox-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+      }
+      .checkbox-row input[type="checkbox"] {
+        accent-color: var(--primary);
+        width: 16px;
+        height: 16px;
+        flex-shrink: 0;
+        margin-top: 2px;
+      }
+      .checkbox-desc {
+        font-size: 0.78rem;
+        color: var(--text-secondary);
+        line-height: 1.6;
+      }
+      .checkbox-desc strong {
+        color: var(--red);
+      }
+
+      .locations-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px 16px;
+        margin-top: 8px;
+      }
+      .locations-grid label {
+        font-size: 0.8rem;
+        color: var(--text);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+        font-weight: 400;
+        text-transform: none;
+        letter-spacing: 0;
+      }
+      .locations-grid input[type="checkbox"] {
+        accent-color: var(--primary);
+        width: 16px;
+        height: 16px;
+      }
+      .locations-header {
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        margin-top: 16px;
+        margin-bottom: 4px;
+      }
+
+      .submit-row {
+        margin-top: 28px;
+        display: flex;
+        justify-content: flex-end;
+      }
+
+      .btn-submit {
+        background: var(--primary);
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        font-family: inherit;
+        font-size: 0.88rem;
+        font-weight: 500;
+        padding: 12px 36px;
+        cursor: pointer;
+        transition: background 0.15s, box-shadow 0.15s;
+        box-shadow: var(--shadow);
+      }
+      .btn-submit:hover {
+        background: var(--primary-dark);
+        box-shadow: var(--shadow-hover);
+      }
+      .btn-submit:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .btn-submit.loading {
+        pointer-events: none;
+        opacity: 0.7;
+      }
+      .btn-submit.loading .spinner {
+        display: inline-block;
+        width: 14px;
+        height: 14px;
+        border: 2px solid rgba(255,255,255,0.3);
+        border-top-color: #fff;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        vertical-align: middle;
+        margin-right: 6px;
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+
+      #monitorPanel {
+        display: none;
+      }
+
+      .monitor-header {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 24px 28px;
+        box-shadow: var(--shadow);
+        margin-bottom: 16px;
+      }
+      .monitor-status-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 18px;
+      }
+      .status-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--border);
+        flex-shrink: 0;
+      }
+      .status-dot.on {
+        background: var(--green);
+      }
+      .status-dot.stopped {
+        background: var(--red);
+      }
+      .monitor-status-text {
+        font-size: 1rem;
+        font-weight: 600;
+      }
+      .monitor-status-text.on {
+        color: var(--green);
+      }
+      .monitor-status-text.stopped {
+        color: var(--red);
+      }
+      .monitor-status-text.idle {
+        color: var(--text-secondary);
+      }
+      .monitor-meta {
+        display: grid;
+        gap: 6px;
+        margin-bottom: 16px;
+      }
+      .meta-row {
+        display: flex;
+        gap: 16px;
+        font-size: 0.82rem;
+      }
+      .meta-key {
+        color: var(--dimtext);
+        width: 100px;
+        flex-shrink: 0;
+      }
+      .meta-val {
+        color: var(--text);
+      }
+      .meta-val.found {
+        color: var(--primary);
+        font-weight: 600;
+      }
+      .action-bar {
+        font-size: 0.82rem;
+        color: var(--text-secondary);
+        padding: 8px 0;
+        border-top: 1px solid var(--border);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .notif-section {
+        margin-top: 20px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 16px;
+      }
+      .notif-section-label {
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        margin-bottom: 12px;
+      }
+      .notif-grid {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .notif-card {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 14px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: var(--bg);
+        font-family: inherit;
+        font-size: 0.78rem;
+        cursor: pointer;
+        transition: border-color 0.15s, box-shadow 0.15s;
+        color: var(--text);
+      }
+      .notif-card:hover {
+        border-color: var(--accent);
+        box-shadow: var(--shadow-hover);
+      }
+      .notif-card-popup {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.4);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+      }
+      .notif-card-popup.show {
+        display: flex;
+      }
+      .popup-content {
+        background: var(--surface);
+        border-radius: 8px;
+        padding: 24px 30px;
+        max-width: 400px;
+        width: 90%;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+      }
+      .popup-title {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text);
+        margin-bottom: 20px;
+      }
+      .popup-field {
+        margin-bottom: 16px;
+      }
+      .popup-field label {
+        display: block;
+        font-size: 0.72rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+        margin-bottom: 6px;
+        text-transform: none;
+        letter-spacing: 0;
+      }
+      .popup-field input {
+        width: 100%;
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        color: var(--text);
+        font-family: inherit;
+        font-size: 0.85rem;
+        padding: 8px 12px;
+        outline: none;
+      }
+      .popup-field input:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 2px rgba(63,81,181,0.15);
+      }
+      .popup-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+      }
+      .btn-popup {
+        flex: 1;
+        padding: 10px 16px;
+        font-family: inherit;
+        font-size: 0.8rem;
+        font-weight: 500;
+        cursor: pointer;
+        border-radius: 4px;
+        transition: background 0.15s, box-shadow 0.15s;
+      }
+      .btn-popup {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--text);
+      }
+      .btn-popup:hover {
+        background: #f5f5f5;
+      }
+      .btn-popup.primary {
+        background: var(--primary);
+        border-color: var(--primary);
+        color: #fff;
+      }
+      .btn-popup.primary:hover {
+        background: var(--primary-dark);
+      }
+      .notif-icon {
+        font-size: 1rem;
+      }
+      .notif-label {
+        color: var(--text-secondary);
+      }
+
+      .log-section-label {
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        margin: 20px 0 10px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .log-section-label::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: var(--border);
+      }
+      .log-panel {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 14px;
+        max-height: 360px;
+        overflow-y: auto;
+      }
+      .log-entry {
+        font-size: 0.75rem;
+        line-height: 1.8;
+        color: var(--text);
+        display: flex;
+        gap: 10px;
+        font-family: monospace;
+      }
+      .log-ts {
+        color: var(--dimtext);
+        flex-shrink: 0;
+      }
+      .log-entry.highlight {
+        color: var(--green);
+        font-weight: 600;
+      }
+      .log-entry.warn {
+        color: var(--orange);
+      }
+      .log-entry.error {
+        color: var(--red);
+      }
+      .log-empty {
+        color: var(--dimtext);
+        font-size: 0.78rem;
+      }
+
+      .screenshot-section {
+        margin-top: 20px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 16px;
+      }
+      .screenshot-label {
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        margin-bottom: 12px;
+      }
+
+      .blink {
+        animation: blink 1s step-end infinite;
+      }
+      @keyframes blink {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrapper">
+      <!-- Header -->
+      <div class="page-header">
+        <p class="sys-badge">Visa Appointment Monitor</p>
+        <h1 class="page-title">Appointment<br />Monitor</h1>
+        <p class="page-desc">
+          Submit your credentials below to initialize automated monitoring of your US visa appointment slot.<br /><br />
+          We'll scan all consulate locations and notify you the moment an earlier date becomes available. You can enable
+          notifications after approval and view <span>live monitoring status</span> after submission.
+        </p>
+      </div>
+
+      <!-- Steps -->
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">          01</div>
+          <div class="step-label"><strong>SUBMIT</strong>Your visa portal credentials &amp; appointment ID</div>
+        </div>
+        <div class="step">
+          <div class="step-num">02</div>
+          <div class="step-label"><strong>SCAN</strong>System monitors all locations continuously</div>
+        </div>
+        <div class="step">
+          <div class="step-num">03</div>
+          <div class="step-label"><strong>MONITOR</strong>Watch live logs on this page</div>
+        </div>
+        <div class="step">
+          <div class="step-num">04</div>
+          <div class="step-label"><strong>NOTIFY</strong>Instant alerts via email, Telegram, or SMS</div>
+        </div>
+      </div>
+
+      <!-- ── SUBMISSION FORM ──────────────────────────────────────── -->
+      <div id="formSection">
+        {% if error %}
+        <div
+          style="
+            border: 1px solid var(--red);
+            background: rgba(255, 0, 68, 0.05);
+            color: var(--red);
+            font-size: 0.72rem;
+            letter-spacing: 1px;
+            padding: 14px 18px;
+            margin-bottom: 20px;
+          "
+        >
+          ⚠ {{ error }}
+        </div>
+        {% endif %}
+
+        <div class="form-panel">
+          <form id="missionForm" autocomplete="off" novalidate>
+            <input type="hidden" name="token" id="tokenField" value="{{ token }}" />
+
+            <p class="form-section-label">Personal Details</p>
+            <div class="form-grid">
+              <div class="form-group full">
+                <label>Your Name</label>
+                <input type="text" name="name" placeholder="Jane Smith" required />
+              </div>
+              <div class="form-group full">
+                <label>Telegram Chat ID (optional)</label>
+                <input type="text" name="telegram_chat_id" placeholder="123456789" />
+                <p class="hint">For Telegram notifications — or link via popup after approval</p>
+              </div>
+            </div>
+
+            <p class="form-section-label">Visa Portal Credentials</p>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Portal Login (Email)</label>
+                <input type="text" name="username" placeholder="your@login.com" required />
+                <p class="hint">ais.usvisa-info.com login</p>
+              </div>
+              <div class="form-group">
+                <label>Portal Password</label>
+                <input type="password" name="password" required />
+              </div>
+            </div>
+
+            <p class="form-section-label">Appointment Details</p>
+            <div class="form-grid">
+              <div class="form-group full">
+                <label>Appointment ID</label>
+                <input
+                  type="text"
+                  name="appointment_id"
+                  id="appointmentId"
+                  required
+                  autocomplete="off"
+                  spellcheck="false"
+                  placeholder="e.g. 12345678"
+                />
+                <p class="hint">From your appointment URL: <code>/schedule/<strong>12345678</strong>/appointment</code></p>
+              </div>
+            </div>
+
+            <!-- Preferred Locations -->
+            <p class="locations-header">Monitor Locations</p>
+            <div class="locations-grid">
+              <label><input type="checkbox" name="location" value="Toronto" checked /> Toronto</label>
+              <label><input type="checkbox" name="location" value="Vancouver" checked /> Vancouver</label>
+              <label><input type="checkbox" name="location" value="Calgary" checked /> Calgary</label>
+              <label><input type="checkbox" name="location" value="Ottawa" checked /> Ottawa</label>
+              <label><input type="checkbox" name="location" value="Halifax" checked /> Halifax</label>
+              <label><input type="checkbox" name="location" value="Montreal" checked /> Montreal</label>
+            </div>
+
+            <!-- Preferred Date Window -->
+            <div class="date-window-box">
+              <p class="date-window-header">Preferred Reschedule Window</p>
+              <p class="date-window-desc">Only reschedule if an earlier date falls within this range (minimum 30 days).</p>
+              <div class="date-window-grid">
+                <div class="form-group">
+                  <label>From</label>
+                  <input type="date" name="preferred_date_from" id="prefDateFrom" />
+                </div>
+                <div class="form-group">
+                  <label>To</label>
+                  <input type="date" name="preferred_date_to" id="prefDateTo" />
+                </div>
+              </div>
+              <p id="dateWindowFeedback" class="date-window-feedback"></p>
+            </div>
+
+            <!-- Reschedule -->
+            <div class="reschedule-box">
+              <p class="reschedule-header">Auto-Reschedule</p>
+              <div class="checkbox-row">
+                <input type="checkbox" name="reschedule" id="reschedule" />
+                <label class="checkbox-desc" for="reschedule">
+                  Enable <strong>automatic rescheduling</strong> — if an earlier date is found, the system will book it
+                  immediately without further confirmation. Only enable this if you are comfortable with any available
+                  location.
+                </label>
+              </div>
+            </div>
+
+            <div class="submit-row">
+              <button type="submit" class="btn-submit" id="submitBtn">Submit</button>
+            </div>
+          </form>
+
+          <div id="urlValidationError"></div>
+        </div>
+      </div>
+
+      <!-- ── PENDING APPROVAL PANEL ──────────────────────────────────── -->
+      <div id="pendingPanel" style="display: none">
+        <div style="border: 1px solid #ffe0b2; background: #fff8e1; border-radius: 8px; padding: 28px;">
+          <p style="font-size: 0.72rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 14px">
+            REQUEST STATUS
+          </p>
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px">
+            <span style="width: 12px; height: 12px; border-radius: 50%; background: var(--orange); flex-shrink: 0;"></span>
+            <span style="font-size: 1.1rem; font-weight: 600; color: var(--orange)">AWAITING APPROVAL</span>
+          </div>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.8; margin-bottom: 16px">
+            Your request has been received and is pending review.<br />
+            This page will automatically update once approved — no need to refresh.
+          </p>
+          <div style="display: flex; gap: 16px; font-size: 0.82rem">
+            <span style="color: var(--dimtext); width: 80px; flex-shrink: 0">STATUS</span>
+            <span style="color: var(--orange)">Pending admin approval <span class="blink">▮</span></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── REJECTED PANEL ────────────────────────────────────────────── -->
+      <div id="rejectedPanel" style="display: none">
+        <div style="border: 1px solid #ffcdd2; background: #ffebee; border-radius: 8px; padding: 28px;">
+          <p style="font-size: 0.72rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 14px">
+            REQUEST STATUS
+          </p>
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px">
+            <span style="width: 12px; height: 12px; border-radius: 50%; background: var(--red); flex-shrink: 0;"></span>
+            <span style="font-size: 1.1rem; font-weight: 600; color: var(--red)">REQUEST DECLINED</span>
+          </div>
+          <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 10px">Reason:</p>
+          <p
+            id="rejectReason"
+            style="
+              font-size: 0.85rem;
+              color: var(--red);
+              line-height: 1.7;
+              border-left: 3px solid var(--red);
+              padding-left: 12px;
+            "
+          ></p>
+        </div>
+      </div>
+
+      <!-- ── MONITORING PANEL (shown after submit) ────────────────── -->
+      <div id="monitorPanel">
+        <div class="monitor-header">
+          <p style="font-size: 0.72rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 14px">
+            MONITOR STATUS
+          </p>
+
+          <div class="monitor-status-row">
+            <span class="status-dot" id="mStatusDot"></span>
+            <span class="monitor-status-text" id="mStatusText">Initializing...</span>
+          </div>
+
+          <div class="monitor-meta">
+            <div class="meta-row">
+              <span class="meta-key">AGENT_ID</span>
+              <span class="meta-val" id="mUserId"></span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-key">CURRENT_APT</span>
+              <span class="meta-val" id="mCurrentApt">—</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-key">FOUND_APT</span>
+              <span class="meta-val found" id="mFoundApt" style="display: none"></span>
+              <span class="meta-val" id="mFoundAptNone">—</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-key">LOCATION</span>
+              <span class="meta-val" id="mLocation">—</span>
+            </div>
+          </div>
+
+          <div class="action-bar" id="mActionBar">—</div>
+
+          <div style="margin-top:16px;display:flex;gap:10px;">
+            <button class="btn-popup" id="clientStopBtn" style="color:var(--red);border-color:var(--red);font-size:0.75rem;padding:8px 18px;">Stop Monitoring</button>
+          </div>
+        </div>
+
+        <!-- Appointment screenshot (shown once when available) -->
+        <div id="screenshotSection" class="screenshot-section" style="display:none">
+          <p class="screenshot-label">Appointment Page</p>
+          <img id="screenshotImg" src="" alt="Appointment page" style="max-width:100%;border:1px solid var(--border);border-radius:4px;" />
+        </div>
+
+        <!-- Notifications -->
+        <div class="notif-section">
+          <p class="notif-section-label">Notifications</p>
+          <div class="notif-grid">
+            <div class="notif-card" id="emailNotifCard">
+              <span class="notif-icon">✉</span>
+              <span class="notif-label">EMAIL</span>
+            </div>
+            <div class="notif-card" id="telegramNotifCard">
+              <span class="notif-icon">✈</span>
+              <span class="notif-label">TELEGRAM</span>
+            </div>
+            <div class="notif-card" id="phoneNotifCard">
+              <span class="notif-icon">📱</span>
+              <span class="notif-label">SMS</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Email Popup -->
+        <div class="notif-card-popup" id="emailPopup">
+          <div class="popup-content">
+            <div class="popup-title">Email Notification</div>
+            <div class="popup-field">
+              <label>EMAIL ADDRESS</label>
+              <input type="email" id="popupEmail" placeholder="your@email.com" />
+            </div>
+            <div class="popup-actions">
+              <button class="btn-popup" id="emailTestBtn">✉ TEST</button>
+              <button class="btn-popup primary" id="emailSaveBtn">SAVE</button>
+              <button class="btn-popup" id="emailCloseBtn">CLOSE</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Telegram Popup -->
+        <div class="notif-card-popup" id="telegramPopup">
+          <div class="popup-content">
+            <div class="popup-title">Telegram Notification</div>
+
+            <button class="btn-popup primary" id="linkTelegramBtn" style="width:100%; margin-bottom:16px;">
+              ⚡ LINK TELEGRAM
+            </button>
+            <p style="font-size: 0.58rem; color: var(--dimtext); margin-bottom: 12px; line-height: 1.5;">
+              Click above to open Telegram → click START to link automatically.
+              <br/><br/>
+              Or enter Chat ID manually below.
+            </p>
+            <div class="popup-field">
+              <label>TELEGRAM CHAT ID</label>
+              <input type="text" id="popupTelegramChatId" placeholder="123456789" />
+            </div>
+            <div class="popup-actions">
+              <button class="btn-popup" id="telegramTestBtn">✈ TEST</button>
+              <button class="btn-popup primary" id="telegramSaveBtn">SAVE</button>
+              <button class="btn-popup" id="telegramCloseBtn">CLOSE</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- SMS Popup -->
+        <div class="notif-card-popup" id="phonePopup">
+          <div class="popup-content">
+            <div class="popup-title">SMS Notification</div>
+            <div class="popup-field">
+              <label>PHONE NUMBER (with country code)</label>
+              <input type="text" id="popupPhone" placeholder="+14155552671" />
+            </div>
+            <div class="popup-actions">
+              <button class="btn-popup" id="phoneTestBtn">📱 TEST</button>
+              <button class="btn-popup primary" id="phoneSaveBtn">SAVE</button>
+              <button class="btn-popup" id="phoneCloseBtn">CLOSE</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live log -->
+        <div class="log-section-label">Live Log</div>
+        <div class="log-panel" id="mLogPanel">
+          <p class="log-empty"><span class="blink">▮</span> Waiting for log entries...</p>
+        </div>
+
+        <p style="margin-top: 20px; font-size: 0.68rem; color: var(--dimtext); letter-spacing: 1px; line-height: 1.8">
+          Bookmark this page — you can return at any time to check your monitoring status.<br />
+          All selected consulate locations are being scanned. You'll be notified when an earlier date is found.
+        </p>
+      </div>
+    </div>
+    <!-- /wrapper -->
+
+    <script>
+      // ── Token from Flask template ──────────────────────────────────────────
+      const PAGE_TOKEN = document.getElementById("tokenField").value.trim();
+
+      // ── Real-time date window validation ──────────────────────────────────
+      function validateDateWindow() {
+        const from = document.getElementById("prefDateFrom").value;
+        const to = document.getElementById("prefDateTo").value;
+        const fb = document.getElementById("dateWindowFeedback");
+        if (from && to) {
+          const fromMs = new Date(from).getTime();
+          const toMs = new Date(to).getTime();
+          if (toMs <= fromMs) {
+            fb.textContent = "The 'To' date must be after the 'From' date.";
+            return;
+          }
+          const diffDays = (toMs - fromMs) / (1000 * 86400);
+          if (diffDays < 30) {
+            fb.textContent = "The date range must be at least 30 days.";
+            return;
+          }
+        }
+        fb.textContent = "";
+      }
+      document.getElementById("prefDateFrom").addEventListener("change", validateDateWindow);
+      document.getElementById("prefDateTo").addEventListener("change", validateDateWindow);
+
+      // ── Form submit ────────────────────────────────────────────────────────
+      const submitBtn = document.getElementById("submitBtn");
+
+      document.getElementById("missionForm").addEventListener("submit", function (e) {
+        e.preventDefault();
+        const form = e.target;
+
+        const required = ["name", "username", "password", "appointment_id"];
+        for (const field of required) {
+          if (!form[field].value.trim()) {
+            showValidationError(`Field "${field.toUpperCase().replace("_", " ")}" is required.`);
+            return;
+          }
+        }
+
+        // Validate preferred date window
+        const dateFrom = form.preferred_date_from.value;
+        const dateTo = form.preferred_date_to.value;
+        if (dateFrom && dateTo) {
+          const fromMs = new Date(dateFrom).getTime();
+          const toMs = new Date(dateTo).getTime();
+          if (toMs <= fromMs) {
+            document.getElementById("dateWindowFeedback").textContent = "The 'To' date must be after the 'From' date.";
+            return;
+          }
+          const diffDays = (toMs - fromMs) / (1000 * 86400);
+          if (diffDays < 30) {
+            document.getElementById("dateWindowFeedback").textContent = "The date range must be at least 30 days.";
+            return;
+          }
+          document.getElementById("dateWindowFeedback").textContent = "";
+        }
+
+        submitBtn.classList.add("loading");
+        submitBtn.innerHTML = '<span class="spinner"></span>Submitting...';
+        document.getElementById("urlValidationError").style.display = "none";
+
+        const fd = new FormData(form);
+        fd.set("reschedule", form.reschedule.checked ? "true" : "false");
+        // Collect selected locations
+        const locs = Array.from(document.querySelectorAll('input[name="location"]:checked')).map(cb => cb.value);
+        fd.set("preferred_locations", JSON.stringify(locs));
+
+        fetch("/client_submit", { method: "POST", body: fd })
+          .then((r) => r.json())
+          .then((data) => {
+            if (data.status === "pending_approval") {
+              showPendingPanel();
+            } else if (data.status === "rejected") {
+              showRejectedPanel(data.reason || "Your request was not approved.");
+            } else {
+              showValidationError(data.message || "Submission failed — please try again.");
+              submitBtn.classList.remove("loading");
+              submitBtn.innerHTML = "Submit";
+            }
+          })
+          .catch(() => {
+            showValidationError("Connection error — could not reach the server.");
+            submitBtn.classList.remove("loading");
+            submitBtn.innerHTML = "▶ INITIATE";
+          });
+      });
+
+      // ── State panels ───────────────────────────────────────────────────────
+
+      function showPendingPanel() {
+        document.getElementById("formSection").style.display = "none";
+        document.getElementById("pendingPanel").style.display = "block";
+        document.getElementById("pendingPanel").scrollIntoView({ behavior: "smooth" });
+        startStatusPolling();
+      }
+
+      function showRejectedPanel(reason) {
+        document.getElementById("formSection").style.display = "none";
+        document.getElementById("pendingPanel").style.display = "none";
+        document.getElementById("monitorPanel").style.display = "none";
+        document.getElementById("rejectedPanel").style.display = "block";
+        document.getElementById("rejectReason").textContent = reason;
+        document.getElementById("rejectedPanel").scrollIntoView({ behavior: "smooth" });
+        if (_pollInterval) {
+          clearInterval(_pollInterval);
+          _pollInterval = null;
+        }
+      }
+
+      function showMonitorPanel() {
+        document.getElementById("formSection").style.display = "none";
+        document.getElementById("pendingPanel").style.display = "none";
+        document.getElementById("monitorPanel").style.display = "block";
+        document.getElementById("monitorPanel").scrollIntoView({ behavior: "smooth" });
+      }
+
+      window.clientNotificationEmail = null;
+      window.clientTelegramChatId = null;
+
+      // Popup handling
+      document.getElementById("emailNotifCard").addEventListener("click", function() {
+        document.getElementById("popupEmail").value = window.clientNotificationEmail || "";
+        document.getElementById("emailPopup").classList.add("show");
+      });
+      document.getElementById("emailCloseBtn").addEventListener("click", function() {
+        document.getElementById("emailPopup").classList.remove("show");
+      });
+      document.getElementById("emailSaveBtn").addEventListener("click", function() {
+        const email = document.getElementById("popupEmail").value.trim();
+        window.clientNotificationEmail = email;
+        if (email) {
+          fetch("/client_update_notif", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user_id: PAGE_TOKEN, notification_email: email })
+          });
+        }
+        document.getElementById("emailPopup").classList.remove("show");
+      });
+      document.getElementById("emailTestBtn").addEventListener("click", function() {
+        const email = document.getElementById("popupEmail").value.trim();
+        if (!email) return;
+        const btn = document.getElementById("emailTestBtn");
+        btn.textContent = "SENDING...";
+        fetch("/test_email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: email })
+        })
+          .then(r => r.json())
+          .then(d => {
+            btn.textContent = d.status === "ok" ? "SENT!" : "FAILED";
+            setTimeout(() => btn.textContent = "✉ TEST", 2000);
+          })
+          .catch(() => { btn.textContent = "FAILED"; setTimeout(() => btn.textContent = "✉ TEST", 2000); });
+      });
+
+      // Link Telegram button - generates deep link and opens Telegram
+      let _botUsername = "us_x_visa_x_bot";
+      fetch("/bot_info").then(r => r.json()).then(d => { if (d.username) _botUsername = d.username; }).catch(() => {});
+
+      document.getElementById("linkTelegramBtn").addEventListener("click", function() {
+        const btn = this;
+        btn.textContent = "GENERATING...";
+        fetch("/generate_telegram_link", { method: "POST" })
+          .then(r => r.json())
+          .then(d => {
+            btn.textContent = "OPENING TELEGRAM...";
+            // Store token for polling
+            window.telegramLinkToken = d.token;
+            // Open Telegram with deep link - client clicks START there, bot auto-links
+            window.open("https://t.me/" + _botUsername + "?start=" + d.token, "_blank");
+            // Start polling for linking
+            pollTelegramLink();
+          })
+          .catch(() => { btn.textContent = "ERROR"; setTimeout(() => btn.textContent = "⚡ LINK TELEGRAM", 2000); });
+      });
+
+      // Poll for Telegram link completion
+      function pollTelegramLink() {
+        if (!window.telegramLinkToken) return;
+        fetch("/check_telegram_linked", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: window.telegramLinkToken })
+        })
+          .then(r => r.json())
+          .then(d => {
+            if (d.linked && d.chat_id) {
+              window.clientTelegramChatId = d.chat_id;
+              document.getElementById("popupTelegramChatId").value = d.chat_id;
+              document.getElementById("linkTelegramBtn").textContent = "✓ LINKED!";
+              // Auto-save the linked chat_id
+              fetch("/client_link_telegram", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ user_id: PAGE_TOKEN, chat_id: d.chat_id })
+              });
+            } else {
+              setTimeout(pollTelegramLink, 2000);
+            }
+          })
+          .catch(() => setTimeout(pollTelegramLink, 3000));
+      }
+
+      document.getElementById("telegramNotifCard").addEventListener("click", function() {
+        document.getElementById("popupTelegramChatId").value = window.clientTelegramChatId || "";
+        document.getElementById("telegramPopup").classList.add("show");
+      });
+      document.getElementById("telegramCloseBtn").addEventListener("click", function() {
+        document.getElementById("telegramPopup").classList.remove("show");
+      });
+      document.getElementById("telegramSaveBtn").addEventListener("click", function() {
+        const chatId = document.getElementById("popupTelegramChatId").value.trim();
+        window.clientTelegramChatId = chatId;
+        if (chatId) {
+          fetch("/client_link_telegram", {
+            method: "POST",
+            body: JSON.stringify({ user_id: PAGE_TOKEN, chat_id: chatId })
+          });
+        }
+        document.getElementById("telegramPopup").classList.remove("show");
+      });
+      document.getElementById("telegramTestBtn").addEventListener("click", function() {
+        const chatId = document.getElementById("popupTelegramChatId").value.trim();
+        if (!chatId) return;
+        const btn = document.getElementById("telegramTestBtn");
+        btn.textContent = "SENDING...";
+        fetch("/test_telegram", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ chat_id: chatId })
+        })
+          .then(r => r.json())
+          .then(d => {
+            btn.textContent = d.status === "ok" ? "SENT!" : "FAILED";
+            setTimeout(() => btn.textContent = "✈ TEST", 2000);
+          })
+          .catch(() => { btn.textContent = "FAILED"; setTimeout(() => btn.textContent = "✈ TEST", 2000); });
+      });
+
+      // ── SMS / Phone ───────────────────────────────────────────────────────────
+      window.clientPhoneNumber = null;
+
+      document.getElementById("phoneNotifCard").addEventListener("click", function() {
+        document.getElementById("popupPhone").value = window.clientPhoneNumber || "";
+        document.getElementById("phonePopup").classList.add("show");
+      });
+      document.getElementById("phoneCloseBtn").addEventListener("click", function() {
+        document.getElementById("phonePopup").classList.remove("show");
+      });
+      document.getElementById("phoneSaveBtn").addEventListener("click", function() {
+        const phone = document.getElementById("popupPhone").value.trim();
+        window.clientPhoneNumber = phone;
+        if (phone) {
+          fetch("/client_update_notif", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user_id: PAGE_TOKEN, phone_number: phone })
+          });
+        }
+        document.getElementById("phonePopup").classList.remove("show");
+      });
+      document.getElementById("phoneTestBtn").addEventListener("click", function() {
+        const phone = document.getElementById("popupPhone").value.trim();
+        if (!phone) return;
+        const btn = document.getElementById("phoneTestBtn");
+        btn.textContent = "SENDING...";
+        fetch("/test_sms", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone: phone })
+        })
+          .then(r => r.json())
+          .then(d => {
+            btn.textContent = d.status === "ok" ? "SENT!" : "FAILED";
+            setTimeout(() => btn.textContent = "📱 TEST", 2000);
+          })
+          .catch(() => { btn.textContent = "FAILED"; setTimeout(() => btn.textContent = "📱 TEST", 2000); });
+      });
+
+      // ── Status polling (handles all state transitions) ─────────────────────
+      let _pollInterval = null;
+
+      function startStatusPolling() {
+        if (!PAGE_TOKEN) return;
+        if (_pollInterval) clearInterval(_pollInterval);
+
+        function doPoll() {
+          fetch(`/client_status/${encodeURIComponent(PAGE_TOKEN)}`)
+            .then((r) => r.json())
+            .then(handleStateUpdate)
+            .catch(() => {});
+        }
+
+        doPoll();
+        _pollInterval = setInterval(doPoll, 4000);
+      }
+
+      function handleStateUpdate(d) {
+        // Pre-fill notification fields from server
+        if (d.notification_email) window.clientNotificationEmail = d.notification_email;
+        if (d.telegram_chat_id) window.clientTelegramChatId = d.telegram_chat_id;
+        if (d.phone_number) window.clientPhoneNumber = d.phone_number;
+
+        if (d.status === "pending_approval" || d.status === "issued") {
+          return;
+        }
+        if (d.status === "rejected") {
+          showRejectedPanel(d.reason || "Your request was not approved.");
+          return;
+        }
+        // Both "ok" (running) and "approved" (stopped) show the monitor panel
+        showMonitorPanel();
+        updateMonitorUI(d);
+      }
+
+      // ── Log classification ─────────────────────────────────────────────────
+      function logClass(msg) {
+        if (/DATE FOUND|SUCCESS|DISMISSED|RESCHEDULED/i.test(msg)) return "highlight";
+        if (/WARNING|ATTEMPT|COOL|SLEEPING|SOFT BAN/i.test(msg)) return "warn";
+        if (/FAILED|ERROR|CRITICAL/i.test(msg)) return "error";
+        return "";
+      }
+
+      function updateMonitorUI(d) {
+        const running = d.is_running;
+        const dot = document.getElementById("mStatusDot");
+        const text = document.getElementById("mStatusText");
+
+        dot.className = "status-dot " + (running ? "on" : "stopped");
+        text.className = "monitor-status-text " + (running ? "on" : "stopped");
+        text.textContent = running ? "RUNNING" : "STOPPED";
+
+        document.getElementById("mActionBar").textContent = d.current_action || "—";
+        document.getElementById("mCurrentApt").textContent = d.current_appointment || "—";
+        document.getElementById("mLocation").textContent = d.last_checked_location || "—";
+
+        if (d.new_appointment) {
+          document.getElementById("mFoundApt").textContent = d.new_appointment;
+          document.getElementById("mFoundApt").style.display = "";
+          document.getElementById("mFoundAptNone").style.display = "none";
+        } else {
+          document.getElementById("mFoundApt").style.display = "none";
+          document.getElementById("mFoundAptNone").style.display = "";
+        }
+
+        const log = d.action_log || [];
+        const panel = document.getElementById("mLogPanel");
+        if (log.length === 0) {
+          panel.innerHTML = '<p class="log-empty"><span class="blink">▮</span> Waiting for log entries...</p>';
+        } else {
+          const atBottom = panel.scrollHeight - panel.scrollTop <= panel.clientHeight + 40;
+          panel.innerHTML = log
+            .map(
+              (e) =>
+                `<div class="log-entry ${logClass(e.msg)}">
+               <span class="log-ts">${e.ts}</span><span>${e.msg}</span>
+             </div>`,
+            )
+            .join("");
+          if (atBottom) panel.scrollTop = panel.scrollHeight;
+        }
+
+        // Show screenshot once when available (piggybacks on status poll)
+        if (!window._screenshotFetched && d.appointments_page_screenshot) {
+          window._screenshotFetched = true;
+          fetch(`/client_screenshot/${encodeURIComponent(PAGE_TOKEN)}`)
+            .then(r => r.json())
+            .then(sd => {
+              if (sd.status === "ready") {
+                document.getElementById("screenshotImg").src = sd.image_url;
+                document.getElementById("screenshotSection").style.display = "";
+              }
+            })
+            .catch(() => {});
+        }
+      }
+
+      // ── Client stop button ──────────────────────────────────────────────────
+      document.getElementById("clientStopBtn").addEventListener("click", function() {
+        if (!confirm("Stop monitoring? You can submit a new request later if needed.")) return;
+        const btn = this;
+        btn.textContent = "STOPPING...";
+        btn.disabled = true;
+        fetch(`/client_stop/${encodeURIComponent(PAGE_TOKEN)}`, { method: "POST" })
+          .then(r => r.json())
+          .then(d => {
+            if (d.status === "stopped") {
+              if (_pollInterval) { clearInterval(_pollInterval); _pollInterval = null; }
+              document.getElementById("mStatusDot").className = "status-dot stopped";
+              document.getElementById("mStatusText").textContent = "STOPPED";
+              document.getElementById("mStatusText").className = "monitor-status-text stopped";
+              btn.textContent = "STOPPED";
+              btn.style.borderColor = "var(--text-secondary)";
+              btn.style.color = "var(--text-secondary)";
+            } else {
+              btn.textContent = "FAILED";
+              btn.disabled = false;
+              setTimeout(() => btn.textContent = "Stop Monitoring", 3000);
+            }
+          })
+          .catch(() => {
+            btn.textContent = "ERROR";
+            btn.disabled = false;
+            setTimeout(() => btn.textContent = "Stop Monitoring", 3000);
+          });
+      });
+
+      // ── Validation error ───────────────────────────────────────────────────
+      function showValidationError(msg) {
+        const el = document.getElementById("urlValidationError");
+        el.textContent = "⚠ " + msg;
+        el.style.display = "block";
+        el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+
+      // ── On page load: check existing token state ───────────────────────────
+      // Client returning to their link after having already submitted
+      (function checkExistingSession() {
+        if (!PAGE_TOKEN) return;
+        fetch(`/client_status/${encodeURIComponent(PAGE_TOKEN)}`)
+          .then((r) => r.json())
+          .then((d) => {
+            if (d.status === "issued") return; // not yet submitted — show form
+            if (d.status === "pending_approval") {
+              showPendingPanel();
+            } else if (d.status === "rejected") {
+              showRejectedPanel(d.reason || "Your request was not approved.");
+            } else if (d.status === "ok" || d.status === "approved") {
+              showMonitorPanel();
+              if (d.status === "ok") updateMonitorUI(d);
+              startStatusPolling();
+            }
+          })
+          .catch(() => {});
+      })();
+    </script>
+  </body>
+</html>

@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class ClientState(str, Enum):
+class ClientState(StrEnum):
     ISSUED = "issued"
     PENDING = "pending"
     APPROVED = "approved"
@@ -9,6 +9,6 @@ class ClientState(str, Enum):
     STOPPED = "stopped"
 
 
-class VisaType(str, Enum):
+class VisaType(StrEnum):
     CANADA = "canada"
     UK = "uk"
