@@ -9,9 +9,10 @@ authenticated, per-message nonce).
 Key: a 44-char URL-safe base64 string in the ENCRYPTION_KEY env var. Generate
 with: `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`
 """
+
 from __future__ import annotations
 
-from cryptography.fernet import Fernet, InvalidToken
+from cryptography.fernet import Fernet
 
 from src.config import settings
 
@@ -26,7 +27,7 @@ def _load_fernet() -> Fernet:
     if not key:
         raise RuntimeError(
             "ENCRYPTION_KEY is not set. Generate one with: "
-            "`python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\"` "
+            '`python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` '
             "and add it to your .env (or secret manager)."
         )
     try:

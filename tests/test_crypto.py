@@ -1,4 +1,5 @@
 """Tests for the Fernet password encryption module."""
+
 from __future__ import annotations
 
 import pytest
@@ -6,7 +7,7 @@ from cryptography.fernet import Fernet, InvalidToken
 
 
 def test_roundtrip(fernet_key: str):
-    from src.infrastructure.crypto import encrypt_password, decrypt_password
+    from src.infrastructure.crypto import decrypt_password, encrypt_password
 
     plain = "MyS3cretP@ss"
     token = encrypt_password(plain)
@@ -41,10 +42,13 @@ def test_missing_key_raises(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.delenv("ENCRYPTION_KEY", raising=False)
     # Reload config so the empty default is read
     import importlib
+
     from src import config
+
     importlib.reload(config)
 
     from src.infrastructure import crypto
+
     importlib.reload(crypto)
 
     with pytest.raises(RuntimeError, match="ENCRYPTION_KEY"):
@@ -54,10 +58,13 @@ def test_missing_key_raises(monkeypatch: pytest.MonkeyPatch):
 def test_malformed_key_raises(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("ENCRYPTION_KEY", "not-a-valid-base64-key!!")
     import importlib
+
     from src import config
+
     importlib.reload(config)
 
     from src.infrastructure import crypto
+
     importlib.reload(crypto)
 
     with pytest.raises(RuntimeError, match="ENCRYPTION_KEY"):
@@ -65,12 +72,14 @@ def test_malformed_key_raises(monkeypatch: pytest.MonkeyPatch):
 
 
 def test_wrong_key_raises_invalid_token(fernet_key: str):
-    from src.infrastructure.crypto import encrypt_password, decrypt_password
+    from src.infrastructure.crypto import encrypt_password
 
     token = encrypt_password("secret")
     # Swap the key underneath — decrypt should fail
     import importlib
+
     from src import config
+
     monkeypatch_key = Fernet.generate_key().decode()
     monkeypatch = pytest.MonkeyPatch()
     try:
@@ -78,6 +87,7 @@ def test_wrong_key_raises_invalid_token(fernet_key: str):
         importlib.reload(config)
         importlib.reload(__import__("src.infrastructure.crypto", fromlist=["*"]))
         from src.infrastructure.crypto import decrypt_password as decrypt2
+
         with pytest.raises(InvalidToken):
             decrypt2(token)
     finally:
@@ -85,7 +95,7 @@ def test_wrong_key_raises_invalid_token(fernet_key: str):
 
 
 def test_tampered_token_raises(fernet_key: str):
-    from src.infrastructure.crypto import encrypt_password, decrypt_password
+    from src.infrastructure.crypto import decrypt_password, encrypt_password
 
     token = encrypt_password("secret")
     # Flip a character in the middle
