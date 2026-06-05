@@ -22,19 +22,19 @@ class AutomationService:
         return {"client_id": client.id, "started": ok}
 
     @staticmethod
-    def stop(token: str) -> dict:
-        client = ClientService.get_by_token(token)
+    def stop(client_id: str) -> dict:
+        client = ClientService.get_by_id(client_id)
         if not client:
-            raise NotFoundError(f"Token {token[:12]}... not found")
+            raise NotFoundError(f"Client {client_id[:12]}... not found")
         client_repo.update_field(client.id, state=ClientState.STOPPED.value)
         ok = orchestrator.stop(client.id)
         return {"client_id": client.id, "stopped": ok}
 
     @staticmethod
-    def get_status(token: str) -> dict:
-        client = ClientService.get_by_token(token)
+    def get_status(client_id: str) -> dict:
+        client = ClientService.get_by_id(client_id)
         if not client:
-            raise NotFoundError(f"Token {token[:12]}... not found")
+            raise NotFoundError(f"Client {client_id[:12]}... not found")
         state = state_repo.load(client.id) or {}
         running = orchestrator.is_alive(client.id)
         return {

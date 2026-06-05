@@ -58,6 +58,7 @@ def approve(token):
     client = ClientService.get_by_token(token)
     if not client or client.state.value != "pending":
         return jsonify({"status": "error", "message": "No pending request"}), 400
+    ClientService.approve(token)
     result = AutomationService.start(token)
     return jsonify({"status": "approved" if result["started"] else "error"})
 
@@ -66,9 +67,13 @@ def approve(token):
 @bp.route("/reject_client/<token>", methods=["POST"])
 @login_required
 def reject(token):
+    from src.domain.errors import NotFoundError
     reason = request.form.get("reason", "Request was not approved.")
-    ClientService.reject(token, reason)
-    return jsonify({"status": "rejected"})
+    try:
+        ClientService.reject(token, reason)
+        return jsonify({"status": "rejected"})
+    except NotFoundError:
+        return jsonify({"status": "error", "message": "Client not found"}), 404
 
 
 @bp.route("/logs/<client_id>")
@@ -82,8 +87,15 @@ def logs(client_id):
 @bp.route("/stop/<token>", methods=["POST"])
 @login_required
 def stop(token):
-    AutomationService.stop(token)
-    return jsonify({"status": "stopped"})
+    from src.domain.errors import NotFoundError
+    client = ClientService.get_by_token(token)
+    if not client:
+        return jsonify({"status": "error", "message": "Client not found"}), 404
+    try:
+        AutomationService.stop(client.id)
+        return jsonify({"status": "stopped"})
+    except NotFoundError:
+        return jsonify({"status": "error", "message": "Client not found"}), 404
 
 
 @bp.route("/status")
@@ -98,10 +110,11 @@ def all_status():
 
 @bp.route("/settings")
 @login_required
-def get_settings():
+def settings_get():
     return jsonify(
         {
             "default_notif_email": settings_repo.get("default_notif_email", ""),
+            "default_telegram_chat_id": settings_repo.get("default_telegram_chat_id", ""),
             "email_enabled": settings_repo.get("email_enabled", "true"),
             "telegram_enabled": settings_repo.get("telegram_enabled", "false"),
             "sms_enabled": settings_repo.get("sms_enabled", "false"),
@@ -113,6 +126,7 @@ def get_settings():
 @login_required
 def save_settings():
     settings_repo.set("default_notif_email", request.form.get("default_notif_email", ""))
+    settings_repo.set("default_telegram_chat_id", request.form.get("default_telegram_chat_id", ""))
     settings_repo.set("email_enabled", "true" if request.form.get("email_enabled") in ("true", "on") else "false")
     settings_repo.set("telegram_enabled", "true" if request.form.get("telegram_enabled") in ("true", "on") else "false")
     settings_repo.set("sms_enabled", "true" if request.form.get("sms_enabled") in ("true", "on") else "false")

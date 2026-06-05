@@ -1,75 +1,169 @@
 # AGENTS.md — UsVisaAppointment
 
+Flask + Playwright app that monitors US visa appointment slots for multiple users
+(Canada module is real; UK module is a stub). Each approved client runs in its
+own `multiprocessing.Process` so a bad run cannot block the web UI.
+
 ## Quick start
 
 ```bash
 make install       # creates .venv, pip install -r requirements.txt, playwright install chromium
-make run           # Flask dev server on port 5000
-make lint          # ruff check .
-make format        # ruff check --fix . && ruff format .
+make run           # dev server via run.py on PORT (default 5000)
 make test          # pytest tests/ -v  (no tests exist yet)
+make lint          # ruff check src/         (note: only src/, CI runs `ruff check .`)
+make format        # ruff check --fix src/ && ruff format src/
 make docker-build  # docker build -t visa-ctrl:latest .
 make docker-run    # docker run --rm -p 5000:8080 --env-file .env visa-ctrl
 make deploy-gcp    # gcloud builds submit --config cloudbuild.yaml .
-make backup        # tar.gz of state files to ./backups/
+make backup        # ./scripts/backup.sh     (stale script — see Gotchas)
 ```
 
-`run.sh` is an alternative entry point that auto-activates `env/` (not `.venv`), sources `.env`, kills port conflicts, and starts Flask.
+`./scripts/setup.sh` is a non-Makefile alternative to `make install` (also
+writes a `.env` from `.env.example` if missing, then exits).
 
-## Project structure
+`./run.sh` is yet another entry point — it expects the venv in `env/`
+(not `.venv/`), sources `.env`, kills anything on `$PORT`, and runs
+`python3 run.py`. Use it if you ran setup.sh with the default venv path.
 
-- `canada/app.py` — Flask app (multi-user admin UI, client portal, Telegram webhook). Entrypoint: `python -m flask --app canada.app run`. Production: `python -m waitress --port=8080 --host=0.0.0.0 canada.app:app`.
-- `canada/main.py` — `VisaAutomation` class + `run_in_subprocess()` entrypoint for multiprocessing. Uses Playwright to check/reschedule US visa appointments for Canada.
-- `canada/config.py` — Locations, selectors, retry/poll constants.
-- `canada/db.py` — SQLite layer (WAL mode, busy timeout 5s). Tables: `settings`, `client_tokens`, `automation_state`, `pending_links`, `sessions`.
-- `canada/state.py` — Thin wrapper saving/publishing automation state to DB for the web UI.
-- `canada/notifications.py` — Email (SMTP), Telegram, SMS (Twilio).
-- `uk/main.py` — Separate UK visa automation (semi-maintained, has **duplicate code and stale bugs** — see CHANGELOG).
-- `uk/routes.py` — Simple Flask app for UK module.
-- `canada/canada/` — **Both** a Python subpackage **and** a data directory holding legacy JSON state files (`client_tokens.json`, `settings.json`). On startup `db.init_db()` migrates these into SQLite if present.
-- `scripts/backup.sh` — State backup. Run from project root.
-- `scripts/deploy-gcp.sh` — One-shot GCP setup + deploy.
-- `scripts/init-oracle-vm.sh` — Oracle Cloud VM bootstrap.
+## Entrypoints
+
+- Dev: `run.py` → `src.app.create.create_app()` (Flask debug server)
+- Prod (Docker, Render, Cloud Run): `src.app.wsgi:app` served by `waitress`
+- Process: `python -m waitress --port=8080 --host=0.0.0.0 src.app.wsgi:app`
+
+## Code layout (src/)
+
+```
+src/
+├── app/                 # Flask app + blueprints + wsgi
+│   ├── create.py        #   create_app(): registers blueprints, starts recovery thread
+│   ├── wsgi.py          #   app = create_app()  (production entry)
+│   └── routes/          #   auth, admin, client, telegram blueprints
+├── config.py            # pydantic-settings AppSettings (env_file = ".env")
+├── domain/              # Client dataclass, enums (ClientState, VisaType), errors
+├── infrastructure/
+│   ├── database.py      #   sqlite3 (WAL, busy_timeout=5s). Tables: settings, clients,
+│   │                    #   automation_state, pending_links. Schema in init_db().
+│   ├── logging.py       #   server.log (rotating) + per-client <id>.log
+│   └── repositories/    #   client_repo, state_repo, settings_repo (in-memory cache)
+├── notifications/       # email (SMTP), telegram, sms (Twilio) — each exposes send()
+├── orchestrator/
+│   └── manager.py       # start/stop/check_and_recover/resume_approved_agents (multiprocess)
+├── scraper/
+│   ├── base.py          #   VisaScraper ABC + run loop (login → check 12× → wait 30-60s)
+│   ├── canada/          #   CanadaVisaScraper — fully implemented
+│   └── uk/              #   UKVisaScraper — login works, check_availability/reschedule are stubs
+└── services/            # ClientService, AutomationService, NotificationService
+```
+
+Routing: `orchestrator/manager.py` dispatches to `src.scraper.canada.scraper.CanadaVisaScraper`
+or `src.scraper.uk.scraper.UKVisaScraper` based on `client.visa_type` (see
+`src/domain/enums.py:VisaType`).
 
 ## Config & secrets
 
-- **.env** — copied from `.env.example`. Loaded by `config.load_environment()` (dotenv from `canada/.env`).
-- **Legacy** `canada/creds.py` and `uk/creds.py` — gitignored, hardcoded credentials for standalone CLI runs.
+- `.env` is at project root and loaded by pydantic (`src/config.py`). Copy
+  from `.env.example` and edit before first run. Required keys: `SECRET_KEY`,
+  `ADMIN_PASSWORD`. Optional: SMTP, Resend, Telegram, Twilio, Sentry.
+- `DB_PATH` controls the SQLite file. Default in `src/config.py` is
+  `data/visactrl.db`; `.env.example` ships with `canada/visactrl.db`. Pick one
+  before first run — the app `mkdir -p`s the parent dir on connect.
+- There are NO `creds.py` files anymore. Old `canada/creds.py` / `uk/creds.py`
+  in `.gitignore` are leftovers from a pre-refactor single-script era.
 
-## Ruff (linter + formatter)
+## Runtime directories (gitignored)
 
-- Line length: 120
-- Target: Python 3.12
-- Quote style: double
-- Selected rules: E, F, W, I, N, UP, S (ignore S101)
-- `ruff check --fix . && ruff format .` to auto-fix
+- `canada/visactrl.db` — current SQLite DB (if you set `DB_PATH=canada/visactrl.db`)
+- `data/` — alternative DB location (default in code)
+- `logs/server.log` and `logs/<client_id>.log` — server + per-client logs (rotating 5MB × 3)
+- `screenshots/<client_id>/NNN_<name>.png` — Playwright screenshots; latest is
+  exposed via the client portal as a base64 data URL
+- `app.log` — leftover root-level log (gitignored)
+- `.env`, `.venv`, `env/`, `.ruff_cache/`, `__pycache__/`
 
-## Testing
+## Telegram integration
 
-- pytest configured in `pyproject.toml` (`testpaths = ["tests"]`), but **no test files exist yet**.
-- CI runs `pytest tests/ -v --cov=canada --cov=uk --cov-report=xml`.
-- Any new test files should go in `tests/test_*.py`.
+- Visit `/set_telegram_webhook` (GET) once after deploy to register the webhook
+  URL. Without this, `/telegram_webhook` will be a no-op.
+- Commands the bot handles (`src/app/routes/telegram.py`):
+  - `/start <token>` — links the chat ID to a client token. Token must already
+    exist in `pending_links` (created by `POST /generate_telegram_link`).
+  - `/myid` and `/getid` — reply with the user's chat ID.
+- `pending_link_ttl_seconds = 1800` (30 min). Stale links are NOT auto-cleaned
+  in the current code — the constant is defined but the cleanup loop is not
+  wired up (see CHANGELOG "Removed" section).
+
+## Lint, format, test
+
+- Ruff config in `pyproject.toml`: line-length 120, py312, select E/F/W/I/N/UP/S
+  (ignore S101), double quotes, LF endings.
+- **Makefile runs `ruff check src/` (narrow). CI runs `ruff check .` (whole repo).**
+  A change in a non-`src/` file can pass `make lint` but fail CI.
+- Pytest is configured (`testpaths = ["tests"]`, `addopts = "-v --tb=short"`)
+  but **no test files exist**. CI's pytest step passes vacuously.
+- CI test command is `pytest tests/ -v --cov=canada --cov=uk --cov-report=xml`
+  — the `--cov=uk` is a leftover and will fail with "no such file" if coverage
+  is ever enforced. CI currently does not enforce coverage.
 
 ## CI/CD
 
-- GitHub Actions: `lint` → `test` → `docker-build` (push to main or PR).
-- Python 3.12 in CI, but `runtime.txt` says 3.11 (Render deployment).
-- Docker base: `mcr.microsoft.com/playwright/python:v1.58.0-noble`. Chromium pre-installed.
-- Cloud Run deployment via `cloudbuild.yaml`: builds image → pushes to Artifact Registry (`northamerica-northeast1`) → deploys with secrets from Secret Manager. 2Gi memory, 2 CPU, 3600s timeout, concurrency 5.
-- Render deployment via `render.yaml` (Docker, `PORT=8080`).
+- `.github/workflows/ci.yml` jobs: `lint` → `test` → `docker-build` (sequential).
+- Python 3.12 in CI, but `runtime.txt` pins **3.11** (Render uses this).
+- Docker base: `mcr.microsoft.com/playwright/python:v1.58.0-noble`. Chromium
+  pre-installed; `playwright install --with-deps chromium` is also re-run in
+  the Dockerfile to keep versions in sync.
+- Cloud Run (`cloudbuild.yaml`): 2Gi RAM, 2 CPU, `--timeout=3600`,
+  `--concurrency=5`, secrets pulled from Secret Manager, region
+  `northamerica-northeast1`. The Cloud Run service is set to
+  `--min-instances=0` so cold starts happen — Playwright relogs in on each
+  fresh cycle, which is by design.
+- Render (`render.yaml`): Docker service on port 8080, secrets `sync: false`
+  (you enter them in the Render dashboard).
 
 ## Architecture quirks
 
-- Each automation user runs in a **separate `multiprocessing.Process`** (not thread). State is persisted via SQLite for the web UI to read.
-- Automation instances are resumed on Flask startup via `resume_approved_agents()`.
-- The `/health` endpoint triggers a keepalive ping thread (every 5 minutes) to prevent cold starts.
-- Telegram webhook handles `/start <token>` to link chat IDs, and `/myid` to return the chat ID.
-- `PENDING_LINK_TTL_SECONDS = 600` (10 min). Stale pending links cleaned before every request.
-- `canada/canada/` is gitignored (runtime state, contains PII). Don't confuse with the `canada/` app package.
+- One `multiprocessing.Process` per approved client, registered in
+  `orchestrator/manager.py:_alive_processes`. The parent process never runs
+  Playwright — it only orchestrates.
+- `create_app()` starts a daemon thread (`_recovery_loop`) that every 60s
+  calls `orchestrator.check_and_recover()` to restart crashed scrapers with
+  exponential backoff (`crash_backoff_base=30s`, `crash_backoff_max=600s`).
+- `orchestrator.resume_approved_agents()` runs on app startup so automations
+  survive a web-tier restart. State lives in SQLite, not in the process.
+- `/health` returns `{"status": "ok"}`. The Dockerfile's HEALTHCHECK polls
+  this every 30s with a 60s start-period.
+- Per-client state is persisted on every log line via
+  `state_repo.save(...)` — `action_log` is a JSON list in the
+  `automation_state` table, capped at `max_action_log_entries=100`.
+- `BaseSettings` reads `.env` at the project root (NOT `canada/.env` as older
+  docs claim). The `extra = "ignore"` config means unknown env vars don't
+  crash the app.
 
 ## Gotchas
 
-- **UK module** has known issues: duplicate `except` blocks in `get_appointment_date()`, duplicate `notification_email` parameter in `__init__`, mixed Canada/UK URLs.
-- **No tests exist** despite pytest config — CI test step passes vacuously.
-- The `canada/canada/` directory serves dual purpose (package + data) — be careful not to delete it thinking it's just `__pycache__`.
-- `make install` puts venv in `.venv/`, but `run.sh` expects `env/`. Two different venv paths.
+- **UK module is a stub.** `UKVisaScraper.login()` works, but
+  `check_availability()` and `reschedule_to()` always return False. Don't
+  enable the UK `visa_type` for real users expecting it to do anything.
+- **`requirements-lock.txt` is OUT OF DATE.** It lists old versions
+  (Flask 3.0.3 not pinned, python-telegram-bot 21.10, etc.). Use
+  `requirements.txt` for installs.
+- **No tests exist** despite the pytest config. Adding the first
+  `tests/test_*.py` will start running the CI test step for real.
+- **Stale docs/scripts:** `README.md`, `docs/api.md`, `docs/deployment.md`,
+  `scripts/backup.sh`, and `SECURITY.md` all reference the pre-refactor
+  single-script layout (paths like `canada.app`, `creds.py`,
+  `canada/canada/client_tokens.json`). Do not trust them — read the code
+  under `src/` instead. The backup script will find no files and exit 0.
+- **Two venv paths exist** because the project was refactored without
+  deleting the old setup: `make install` uses `.venv/`, `run.sh` and
+  `scripts/setup.sh` use `env/`. Pick one and stick with it.
+- **No CSRF protection, no rate limiting, no MFA on `/login`.** See
+  `SECURITY.md`. Admin auth is a single shared password compared in
+  `src/app/routes/auth.py:login()`.
+- **Client passwords are stored in plaintext** in the `clients` table
+  (`client_repo.save`). The DB file is gitignored and lives on ephemeral
+  storage in production, but this is a real exposure if the DB is exfiltrated.
+- **No `opencode.json` or `.opencode/`** in this repo — OpenCode picks up
+  only this `AGENTS.md`.
+- **No pre-commit hooks.** Run `make format` and `make lint` manually
+  before pushing (and remember CI lints the whole repo, not just `src/`).

@@ -3,7 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Visa Appointment Monitor</title>
+    <title>VisaCtrl — Client</title>
+    <link rel="stylesheet" href="/static/css/glass.css" />
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
       *,
       *::before,
@@ -14,27 +16,25 @@
       }
 
       :root {
-        --primary: #3f51b5;
-        --primary-dark: #303f9f;
-        --accent: #2196f3;
-        --green: #4caf50;
-        --red: #f44336;
-        --orange: #ff9800;
-        --bg: #fafafa;
-        --surface: #ffffff;
-        --panel: #ffffff;
-        --border: #e0e0e0;
-        --text: #212121;
-        --text-secondary: #757575;
-        --dimtext: #9e9e9e;
-        --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+        --primary: var(--accent);
+        --green: var(--success);
+        --red: var(--error);
+        --orange: var(--warning);
+        --bg: var(--bg-primary);
+        --surface: var(--bg-secondary);
+        --panel: var(--bg-secondary);
+        --border: var(--glass-border);
+        --text: var(--text-primary);
+        --text-secondary: var(--text-secondary);
+        --dimtext: var(--text-muted);
+        --shadow: var(--shadow-sm);
         --shadow-hover: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.06);
       }
 
       body {
         background: var(--bg);
         color: var(--text);
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        font-family: var(--font);
         min-height: 100vh;
         display: flex;
         align-items: flex-start;
@@ -45,39 +45,49 @@
 
       .wrapper {
         width: min(720px, 100%);
+        background: var(--glass-bg);
+        backdrop-filter: var(--glass-blur);
+        -webkit-backdrop-filter: var(--glass-blur);
+        border: 1px solid var(--glass-border);
+        border-radius: var(--glass-radius);
+        padding: var(--space-2xl);
+        box-shadow: var(--shadow-glass);
       }
 
       .page-header {
-        margin-bottom: 32px;
+        margin-bottom: 24px;
+        text-align: center;
       }
 
       .sys-badge {
         font-size: 0.72rem;
         font-weight: 600;
-        color: var(--text-secondary);
+        color: var(--text-muted);
         margin-bottom: 8px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
       }
 
       .page-title {
-        font-size: clamp(1.6rem, 6vw, 2.2rem);
+        font-size: clamp(1.5rem, 5vw, 2rem);
         font-weight: 700;
-        color: var(--primary);
+        color: var(--text-primary);
         line-height: 1.2;
-        letter-spacing: -0.5px;
+        letter-spacing: -0.03em;
       }
 
       .page-desc {
         margin-top: 16px;
-        color: var(--text-secondary);
-        font-size: 0.85rem;
+        color: var(--text-muted);
+        font-size: 0.82rem;
         line-height: 1.7;
-        border-left: 3px solid var(--primary);
-        padding-left: 16px;
+        padding: 0;
+        border: none;
       }
 
       .page-desc span {
-        color: var(--primary);
-        font-weight: 600;
+        color: var(--accent);
+        font-weight: 500;
       }
 
       .steps {
@@ -85,17 +95,17 @@
         gap: 0;
         margin: 28px 0;
         flex-wrap: wrap;
-        border-radius: 8px;
+        border-radius: 10px;
         overflow: hidden;
-        box-shadow: var(--shadow);
+        border: 1px solid var(--glass-border);
       }
 
       .step {
         flex: 1;
         min-width: 140px;
         padding: 16px;
-        background: var(--surface);
-        border-right: 1px solid var(--border);
+        background: var(--glass-bg);
+        border-right: 1px solid var(--glass-border);
       }
       .step:last-child {
         border-right: none;
@@ -156,9 +166,30 @@
       }
 
       label {
-        font-size: 0.72rem;
+        display: block;
+        font-size: 0.82rem;
         font-weight: 500;
         color: var(--text-secondary);
+        margin-bottom: 6px;
+      }
+      input[type="text"],
+      input[type="password"],
+      input[type="email"] {
+        display: block;
+        width: 100%;
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: 10px;
+        color: var(--text-primary);
+        font-family: inherit;
+        font-size: 0.9rem;
+        padding: 10px 14px;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+      input:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(0,113,227,0.2);
       }
 
       input[type="text"],
@@ -313,17 +344,40 @@
       }
 
       .btn-submit {
-        background: var(--primary);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        background: var(--accent);
         color: #fff;
         border: none;
-        border-radius: 4px;
+        border-radius: 8px;
         font-family: inherit;
-        font-size: 0.88rem;
+        font-size: 0.9rem;
         font-weight: 500;
-        padding: 12px 36px;
+        padding: 10px 28px;
         cursor: pointer;
-        transition: background 0.15s, box-shadow 0.15s;
-        box-shadow: var(--shadow);
+        transition: background 0.2s;
+      }
+      .btn-submit:hover {
+        background: var(--accent-hover);
+      }
+      .btn-submit:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .btn-submit.loading {
+        pointer-events: none;
+        opacity: 0.7;
+      }
+      .btn-submit.loading .spinner {
+        display: inline-block;
+        width: 14px;
+        height: 14px;
+        border: 2px solid rgba(255,255,255,0.3);
+        border-top-color: #fff;
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
       }
       .btn-submit:hover {
         background: var(--primary-dark);
@@ -1400,5 +1454,6 @@
           .catch(() => {});
       })();
     </script>
+    <script>lucide.createIcons();</script>
   </body>
 </html>

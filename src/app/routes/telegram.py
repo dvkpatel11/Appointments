@@ -45,7 +45,10 @@ def telegram_webhook():
                     f"https://api.telegram.org/bot{bot_token}/sendMessage",
                     json={
                         "chat_id": chat_id,
-                        "text": "✓ VisaCtrl Notifications linked! You'll receive alerts when earlier dates become available.",
+                        "text": (
+                            "✓ VisaCtrl Notifications linked!"
+                            " You'll receive alerts when earlier dates become available."
+                        ),
                     },
                     timeout=10,
                 )
