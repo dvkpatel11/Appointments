@@ -40,10 +40,8 @@
       pendingRefetch = null;
       const dash = document.getElementById("dash-metrics");
       const monitors = document.querySelector("[data-dash-monitors]");
-      const activity = document.querySelector("[data-dash-activity]");
       if (dash) htmx.ajax("GET", dash.dataset.href || dash.getAttribute("hx-get"), dash);
       if (monitors) htmx.ajax("GET", monitors.getAttribute("hx-get"), monitors);
-      if (activity) htmx.ajax("GET", activity.getAttribute("hx-get"), activity);
     }, 200);
   }
   window.store.subscribeSlice("snapshot", refetchFragments);

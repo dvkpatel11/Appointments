@@ -46,10 +46,6 @@ docker-run:
 deploy-gcp:
 	gcloud builds submit --config cloudbuild.yaml .
 
-.PHONY: backup
-backup:
-	./scripts/backup.sh
-
 .PHONY: clean
 clean:
 	rm -rf $(VENV) __pycache__ .ruff_cache .pytest_cache .coverage

@@ -44,7 +44,7 @@
   <div class="stat"><div class="stat__label">Errors (24h)</div><div class="skel skel--text" style="width:60px;height:32px"></div></div>
 </div>
 
-{# ── Two-column section: monitors + activity ───────────────────── #}
+{# ── Active monitors ──────────────────────────────────────────── #}
 <div class="dash-grid">
   <section class="dash-section" aria-labelledby="monitors-h">
     <div class="dash-section__head">
@@ -58,23 +58,6 @@
          aria-live="polite">
       <div class="monitor skel" style="height:120px"></div>
       <div class="monitor skel" style="height:120px"></div>
-    </div>
-  </section>
-
-  <section class="dash-section" aria-labelledby="activity-h">
-    <div class="dash-section__head">
-      <h2 class="dash-section__title" id="activity-h">Recent activity</h2>
-    </div>
-    <div class="card">
-      <div class="activity" data-dash-activity
-           hx-get="{{ url_for('admin.dashboard_activity') }}"
-           hx-trigger="load delay:200ms"
-           hx-swap="innerHTML"
-           aria-live="polite">
-        <div class="activity__item skel" style="height:32px"></div>
-        <div class="activity__item skel" style="height:32px"></div>
-        <div class="activity__item skel" style="height:32px"></div>
-      </div>
     </div>
   </section>
 </div>

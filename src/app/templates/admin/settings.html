@@ -24,7 +24,6 @@
   <button class="tab" role="tab" aria-selected="false" data-tab="notifications" data-target="#tab-notifications">Notifications</button>
   <button class="tab" role="tab" aria-selected="false" data-tab="telegram"      data-target="#tab-telegram">Telegram</button>
   <button class="tab" role="tab" aria-selected="false" data-tab="security"      data-target="#tab-security">Security</button>
-  <button class="tab" role="tab" aria-selected="false" data-tab="backups"       data-target="#tab-backups">Backups</button>
 </div>
 
 {# ── General ───────────────────────────────────────────────────────── #}
@@ -115,17 +114,28 @@
           <p class="setting-section__sub">Pick where alerts should land.</p>
         </div>
       </header>
+      <div class="form-grid form-grid--2" style="padding: var(--s-3) 0;">
+        <div class="field">
+          <label class="field__label" for="notif-test-email">Test email recipient</label>
+          <input class="input" id="notif-test-email" type="email" placeholder="ops@example.com" />
+        </div>
+        <div class="field">
+          <label class="field__label" for="notif-test-chat">Test Telegram chat ID</label>
+          <input class="input input--mono" id="notif-test-chat" type="text" placeholder="123456789" />
+        </div>
+        <div class="field">
+          <label class="field__label" for="notif-test-phone">Test SMS phone (E.164)</label>
+          <input class="input" id="notif-test-phone" type="tel" placeholder="+14155552671" />
+        </div>
+      </div>
       <div class="setting-row">
         <div class="setting-row__label">
           <span class="setting-row__title">Email (SMTP)</span>
           <span class="setting-row__hint">Set host, port, user, pass in <code>.env</code>.</span>
         </div>
-        <div class="setting-row__control" style="display:flex; gap: var(--s-2);">
-          <label class="switch"><input type="checkbox" checked /><span class="switch__slider"></span></label>
+        <div class="setting-row__control">
           <button class="btn btn--secondary btn--sm" type="button"
-                  hx-post="{{ url_for('admin.test_notification', channel='email') }}"
-                  hx-swap="none"
-                  hx-on::after-request="window.toast && window.toast('Test sent', 'info', 'Check your inbox')">
+                  data-test-channel="email">
             Send test
           </button>
         </div>
@@ -135,12 +145,9 @@
           <span class="setting-row__title">Telegram</span>
           <span class="setting-row__hint">Each client can be linked to their own chat.</span>
         </div>
-        <div class="setting-row__control" style="display:flex; gap: var(--s-2);">
-          <label class="switch"><input type="checkbox" checked /><span class="switch__slider"></span></label>
+        <div class="setting-row__control">
           <button class="btn btn--secondary btn--sm" type="button"
-                  hx-post="{{ url_for('admin.test_notification', channel='telegram') }}"
-                  hx-swap="none"
-                  hx-on::after-request="window.toast && window.toast('Test sent', 'info', 'Check your bot')">
+                  data-test-channel="telegram">
             Send test
           </button>
         </div>
@@ -150,9 +157,11 @@
           <span class="setting-row__title">SMS (Twilio)</span>
           <span class="setting-row__hint">Optional. Reserve for urgent alerts.</span>
         </div>
-        <div class="setting-row__control" style="display:flex; gap: var(--s-2);">
-          <label class="switch"><input type="checkbox" /><span class="switch__slider"></span></label>
-          <button class="btn btn--secondary btn--sm" type="button" disabled>Send test</button>
+        <div class="setting-row__control">
+          <button class="btn btn--secondary btn--sm" type="button"
+                  data-test-channel="sms">
+            Send test
+          </button>
         </div>
       </div>
     </div>
@@ -236,38 +245,6 @@
         </div>
         <div class="setting-row__control">
           <label class="switch"><input type="checkbox" checked /><span class="switch__slider"></span></label>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-{# ── Backups ───────────────────────────────────────────────────────── #}
-<section id="tab-backups" data-tab-panel="backups" role="tabpanel" hidden>
-  <div class="panel">
-    <div class="setting-section">
-      <header class="setting-section__head">
-        <div>
-          <h2 class="setting-section__title">Local backups</h2>
-          <p class="setting-section__sub">Schedule and inspect automatic snapshots.</p>
-        </div>
-      </header>
-      <div class="setting-row">
-        <div class="setting-row__label">
-          <span class="setting-row__title">Auto backup</span>
-          <span class="setting-row__hint">Snapshot the SQLite database on shutdown.</span>
-        </div>
-        <div class="setting-row__control">
-          <label class="switch"><input type="checkbox" checked /><span class="switch__slider"></span></label>
-        </div>
-      </div>
-      <div class="setting-row">
-        <div class="setting-row__label">
-          <span class="setting-row__title">Last backup</span>
-          <span class="setting-row__hint">Available in <code>backups/</code>.</span>
-        </div>
-        <div class="setting-row__control">
-          <span class="u-text-mono u-text-xs u-text-muted">—</span>
         </div>
       </div>
     </div>
