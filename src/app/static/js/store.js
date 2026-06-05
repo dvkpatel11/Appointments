@@ -20,6 +20,8 @@
   const state = structuredClone(initial);
   const listeners = new Set();
   const sliceListeners = new Map(); // key -> Set<fn>
+  const alerts = []; // session-only list of {title, msg, severity, _id, _ts}
+  let alertSeq = 0;
 
   function notify(slice) {
     listeners.forEach((fn) => fn(state, slice));
@@ -30,6 +32,19 @@
 
   function get() {
     return state;
+  }
+
+  function getAlerts() {
+    return alerts.slice();
+  }
+
+  function clearAlerts() {
+    alerts.length = 0;
+    const badge = document.querySelector("[data-notif-count]");
+    if (badge) {
+      badge.hidden = true;
+      badge.textContent = "0";
+    }
   }
 
   function setConnected(v) {
@@ -83,8 +98,25 @@
         }
         break;
       case "alert":
-        if (data && window.toast) {
-          window.toast(data.title || "Alert", data.severity || "info", data.msg || "");
+        if (data) {
+          const entry = {
+            title: data.title || "Alert",
+            msg: data.msg || "",
+            severity: data.severity || "info",
+            _id: ++alertSeq,
+            _ts: Date.now(),
+          };
+          alerts.unshift(entry);
+          if (alerts.length > 100) alerts.length = 100;
+          const badge = document.querySelector("[data-notif-count]");
+          if (badge) {
+            const n = alerts.length;
+            badge.hidden = n === 0;
+            badge.textContent = String(n);
+          }
+          if (window.toast) {
+            window.toast(entry.title, entry.severity, entry.msg);
+          }
         }
         break;
       default:
@@ -124,5 +156,5 @@
     return () => sliceListeners.get(slice).delete(fn);
   }
 
-  window.store = { get, hydrate, applyDelta, setConnected, subscribe, subscribeSlice, restore };
+  window.store = { get, hydrate, applyDelta, setConnected, subscribe, subscribeSlice, restore, getAlerts, clearAlerts };
 })();
