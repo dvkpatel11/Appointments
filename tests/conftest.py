@@ -8,6 +8,7 @@ Each test gets:
 Fixtures defensively reload cached module state on entry, so tests are isolated
 from each other regardless of order or what previous tests did to the env.
 """
+
 from __future__ import annotations
 
 from pathlib import Path

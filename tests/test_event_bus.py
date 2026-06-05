@@ -4,6 +4,7 @@ These run without the database, so they're fast and self-contained. The goal
 is to bootstrap the test suite — subsequent tests can add DB fixtures, but
 this file is intentionally hermetic.
 """
+
 from __future__ import annotations
 
 import threading
