@@ -6,9 +6,13 @@ from pathlib import Path
 
 from flask import Blueprint, jsonify, redirect, render_template, request, session, url_for
 
-from src.config import settings
+from src import __version__
 from src.infrastructure import logging as infra_logging
 from src.infrastructure.repositories import client_repo, state_repo
+from src.notifications import email as email_notif
+from src.notifications import sms as sms_notif
+from src.notifications import telegram as telegram_notif
+from src.orchestrator import manager as orchestrator
 from src.services.automation_service import AutomationService
 from src.services.client_service import ClientService
 
@@ -156,7 +160,83 @@ def restart_client(client_id: str):
 @bp.route("/test_notification/<channel>", methods=["POST"])
 @login_required
 def test_notification(channel: str):
-    return jsonify({"status": "ok", "channel": channel})
+    """Send a single test message through the named channel.
+
+    The form payload must include a recipient: ``email``, ``chat_id``, or
+    ``phone`` (depending on the channel). Returns 400 if the recipient is
+    missing or the channel is unknown.
+    """
+    payload = request.get_json(silent=True) or request.form
+    if channel == "email":
+        recipient = (payload.get("email") or "").strip()
+        if not recipient:
+            return jsonify({"status": "error", "message": "Missing email"}), 400
+        ok = email_notif.send("VisaCtrl test", "This is a test email from VisaCtrl.", recipient)
+        return jsonify({"status": "ok" if ok else "error"})
+    if channel == "telegram":
+        chat_id = (payload.get("chat_id") or "").strip()
+        if not chat_id:
+            return jsonify({"status": "error", "message": "Missing chat_id"}), 400
+        ok = telegram_notif.send("This is a test message from VisaCtrl.", chat_id)
+        return jsonify({"status": "ok" if ok else "error"})
+    if channel == "sms":
+        phone = (payload.get("phone") or "").strip()
+        if not phone:
+            return jsonify({"status": "error", "message": "Missing phone"}), 400
+        ok = sms_notif.send("This is a test SMS from VisaCtrl.", phone)
+        return jsonify({"status": "ok" if ok else "error"})
+    return jsonify({"status": "error", "message": f"Unknown channel: {channel}"}), 400
+
+
+@bp.route("/version")
+@login_required
+def version():
+    """Return app version + short git SHA, for the user menu footer."""
+    return jsonify({"version": __version__, "commit": _git_short_sha()})
+
+
+@bp.route("/clients/bulk-start", methods=["POST"])
+@login_required
+def clients_bulk_start():
+    """Start scrapers for the given client ids. Returns per-id outcome."""
+    payload = request.get_json(silent=True) or {}
+    ids = payload.get("ids") or []
+    if not isinstance(ids, list):
+        return jsonify({"status": "error", "message": "ids must be a list"}), 400
+    results: dict[str, str] = {}
+    for client_id in ids:
+        client = ClientService.get_by_id(client_id)
+        if not client:
+            results[client_id] = "not_found"
+            continue
+        try:
+            started = AutomationService.start(client.token)
+            results[client_id] = "started" if started.get("started") else "error"
+        except Exception:  # noqa: BLE001
+            results[client_id] = "error"
+    return jsonify({"status": "ok", "results": results})
+
+
+@bp.route("/clients/bulk-stop", methods=["POST"])
+@login_required
+def clients_bulk_stop():
+    """Stop scrapers for the given client ids. Returns per-id outcome."""
+    payload = request.get_json(silent=True) or {}
+    ids = payload.get("ids") or []
+    if not isinstance(ids, list):
+        return jsonify({"status": "error", "message": "ids must be a list"}), 400
+    results: dict[str, str] = {}
+    for client_id in ids:
+        client = ClientService.get_by_id(client_id)
+        if not client:
+            results[client_id] = "not_found"
+            continue
+        try:
+            orchestrator.stop(client_id)
+            results[client_id] = "stopped"
+        except Exception:  # noqa: BLE001
+            results[client_id] = "error"
+    return jsonify({"status": "ok", "results": results})
 
 
 @bp.route("/telegram_webhook_setup")
@@ -226,48 +306,6 @@ def dashboard_monitors():
     if not cards:
         return render_template("partials/_monitors_empty.html"), 200
     return render_template("partials/_monitors_grid.html", cards=cards), 200
-
-
-@bp.route("/dashboard/activity")
-@login_required
-def dashboard_activity():
-    """Render a recent-activity feed from the most recent action-log lines.
-
-    Concatenates the last N lines across all running scrapers and tags each
-    by the matching client. Cheap, doesn't require a separate events table.
-    """
-    log_dir = Path(settings.log_dir)
-    now = datetime.utcnow()
-    items: list[dict] = []
-    if log_dir.is_dir():
-        for log_file in sorted(log_dir.glob("*.log"), key=lambda p: p.stat().st_mtime, reverse=True):
-            if log_file.stem == "server":
-                continue
-            try:
-                size = log_file.stat().st_size
-                if size == 0:
-                    continue
-                with log_file.open("r", errors="replace") as f:
-                    f.seek(max(0, size - 8192))
-                    lines = f.read().splitlines()[-6:]
-            except OSError:
-                continue
-            for line in lines:
-                tone, title, sub = _classify_log_line(line)
-                items.append(
-                    {
-                        "id": f"{log_file.stem}:{len(items)}",
-                        "tone": tone,
-                        "title": title,
-                        "sub": f"{log_file.stem[:8]}… · {sub}" if sub else log_file.stem[:8] + "…",
-                        "iso": now.isoformat(),
-                        "relative": "just now",
-                    }
-                )
-    items = items[:20]
-    if not items:
-        return render_template("partials/_activity_empty.html"), 200
-    return render_template("partials/_activity_list.html", items=items), 200
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -382,27 +420,19 @@ def _monitor_status_tone(action: str, is_running: bool) -> tuple[str, str]:
     return "success", "Running"
 
 
-def _classify_log_line(line: str) -> tuple[str, str, str]:
-    """Heuristic: extract a short title and tone from a log line."""
-    line = line.strip()
-    if not line:
-        return "info", "", ""
-    upper = line.upper()
-    if "ERROR" in upper or "EXCEPTION" in upper or "FAIL" in upper:
-        return "error", _shorten(line), ""
-    if "FOUND" in upper or "AVAILABLE" in upper:
-        return "success", "Earlier date found", line
-    if "LOGIN" in upper:
-        return "info", "Login successful" if "SUCCESS" in upper else "Login attempt", line
-    if "WAITING" in upper or "SLEEP" in upper:
-        return "info", "Waiting", line
-    if "START" in upper or "RESUME" in upper:
-        return "success", "Started", line
-    if "STOP" in upper:
-        return "warning", "Stopped", line
-    return "info", _shorten(line), ""
+def _git_short_sha() -> str:
+    try:
+        import subprocess
 
-
-def _shorten(s: str, n: int = 64) -> str:
-    s = s.strip()
-    return s if len(s) <= n else s[: n - 1] + "…"
+        return (
+            subprocess.check_output(
+                ["git", "rev-parse", "--short", "HEAD"],  # noqa: S607
+                cwd=Path(__file__).resolve().parents[3],
+                stderr=subprocess.DEVNULL,
+                timeout=2,
+            )
+            .decode()
+            .strip()
+        )
+    except Exception:  # noqa: BLE001
+        return "unknown"
