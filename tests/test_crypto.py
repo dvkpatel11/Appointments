@@ -121,3 +121,36 @@ def test_init_db_is_idempotent(temp_db_path, fernet_key, app_modules):
 
     database.init_db()  # second run
     # If we get here without exception, the test passes.
+
+
+def test_create_app_fails_without_encryption_key(temp_db_path, monkeypatch):
+    """Without ENCRYPTION_KEY, the app factory must raise a clear error."""
+    monkeypatch.delenv("ENCRYPTION_KEY", raising=False)
+    import importlib
+
+    from src import config
+    from src.infrastructure import crypto
+
+    importlib.reload(config)
+    importlib.reload(crypto)  # crypto holds a stale settings ref from earlier tests
+    # Sanity check: settings is now empty
+    assert config.settings.encryption_key == ""
+
+    with pytest.raises(RuntimeError, match="ENCRYPTION_KEY"):
+        from src.app.create import create_app
+
+        create_app()
+
+
+def test_create_app_succeeds_with_encryption_key(temp_db_path, fernet_key, app_modules):
+    """With ENCRYPTION_KEY set, the app factory must boot successfully."""
+    # The fernet_key fixture already sets ENCRYPTION_KEY and reloaded config.
+    # app_modules reloaded config + db. Now reload create.
+    import importlib
+
+    from src.app import create
+
+    importlib.reload(create)
+
+    app = create.create_app()
+    assert app is not None

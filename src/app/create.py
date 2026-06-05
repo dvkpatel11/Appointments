@@ -16,6 +16,7 @@ except ImportError:
 from src.app.routes import admin, auth, client, events, snapshot, telegram
 from src.config import settings
 from src.infrastructure import logging as server_logging
+from src.infrastructure.crypto import ensure_encryption_key
 from src.infrastructure.database import init_db
 from src.infrastructure.repositories import client_repo, settings_repo
 from src.orchestrator import manager as orchestrator
@@ -38,6 +39,8 @@ def _handle_signal(signum: int, frame) -> None:
 
 
 def create_app() -> Flask:
+    ensure_encryption_key()
+
     app = Flask(__name__)
     app.secret_key = settings.secret_key or _generate_secret_key()
 
