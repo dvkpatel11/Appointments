@@ -4,6 +4,11 @@ import os
 
 from pydantic_settings import BaseSettings
 
+# Tests set VISACTRL_DISABLE_DOTENV=1 to make AppSettings ignore .env, so they
+# are hermetic regardless of the developer's local .env contents. Production
+# and dev runs leave it unset and pick up .env normally.
+_ENV_FILE = None if os.environ.get("VISACTRL_DISABLE_DOTENV") == "1" else ".env"
+
 
 class AppSettings(BaseSettings):
     admin_password: str = ""
@@ -41,7 +46,7 @@ class AppSettings(BaseSettings):
 
     sentry_dsn: str = ""
 
-    model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
+    model_config = {"env_file": _ENV_FILE, "env_file_encoding": "utf-8", "extra": "ignore"}
 
 
 settings = AppSettings()

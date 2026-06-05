@@ -4,6 +4,10 @@ Each test gets:
   - A temporary SQLite DB (DB_PATH monkey-patched BEFORE src.infrastructure.database is imported)
   - A valid Fernet key (ENCRYPTION_KEY monkey-patched BEFORE src.config is imported)
   - A clean src.config.settings (reloaded so pydantic-settings sees the new env)
+  - A hermetic config that ignores .env (set via VISACTRL_DISABLE_DOTENV=1 in
+    pyproject addopts or pytest.ini, then src.config itself respects it across
+    reloads). This makes tests deterministic regardless of the developer's
+    local .env contents.
 
 Fixtures defensively reload cached module state on entry, so tests are isolated
 from each other regardless of order or what previous tests did to the env.
@@ -11,10 +15,17 @@ from each other regardless of order or what previous tests did to the env.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
 import pytest
+
+# Disable .env reads for the entire test session, BEFORE any test module
+# imports src.config. This must run at conftest import time, not inside a
+# fixture, because the AppSettings class is created when src.config is first
+# imported.
+os.environ.setdefault("VISACTRL_DISABLE_DOTENV", "1")
 
 
 @pytest.fixture
