@@ -102,3 +102,22 @@ def test_tampered_token_raises(fernet_key: str):
     bad = token[:50] + ("A" if token[50] != "A" else "B") + token[51:]
     with pytest.raises(InvalidToken):
         decrypt_password(bad)
+
+
+def test_init_db_adds_password_ciphertext_column(temp_db_path, fernet_key, app_modules):
+    from src.infrastructure.database import cursor
+
+    with cursor() as cur:
+        cur.execute("PRAGMA table_info(clients)")
+        cols = {row["name"] for row in cur.fetchall()}
+    assert "password_ciphertext" in cols
+    assert "password" in cols  # legacy column preserved for migration window
+
+
+def test_init_db_is_idempotent(temp_db_path, fernet_key, app_modules):
+    """Running init_db() twice must not crash (ALTER TABLE ADD COLUMN errors
+    are caught and treated as 'column already exists')."""
+    from src.infrastructure import database
+
+    database.init_db()  # second run
+    # If we get here without exception, the test passes.

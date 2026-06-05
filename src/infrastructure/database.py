@@ -86,3 +86,10 @@ def init_db():
                 linked_at TIMESTAMP
             );
         """)
+
+        # Idempotent migration: add password_ciphertext if missing.
+        # Existing rows keep their plaintext in `password` until next save().
+        try:
+            cur.execute("ALTER TABLE clients ADD COLUMN password_ciphertext TEXT")
+        except sqlite3.OperationalError:
+            pass
