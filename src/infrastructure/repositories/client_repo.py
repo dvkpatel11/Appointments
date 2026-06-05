@@ -6,6 +6,7 @@ from typing import Any
 
 from src.domain.client import Client
 from src.domain.enums import ClientState, VisaType
+from src.infrastructure.crypto import decrypt_password, encrypt_password, is_encrypted_token
 from src.infrastructure.database import cursor
 
 ALLOWED_UPDATE_COLUMNS = frozenset(
@@ -31,6 +32,13 @@ ALLOWED_UPDATE_COLUMNS = frozenset(
 
 
 def row_to_client(row: dict[str, Any]) -> Client:
+    # Prefer the encrypted column; fall back to legacy plaintext for
+    # pre-migration rows (migrated on next save()).
+    token = row.get("password_ciphertext")
+    if token and is_encrypted_token(token):
+        password = decrypt_password(token)
+    else:
+        password = row["password"]
     return Client(
         id=row["id"],
         token=row["token"],
@@ -38,7 +46,7 @@ def row_to_client(row: dict[str, Any]) -> Client:
         state=ClientState(row["state"]),
         reject_reason=row["reject_reason"],
         username=row["username"],
-        password=row["password"],
+        password=password,
         appointment_id=row["appointment_id"],
         appointment_url=row["appointment_url"],
         visa_type=VisaType(row.get("visa_type", "canada")),
@@ -84,14 +92,15 @@ def get_all() -> dict[str, Client]:
 
 
 def save(client: Client) -> None:
+    encrypted_pw = encrypt_password(client.password) if client.password else None
     with cursor() as cur:
         cur.execute(
             """INSERT OR REPLACE INTO clients
-               (id, token, name, state, reject_reason, username, password,
-                appointment_id, appointment_url, visa_type, reschedule,
-                preferred_locations, preferred_date_from, preferred_date_to,
-                notification_email, telegram_chat_id, phone_number, agent_pid,
-                updated_at)
+               (id, token, name, state, reject_reason, username,
+                password_ciphertext, appointment_id, appointment_url,
+                visa_type, reschedule, preferred_locations,
+                preferred_date_from, preferred_date_to, notification_email,
+                telegram_chat_id, phone_number, agent_pid, updated_at)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                        CURRENT_TIMESTAMP)""",
             (
@@ -101,7 +110,7 @@ def save(client: Client) -> None:
                 client.state.value,
                 client.reject_reason,
                 client.username,
-                client.password,
+                encrypted_pw,
                 client.appointment_id,
                 client.appointment_url,
                 client.visa_type.value,
@@ -120,9 +129,16 @@ def save(client: Client) -> None:
 def update_field(client_id: str, **kwargs: Any) -> None:
     if not kwargs:
         return
+    # Validate caller-provided column names BEFORE internal remapping, so the
+    # internal `password_ciphertext` target is never exposed as a public input.
     invalid = set(kwargs) - ALLOWED_UPDATE_COLUMNS
     if invalid:
         raise ValueError(f"Invalid update columns: {sorted(invalid)}")
+    # If updating password, encrypt the value AND write to the ciphertext column.
+    # (We never write plaintext to the legacy `password` column going forward.)
+    if "password" in kwargs:
+        plaintext = kwargs.pop("password")
+        kwargs["password_ciphertext"] = encrypt_password(plaintext) if plaintext else None
     sets = ", ".join(f"{k} = ?" for k in kwargs)
     vals = list(kwargs.values())
     with cursor() as cur:
