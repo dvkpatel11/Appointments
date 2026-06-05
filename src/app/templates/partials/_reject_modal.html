@@ -1,0 +1,37 @@
+{# ─────────────────────────────────────────────────────────────────────
+   partials/_reject_modal.html — modal for rejecting a pending request
+   ───────────────────────────────────────────────────────────────────── #}
+<div class="modal-overlay" data-modal="reject-modal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="reject-title">
+    <div class="modal__header">
+      <div>
+        <h3 class="modal__title" id="reject-title">Reject request</h3>
+        <p class="modal__sub">This will notify the client. Be specific so they understand why.</p>
+      </div>
+      <button class="btn btn--ghost btn--icon btn--sm" type="button" data-modal-close aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <form hx-post="{{ url_for('admin.reject', token=token) }}" hx-swap="none" hx-on::after-request="window.toast && window.toast('Rejected', 'warning', 'Request rejected')">
+      <div class="modal__body">
+        <div class="field">
+          <label class="field__label" for="reason">Reason</label>
+          <textarea class="textarea" id="reason" name="reason" rows="4" required>We're unable to approve your request at this time. Please reach out if you have questions.</textarea>
+          <p class="field__hint">Templates</p>
+          <div style="display: flex; gap: var(--s-1); flex-wrap: wrap; margin-top: var(--s-1);">
+            <button class="btn btn--secondary btn--sm" type="button" data-reason-template="Insufficient appointment urgency — please reapply closer to your travel date.">Urgency</button>
+            <button class="btn btn--secondary btn--sm" type="button" data-reason-template="Slots in your preferred location are unavailable for the next 60 days.">Capacity</button>
+            <button class="btn btn--secondary btn--sm" type="button" data-reason-template="Service area not currently supported.">Coverage</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal__footer">
+        <button class="btn btn--secondary" type="button" data-modal-close>Cancel</button>
+        <button class="btn btn--destructive" type="submit">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          Reject request
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

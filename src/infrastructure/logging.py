@@ -69,3 +69,12 @@ def read_client_log(client_id: str, lines: int = 200) -> str:
     with open(log_file) as f:
         all_lines = f.readlines()
     return "".join(all_lines[-lines:])
+
+
+def read_server_log(lines: int = 200) -> str:
+    log_file = Path(settings.log_dir) / "server.log"
+    if not log_file.exists():
+        return ""
+    with open(log_file) as f:
+        all_lines = f.readlines()
+    return "".join(all_lines[-lines:])

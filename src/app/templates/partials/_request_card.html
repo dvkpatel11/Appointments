@@ -1,0 +1,90 @@
+{# ─────────────────────────────────────────────────────────────────────
+   partials/_request_card.html — inbox card for a pending/approved/rejected request
+   ───────────────────────────────────────────────────────────────────── #}
+{% set state_class = {
+  'pending':  'inbox__card',
+  'approved': 'inbox__card inbox__card--approved',
+  'rejected': 'inbox__card inbox__card--rejected',
+} %}
+{% set visa_class = 'inbox__card--' + item.client.visa_type.value %}
+
+<article class="{{ state_class[item.client.state.value] }} {{ visa_class }}"
+         data-request-id="{{ item.client.token }}"
+         aria-label="Request from {{ item.client.name or 'Unnamed client' }}">
+
+  <header class="inbox__head">
+    <div style="display: flex; align-items: center; gap: var(--s-3); min-width: 0;">
+      <span class="avatar avatar--lg {{ 'avatar--canada' if item.client.visa_type.value == 'canada' else 'avatar--uk' }}" aria-hidden="true">
+        {{ (item.client.name or 'C')[:1] | upper }}
+      </span>
+      <div style="min-width: 0;">
+        <h3 class="inbox__title u-truncate">{{ item.client.name or 'Unnamed client' }}</h3>
+        <p class="u-text-xs u-text-muted u-truncate" style="margin: 0;">{{ item.client.notification_email or item.client.username or '—' }}</p>
+      </div>
+    </div>
+    <span class="inbox__id u-text-mono u-text-xs" title="Token">{{ item.client.token[:10] }}…</span>
+  </header>
+
+  <div class="inbox__body">
+    <div class="inbox__meta">
+      <span class="inbox__chip inbox__chip--{{ item.client.visa_type.value }}">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        {{ item.client.visa_type.value | capitalize }}
+      </span>
+      {% if item.client.appointment_id %}
+      <span class="inbox__chip">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        {{ item.client.appointment_id }}
+      </span>
+      {% endif %}
+      {% if item.client.reschedule %}
+      <span class="inbox__chip">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15A9 9 0 1 1 19 6.5L23 10"/></svg>
+        Reschedule
+      </span>
+      {% endif %}
+      {% for loc in (item.client.preferred_locations or [])[:3] %}
+      <span class="inbox__chip">{{ loc }}</span>
+      {% endfor %}
+    </div>
+
+    {% if item.client.state.value == 'rejected' and item.client.reject_reason %}
+    <p class="u-text-xs" style="color: var(--c-error); margin-top: var(--s-2);">
+      <strong>Reason:</strong> {{ item.client.reject_reason }}
+    </p>
+    {% endif %}
+  </div>
+
+  <footer class="inbox__actions">
+    <a class="btn btn--ghost btn--sm" href="{{ url_for('admin.client_detail', client_id=item.client.id) }}">
+      View details
+    </a>
+    <div class="topbar__spacer" style="flex: 1;"></div>
+    {% if item.client.state.value == 'pending' %}
+    <button class="btn btn--secondary btn--sm" type="button"
+            data-modal-trigger="reject-modal"
+            data-reject-token="{{ item.client.token }}"
+            data-reject-name="{{ item.client.name or 'this client' }}">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      Reject
+    </button>
+    <form hx-post="{{ url_for('admin.approve', token=item.client.token) }}" hx-swap="none" style="display: inline;">
+      <button class="btn btn--primary btn--sm" type="submit"
+              hx-on::after-request="window.toast && window.toast('Approved', 'success', '{{ item.client.name or item.client.token[:8] }} approved')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        Approve
+      </button>
+    </form>
+    {% elif item.client.state.value == 'approved' %}
+    <span class="pill pill--approved">
+      <span class="pill__dot pill__dot--pulse"></span>
+      Active
+    </span>
+    {% elif item.client.state.value == 'rejected' %}
+    <span class="pill pill--rejected">
+      <span class="pill__dot"></span>
+      Rejected
+    </span>
+    {% endif %}
+  </footer>
+</article>

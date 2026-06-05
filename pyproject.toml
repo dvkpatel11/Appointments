@@ -8,7 +8,10 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP", "S"]
-ignore = ["S101"]
+# S101: asserts are used in tests and in preconditions.
+# S311: random is used for sleep timing and user-agent selection in the
+#       scraper; not a cryptographic context. The standard PRNG is fine.
+ignore = ["S101", "S311"]
 
 [tool.ruff.format]
 quote-style = "double"

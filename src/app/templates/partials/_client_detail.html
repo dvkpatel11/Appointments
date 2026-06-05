@@ -1,0 +1,125 @@
+{# ─────────────────────────────────────────────────────────────────────
+   partials/_client_detail.html — drawer body for one client
+   ───────────────────────────────────────────────────────────────────── #}
+<div class="drawer-overlay" data-drawer-overlay hidden></div>
+<aside class="drawer drawer--lg" id="client-drawer" role="dialog" aria-modal="true" aria-labelledby="cd-title" hidden>
+  <div class="drawer__header">
+    <div style="display: flex; align-items: center; gap: var(--s-3); min-width: 0;">
+      <span class="avatar avatar--lg {{ 'avatar--canada' if client.visa_type.value == 'canada' else 'avatar--uk' }}" aria-hidden="true">
+        {{ (client.name or 'C')[:1] | upper }}
+      </span>
+      <div style="min-width: 0;">
+        <h3 class="drawer__title u-truncate" id="cd-title">{{ client.name or 'Unnamed client' }}</h3>
+        <p class="u-text-xs u-text-muted u-truncate" style="margin: 0;">{{ client.notification_email or client.username or '—' }}</p>
+      </div>
+    </div>
+    <button class="btn btn--ghost btn--icon btn--sm" type="button" data-drawer-close aria-label="Close">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+
+  <div class="drawer__body" id="client-drawer-body">
+    <div class="status-strip" style="margin-bottom: var(--s-4);">
+      <span class="status-strip__item status-strip__item--active">
+        <span class="pill__dot {% if state and state.is_running %}pill__dot--pulse{% endif %}" aria-hidden="true"></span>
+        {{ (state.current_action or 'Idle') if state else 'Idle' }}
+      </span>
+      <span class="status-strip__item">Visa: {{ client.visa_type.value | capitalize }}</span>
+      <span class="status-strip__item">State: {{ client.state.value | capitalize }}</span>
+    </div>
+
+    <h4 class="u-text-2xs" style="margin-bottom: var(--s-3);">Account</h4>
+    <div class="detail-grid detail-grid--2" style="margin-bottom: var(--s-5);">
+      <div class="detail-row">
+        <span class="detail-row__label">Token</span>
+        <span class="detail-row__value detail-row__value--mono u-truncate">{{ client.token[:16] }}…</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-row__label">Client ID</span>
+        <span class="detail-row__value detail-row__value--mono u-truncate">{{ client.id[:16] }}…</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-row__label">Username</span>
+        <span class="detail-row__value u-truncate">{{ client.username or '—' }}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-row__label">Email</span>
+        <span class="detail-row__value u-truncate">{{ client.notification_email or '—' }}</span>
+      </div>
+    </div>
+
+    <h4 class="u-text-2xs" style="margin-bottom: var(--s-3);">Appointment</h4>
+    <div class="detail-grid detail-grid--2" style="margin-bottom: var(--s-5);">
+      <div class="detail-row">
+        <span class="detail-row__label">Appointment ID</span>
+        <span class="detail-row__value detail-row__value--mono">{{ client.appointment_id or '—' }}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-row__label">Reschedule</span>
+        <span class="detail-row__value">{{ 'Yes' if client.reschedule else 'No' }}</span>
+      </div>
+      <div class="detail-row" style="grid-column: 1 / -1;">
+        <span class="detail-row__label">Preferred locations</span>
+        <span class="detail-row__value">
+          {% if client.preferred_locations %}
+            {% for loc in client.preferred_locations %}<span class="badge" style="margin-right: 4px;">{{ loc }}</span>{% endfor %}
+          {% else %}—{% endif %}
+        </span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-row__label">Date from</span>
+        <span class="detail-row__value">{{ client.preferred_date_from or '—' }}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-row__label">Date to</span>
+        <span class="detail-row__value">{{ client.preferred_date_to or '—' }}</span>
+      </div>
+    </div>
+
+    {% if state %}
+    <h4 class="u-text-2xs" style="margin-bottom: var(--s-3);">Live state</h4>
+    <div class="detail-grid detail-grid--2" style="margin-bottom: var(--s-5);">
+      <div class="detail-row">
+        <span class="detail-row__label">Running</span>
+        <span class="detail-row__value">
+          <span class="pill {{ 'pill--success' if state.is_running else 'pill--neutral' }}">
+            <span class="pill__dot {% if state.is_running %}pill__dot--pulse{% endif %}"></span>
+            {{ 'Running' if state.is_running else 'Stopped' }}
+          </span>
+        </span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-row__label">Errors (session)</span>
+        <span class="detail-row__value">{{ state.error_count or 0 }}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-row__label">Current appointment</span>
+        <span class="detail-row__value detail-row__value--mono">{{ state.current_appointment or '—' }}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-row__label">Last checked location</span>
+        <span class="detail-row__value">{{ state.last_checked_location or '—' }}</span>
+      </div>
+    </div>
+    {% endif %}
+
+    <h4 class="u-text-2xs" style="margin-bottom: var(--s-3);">Recent logs</h4>
+    <div class="log-viewer" data-log-stream data-client-id="{{ client.id }}" style="max-height: 240px;">
+      <div class="skel skel--text" style="background: rgba(255,255,255,0.1);"></div>
+      <div class="skel skel--text" style="background: rgba(255,255,255,0.1); width: 80%; margin-top: 4px;"></div>
+    </div>
+  </div>
+
+  <div class="drawer__footer">
+    <button class="btn btn--ghost btn--sm" type="button" data-drawer-close>Close</button>
+    {% if state and state.is_running %}
+    <button class="btn btn--destructive btn--sm" type="button"
+            hx-post="{{ url_for('admin.stop', token=client.token) }}"
+            hx-swap="none"
+            hx-on::after-request="window.toast && window.toast('Stopped', 'success'); document.getElementById('client-drawer').hidden = true;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+      Stop monitor
+    </button>
+    {% endif %}
+  </div>
+</aside>

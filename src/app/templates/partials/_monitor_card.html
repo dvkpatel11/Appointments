@@ -1,0 +1,36 @@
+{# ── Active monitor card ─────────────────────────────────────────── #}
+<article class="monitor" data-monitor-id="{{ client.id }}" aria-label="Monitor for {{ client.name }}">
+  <header class="monitor__head">
+    <div class="avatar avatar--sm" aria-hidden="true">{{ (client.name or 'C')[:1] | upper }}</div>
+    <div style="min-width:0; flex:1">
+      <div class="monitor__name u-truncate">{{ client.name or 'Client' }}</div>
+      <div class="monitor__meta u-truncate">
+        {{ client.preferred_locations[0] if client.preferred_locations else 'Any location' }}
+      </div>
+    </div>
+    <span class="pill pill--{{ status_tone }}">
+      <span class="pill__dot{% if state.is_running %} pill__dot--pulse{% endif %}"></span>
+      {{ status_label }}
+    </span>
+  </header>
+
+  <dl class="monitor__row">
+    <dt>Current</dt>
+    <dd>{{ state.current_appointment or '—' }}</dd>
+  </dl>
+  <dl class="monitor__row">
+    <dt>Last check</dt>
+    <dd>
+      {% if state.last_checked_location %}
+        {{ state.last_checked_location }}
+      {% else %}
+        —
+      {% endif %}
+    </dd>
+  </dl>
+
+  <footer class="monitor__row" style="border-top: 1px solid var(--c-border); padding-top: var(--s-3); margin-top: var(--s-1)">
+    <span class="u-text-xs u-text-muted">PID {{ client.agent_pid or '—' }}</span>
+    <a class="dash-section__link" href="{{ url_for('admin.client_detail', client_id=client.id) }}">Open →</a>
+  </footer>
+</article>

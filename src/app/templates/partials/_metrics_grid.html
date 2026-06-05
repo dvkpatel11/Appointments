@@ -1,0 +1,7 @@
+{% from "partials/_metric_tile.html" import stat %}
+<div class="dash-metrics" id="dash-metrics">
+  {{ stat("Total clients", metrics.total) }}
+  {{ stat("Running", metrics.running) }}
+  {{ stat("Pending requests", metrics.pending) }}
+  {{ stat("Errors (24h)", metrics.errors_24h) }}
+</div>

@@ -48,8 +48,8 @@ class CanadaVisaScraper(VisaScraper):
             time.sleep(60)
             try:
                 self._page.get_by_role("menuitem", name=s["continue_button"]).click()
-            except Exception:
-                pass
+            except Exception as e:
+                self._log(f"Continue menu click failed: {e}", "warning")
             return False
 
     def get_current_appointment(self) -> datetime | None:
@@ -135,8 +135,8 @@ class CanadaVisaScraper(VisaScraper):
             month_num = selectors.MONTH_MAP.get(month[:3].lower())
             if month_num:
                 return datetime(year, month_num, day)
-        except Exception:
-            pass
+        except Exception as e:
+            self._log(f"Date parse failed: {e}", "warning")
         return None
 
     def reschedule_to(self, location: str) -> bool:

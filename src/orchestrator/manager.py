@@ -129,8 +129,8 @@ def stop(client_id: str) -> bool:
         if proc.is_alive():
             proc.kill()
             proc.join(timeout=3)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("Error stopping process for %s: %s", client_id[:12], e)
     _alive_processes.pop(client_id, None)
     client_repo.update_field(client_id, agent_pid=None, state="stopped")
     state_repo.delete(client_id)

@@ -1,0 +1,27 @@
+{# ─────────────────────────────────────────────────────────────────────
+   partials/_clients_tbody.html — body of clients table (htmx target)
+   ───────────────────────────────────────────────────────────────────── #}
+{% for client in clients %}
+  {% include "partials/_client_row.html" %}
+{% else %}
+<tr>
+  <td colspan="8">
+    <div class="empty empty--lg">
+      <div class="empty__icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </div>
+      <div class="empty__title">No clients yet</div>
+      <p class="empty__msg">Generate a client link and share it with your first operator.</p>
+      <a class="btn btn--primary btn--sm empty__action" href="{{ url_for('admin.generate_client_link') }}"
+         hx-get="{{ url_for('admin.generate_client_link') }}"
+         hx-target="#link-modal-body"
+         hx-swap="innerHTML"
+         hx-trigger="click"
+         data-modal-trigger="link-modal">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Generate your first link
+      </a>
+    </div>
+  </td>
+</tr>
+{% endfor %}

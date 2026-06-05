@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+{% block title %}Settings{% endblock %}
+{% block topbar_title %}Settings{% endblock %}
+
+{% block content %}
+<header class="l-page-header">
+  <div class="l-page-header__title">
+    <span class="l-page-header__eyebrow">Configuration</span>
+    <h1>Settings</h1>
+    <p class="l-page-header__sub">
+      Tune your VisaCtrl instance. Changes apply to the next monitor cycle.
+    </p>
+  </div>
+  <div class="l-page-header__actions">
+    <button class="btn btn--ghost btn--sm" type="button" data-settings-export>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Export config
+    </button>
+  </div>
+</header>
+
+<div class="tabs" role="tablist" aria-label="Settings" data-tabs>
+  <button class="tab" role="tab" aria-selected="true"  data-tab="general"       data-target="#tab-general">General</button>
+  <button class="tab" role="tab" aria-selected="false" data-tab="notifications" data-target="#tab-notifications">Notifications</button>
+  <button class="tab" role="tab" aria-selected="false" data-tab="telegram"      data-target="#tab-telegram">Telegram</button>
+  <button class="tab" role="tab" aria-selected="false" data-tab="security"      data-target="#tab-security">Security</button>
+  <button class="tab" role="tab" aria-selected="false" data-tab="backups"       data-target="#tab-backups">Backups</button>
+</div>
+
+{# ── General ───────────────────────────────────────────────────────── #}
+<section id="tab-general" data-tab-panel="general" role="tabpanel">
+  <div class="panel">
+    <div class="setting-section">
+      <header class="setting-section__head">
+        <div>
+          <h2 class="setting-section__title">Operator preferences</h2>
+          <p class="setting-section__sub">Personalize your experience. Stored locally on this device.</p>
+        </div>
+      </header>
+      <div class="setting-row">
+        <div class="setting-row__label">
+          <span class="setting-row__title">Default page</span>
+          <span class="setting-row__hint">Where to land after signing in.</span>
+        </div>
+        <div class="setting-row__control">
+          <select class="select">
+            <option>Dashboard</option>
+            <option>Clients</option>
+            <option>Requests</option>
+          </select>
+        </div>
+      </div>
+      <div class="setting-row">
+        <div class="setting-row__label">
+          <span class="setting-row__title">Time format</span>
+          <span class="setting-row__hint">Affects timestamps everywhere.</span>
+        </div>
+        <div class="setting-row__control">
+          <div class="toolbar__density" role="group">
+            <button type="button" aria-pressed="true">12h</button>
+            <button type="button" aria-pressed="false">24h</button>
+          </div>
+        </div>
+      </div>
+      <div class="setting-row">
+        <div class="setting-row__label">
+          <span class="setting-row__title">Compact tables</span>
+          <span class="setting-row__hint">Reduces row padding on Clients and Requests.</span>
+        </div>
+        <div class="setting-row__control">
+          <label class="switch">
+            <input type="checkbox" />
+            <span class="switch__slider"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="setting-section">
+      <header class="setting-section__head">
+        <div>
+          <h2 class="setting-section__title">Monitor defaults</h2>
+          <p class="setting-section__sub">Applied to new clients at approval time.</p>
+        </div>
+      </header>
+      <div class="setting-row">
+        <div class="setting-row__label">
+          <span class="setting-row__title">Check interval (seconds)</span>
+          <span class="setting-row__hint">How often the scraper polls for slots.</span>
+        </div>
+        <div class="setting-row__control">
+          <input class="input" type="number" value="30" min="10" max="600" step="5" />
+        </div>
+      </div>
+      <div class="setting-row">
+        <div class="setting-row__label">
+          <span class="setting-row__title">Slot date range</span>
+          <span class="setting-row__hint">Restrict to within this many days.</span>
+        </div>
+        <div class="setting-row__control">
+          <input class="input" type="number" value="90" min="7" max="365" />
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{# ── Notifications ─────────────────────────────────────────────────── #}
+<section id="tab-notifications" data-tab-panel="notifications" role="tabpanel" hidden>
+  <div class="panel">
+    <div class="setting-section">
+      <header class="setting-section__head">
+        <div>
+          <h2 class="setting-section__title">Channels</h2>
+          <p class="setting-section__sub">Pick where alerts should land.</p>
+        </div>
+      </header>
+      <div class="setting-row">
+        <div class="setting-row__label">
+          <span class="setting-row__title">Email (SMTP)</span>
+          <span class="setting-row__hint">Set host, port, user, pass in <code>.env</code>.</span>
+        </div>
+        <div class="setting-row__control" style="display:flex; gap: var(--s-2);">
+          <label class="switch"><input type="checkbox" checked /><span class="switch__slider"></span></label>
+          <button class="btn btn--secondary btn--sm" type="button"
+                  hx-post="{{ url_for('admin.test_notification', channel='email') }}"
+                  hx-swap="none"
+                  hx-on::after-request="window.toast && window.toast('Test sent', 'info', 'Check your inbox')">
+            Send test
+          </button>
+        </div>
+      </div>
+      <div class="setting-row">
+        <div class="setting-row__label">
+          <span class="setting-row__title">Telegram</span>
+          <span class="setting-row__hint">Each client can be linked to their own chat.</span>
+        </div>
+        <div class="setting-row__control" style="display:flex; gap: var(--s-2);">
+          <label class="switch"><input type="checkbox" checked /><span class="switch__slider"></span></label>
+          <button class="btn btn--secondary btn--sm" type="button"
+                  hx-post="{{ url_for('admin.test_notification', channel='telegram') }}"
+                  hx-swap="none"
+                  hx-on::after-request="window.toast && window.toast('Test sent', 'info', 'Check your bot')">
+            Send test
+          </button>
+        </div>
+      </div>
+      <div class="setting-row">
+        <div class="setting-row__label">
+          <span class="setting-row__title">SMS (Twilio)</span>
+          <span class="setting-row__hint">Optional. Reserve for urgent alerts.</span>
+        </div>
+        <div class="setting-row__control" style="display:flex; gap: var(--s-2);">
+          <label class="switch"><input type="checkbox" /><span class="switch__slider"></span></label>
+          <button class="btn btn--secondary btn--sm" type="button" disabled>Send test</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{# ── Telegram ──────────────────────────────────────────────────────── #}
+<section id="tab-telegram" data-tab-panel="telegram" role="tabpanel" hidden>
+  <div class="panel">
+    <div class="setting-section">
+      <header class="setting-section__head">
+        <div>
+          <h2 class="setting-section__title">Bot integration</h2>
+          <p class="setting-section__sub">Pair VisaCtrl with your Telegram bot for instant alerts.</p>
+        </div>
+      </header>
+      <div class="form-grid form-grid--2" style="padding: var(--s-3) 0;">
+        <div class="field">
+          <label class="field__label" for="tg-token">Bot token</label>
+          <input class="input" id="tg-token" type="password" placeholder="123456789:ABCdefGHIjklMNOpqrSTUvwxyz" />
+          <p class="field__hint">Get one from <a href="https://t.me/BotFather" target="_blank" rel="noopener">@BotFather</a>.</p>
+        </div>
+        <div class="field">
+          <label class="field__label" for="tg-webhook">Webhook URL</label>
+          <input class="input input--mono" id="tg-webhook" type="text" value="{{ request.host_url }}telegram_webhook" readonly />
+          <p class="field__hint">Auto-registered on deploy.</p>
+        </div>
+      </div>
+      <div class="setting-row" style="border-top: 1px solid var(--c-border); margin-top: var(--s-3); padding-top: var(--s-4);">
+        <div class="setting-row__label">
+          <span class="setting-row__title">Webhook registered</span>
+          <span class="setting-row__hint">Run <code>/set_telegram_webhook</code> after deploy.</span>
+        </div>
+        <div class="setting-row__control">
+          <a class="btn btn--secondary btn--sm" href="{{ url_for('admin.telegram_webhook_setup') }}" target="_blank">
+            Re-register
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{# ── Security ──────────────────────────────────────────────────────── #}
+<section id="tab-security" data-tab-panel="security" role="tabpanel" hidden>
+  <div class="panel">
+    <div class="setting-section">
+      <header class="setting-section__head">
+        <div>
+          <h2 class="setting-section__title">Access control</h2>
+          <p class="setting-section__sub">All traffic passes through this gate. Keep it strong.</p>
+        </div>
+      </header>
+      <div class="setting-row">
+        <div class="setting-row__label">
+          <span class="setting-row__title">Admin password</span>
+          <span class="setting-row__hint">Change <code>ADMIN_PASSWORD</code> in <code>.env</code> and restart.</span>
+        </div>
+        <div class="setting-row__control">
+          <code class="badge">ENV-ONLY</code>
+        </div>
+      </div>
+      <div class="setting-row">
+        <div class="setting-row__label">
+          <span class="setting-row__title">Session lifetime</span>
+          <span class="setting-row__hint">Auto sign-out after this duration of inactivity.</span>
+        </div>
+        <div class="setting-row__control">
+          <select class="select">
+            <option>15 minutes</option>
+            <option selected>1 hour</option>
+            <option>8 hours</option>
+            <option>24 hours</option>
+          </select>
+        </div>
+      </div>
+      <div class="setting-row">
+        <div class="setting-row__label">
+          <span class="setting-row__title">Require HTTPS</span>
+          <span class="setting-row__hint">Strongly recommended for any non-local deployment.</span>
+        </div>
+        <div class="setting-row__control">
+          <label class="switch"><input type="checkbox" checked /><span class="switch__slider"></span></label>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{# ── Backups ───────────────────────────────────────────────────────── #}
+<section id="tab-backups" data-tab-panel="backups" role="tabpanel" hidden>
+  <div class="panel">
+    <div class="setting-section">
+      <header class="setting-section__head">
+        <div>
+          <h2 class="setting-section__title">Local backups</h2>
+          <p class="setting-section__sub">Schedule and inspect automatic snapshots.</p>
+        </div>
+      </header>
+      <div class="setting-row">
+        <div class="setting-row__label">
+          <span class="setting-row__title">Auto backup</span>
+          <span class="setting-row__hint">Snapshot the SQLite database on shutdown.</span>
+        </div>
+        <div class="setting-row__control">
+          <label class="switch"><input type="checkbox" checked /><span class="switch__slider"></span></label>
+        </div>
+      </div>
+      <div class="setting-row">
+        <div class="setting-row__label">
+          <span class="setting-row__title">Last backup</span>
+          <span class="setting-row__hint">Available in <code>backups/</code>.</span>
+        </div>
+        <div class="setting-row__control">
+          <span class="u-text-mono u-text-xs u-text-muted">—</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script type="module" src="{{ url_for('static', filename='js/views/settings.js') }}"></script>
+{% endblock %}

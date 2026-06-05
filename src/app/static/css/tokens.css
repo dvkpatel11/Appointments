@@ -1,0 +1,254 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   tokens.css — VisaCtrl Design Tokens
+   Formal typography, vibrant Material-conspicuous colors, Apple-caliber motion
+   ───────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* ── Colors: Neutral (Neutral-950 base) ──────────────────────────────── */
+  --c-neutral-50:  #fafafa;
+  --c-neutral-100: #f5f5f5;
+  --c-neutral-200: #e5e5e5;
+  --c-neutral-300: #d4d4d4;
+  --c-neutral-400: #a3a3a3;
+  --c-neutral-500: #737373;
+  --c-neutral-600: #525252;
+  --c-neutral-700: #404040;
+  --c-neutral-800: #262626;
+  --c-neutral-900: #171717;
+  --c-neutral-950: #0a0a0b;
+
+  /* ── Colors: Primary — Electric Indigo (Authority, Trust) ───────────── */
+  --c-pri-50:  #eef2ff;
+  --c-pri-100: #e0e7ff;
+  --c-pri-200: #c7d2fe;
+  --c-pri-300: #a5b4fc;
+  --c-pri-400: #818cf8;
+  --c-pri-500: #6366f1;
+  --c-pri-600: #4f46e5;
+  --c-pri-700: #4338ca;
+  --c-pri-800: #3730a3;
+  --c-pri-900: #312e81;
+
+  /* ── Visa-Type Accents — CONSPICUOUS & Distinct ─────────────────────── */
+  --c-canada: #ea580c;         /* Orange-600 */
+  --c-canada-light: #fff7ed;
+  --c-canada-muted: #fed7aa;
+
+  --c-uk: #7c3aed;             /* Violet-600 */
+  --c-uk-light: #f5f3ff;
+  --c-uk-muted: #ddd6fe;
+
+  /* ── Status — Triple Encoded (Color + Icon + Label) ─────────────────── */
+  --c-running: #16a34a;        --c-running-bg: #f0fdf4;      --c-running-border: #bbf7d0;
+  --c-checking: #0ea5e9;       --c-checking-bg: #f0f9ff;     --c-checking-border: #bae6fd;
+  --c-login: #f59e0b;          --c-login-bg: #fffbeb;        --c-login-border: #fde68a;
+  --c-paused: #a1a1aa;         --c-paused-bg: #fafafa;       --c-paused-border: #e5e5e5;
+  --c-error: #ef4444;          --c-error-bg: #fef2f2;        --c-error-border: #fecaca;
+  --c-pending: #f97316;        --c-pending-bg: #fff7ed;      --c-pending-border: #fed7aa;
+  --c-approved: #16a34a;       --c-approved-bg: #f0fdf4;     --c-approved-border: #bbf7d0;
+  --c-rejected: #ef4444;       --c-rejected-bg: #fef2f2;     --c-rejected-border: #fecaca;
+
+  /* ── Semantic ── */
+  --c-success: var(--c-running);
+  --c-warning: var(--c-login);
+  --c-info: var(--c-checking);
+  --c-danger: var(--c-error);
+
+  /* ── Surfaces (Light) ───────────────────────────────────────────────── */
+  --c-bg: #ffffff;
+  --c-bg-soft: #fafafa;
+  --c-bg-muted: #f5f5f5;
+  --c-bg-raised: #ffffff;
+  --c-bg-inverse: #0a0a0b;
+  --c-bg-glass: rgba(255, 255, 255, 0.85);
+  --c-bg-overlay: rgba(10, 10, 11, 0.55);
+
+  --c-border: #e5e5e5;
+  --c-border-strong: #d4d4d4;
+  --c-border-focus: var(--c-pri-500);
+
+  /* ── Text (Light) ───────────────────────────────────────────────────── */
+  --c-text: #0a0a0b;
+  --c-text-soft: #404040;
+  --c-text-muted: #a3a3a3;
+  --c-text-inverse: #fafafa;
+  --c-text-link: var(--c-pri-600);
+
+  /* ── Typography ── */
+  --font-display: 'Fraunces', 'Georgia', serif;
+  --font-ui: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, Monaco, monospace;
+
+  --text-2xs: 0.6875rem;   /* 11px — badges, meta */
+  --text-xs:  0.75rem;     /* 12px — secondary labels */
+  --text-sm:  0.8125rem;   /* 13px — form hints */
+  --text-base: 0.875rem;   /* 14px — body */
+  --text-md:  1rem;        /* 16px — emphasized */
+  --text-lg:  1.125rem;    /* 18px — subheadings */
+  --text-xl:  1.375rem;    /* 22px — section titles */
+  --text-2xl: 1.75rem;     /* 28px — page titles */
+  --text-3xl: 2.25rem;     /* 36px — hero stats */
+
+  --w-regular: 400;
+  --w-medium: 500;
+  --w-semibold: 600;
+  --w-bold: 700;
+
+  --lh-tight: 1.25;
+  --lh-snug: 1.375;
+  --lh-normal: 1.5;
+  --lh-relaxed: 1.625;
+
+  --tracking-tight: -0.02em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.04em;
+  --tracking-wider: 0.08em;
+
+  /* ── Spacing (4px base) ─────────────────────────────────────────────── */
+  --s-0: 0;
+  --s-1: 0.25rem;   /* 4px */
+  --s-2: 0.5rem;    /* 8px */
+  --s-3: 0.75rem;   /* 12px */
+  --s-4: 1rem;      /* 16px */
+  --s-5: 1.25rem;   /* 20px */
+  --s-6: 1.5rem;    /* 24px */
+  --s-8: 2rem;      /* 32px */
+  --s-10: 2.5rem;   /* 40px */
+  --s-12: 3rem;     /* 48px */
+  --s-16: 4rem;     /* 64px */
+
+  /* ── Border Radius ── */
+  --r-xs: 0.125rem;   /* 2px */
+  --r-sm: 0.25rem;    /* 4px */
+  --r-md: 0.375rem;   /* 6px */
+  --r-lg: 0.5rem;     /* 8px */
+  --r-xl: 0.75rem;    /* 12px */
+  --r-2xl: 1rem;      /* 16px */
+  --r-full: 9999px;
+
+  /* ── Shadows ── */
+  --sh-xs: 0 1px 2px 0 rgba(10, 10, 11, 0.03);
+  --sh-sm: 0 1px 3px 0 rgba(10, 10, 11, 0.05), 0 1px 2px -1px rgba(10, 10, 11, 0.03);
+  --sh-md: 0 4px 6px -1px rgba(10, 10, 11, 0.07), 0 2px 4px -2px rgba(10, 10, 11, 0.04);
+  --sh-lg: 0 10px 15px -3px rgba(10, 10, 11, 0.08), 0 4px 6px -4px rgba(10, 10, 11, 0.05);
+  --sh-xl: 0 20px 25px -5px rgba(10, 10, 11, 0.1), 0 8px 10px -6px rgba(10, 10, 11, 0.05);
+  --sh-focus: 0 0 0 3px rgba(99, 102, 241, 0.35);
+  --sh-card-hover: 0 20px 25px -5px rgba(10, 10, 11, 0.08), 0 8px 10px -6px rgba(10, 10, 11, 0.04);
+
+  /* ── Z-Index ── */
+  --z-base: 1;
+  --z-dropdown: 10;
+  --z-sticky: 20;
+  --z-drawer: 30;
+  --z-modal: 31;
+  --z-overlay: 30;
+  --z-popover: 40;
+  --z-toast: 50;
+  --z-tooltip: 60;
+  --z-toast-stack: 70;
+
+  /* ── Motion — Apple-Caliber Spring Curves ── */
+  --t-instant: 50ms;
+  --t-fast: 120ms;
+  --t-base: 200ms;
+  --t-slow: 300ms;
+  --t-slower: 400ms;
+  --t-slowest: 500ms;
+
+  --ease-smooth: cubic-bezier(0.16, 1, 0.3, 1);        /* Standard */
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);    /* Playful */
+  --ease-snappy: cubic-bezier(0.2, 0, 0, 1);           /* UI chrome */
+  --ease-gentle: cubic-bezier(0.25, 0.46, 0.45, 0.94); /* Cards */
+  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);        /* Rail, drawers */
+
+  /* ── Component Sizes ── */
+  --size-btn-sm: 32px;
+  --size-btn-md: 40px;
+  --size-btn-lg: 48px;
+  --size-input-sm: 36px;
+  --size-input-md: 44px;
+  --size-input-lg: 52px;
+  --size-topbar: 64px;
+  --size-rail-collapsed: 72px;
+  --size-rail-expanded: 280px;
+  --size-page-max: 1400px;
+  --size-drawer-sm: 380px;
+  --size-drawer-md: 520px;
+  --size-drawer-lg: 720px;
+  --size-modal-sm: 400px;
+  --size-modal-md: 560px;
+  --size-modal-lg: 720px;
+}
+
+/* ── Dark Mode ─────────────────────────────────────────────────────── */
+.theme-dark {
+  --c-bg: #0a0a0b;
+  --c-bg-soft: #18181b;
+  --c-bg-muted: #27272a;
+  --c-bg-raised: #18181b;
+  --c-bg-inverse: #fafafa;
+  --c-bg-glass: rgba(10, 10, 11, 0.85);
+  --c-bg-overlay: rgba(0, 0, 0, 0.65);
+
+  --c-border: #3f3f46;
+  --c-border-strong: #52525b;
+  --c-border-focus: var(--c-pri-400);
+
+  --c-text: #fafafa;
+  --c-text-soft: #d4d4d4;
+  --c-text-muted: #a3a3a3;
+  --c-text-inverse: #0a0a0b;
+  --c-text-link: var(--c-pri-400);
+
+  --c-pri-400: #a5b4fc;
+  --c-pri-500: #818cf8;
+  --c-pri-600: #6366f1;
+
+  --c-canada-light: #ffedd5;
+  --c-uk-light: #efe9ff;
+
+  --c-running-bg: #052e16;      --c-running-border: #14532d;
+  --c-checking-bg: #0369a1;     --c-checking-border: #0284c7;
+  --c-login-bg: #451a03;        --c-login-border: #92400e;
+  --c-error-bg: #450a0a;        --c-error-border: #991b1b;
+  --c-pending-bg: #451a03;      --c-pending-border: #92400e;
+  --c-approved-bg: #052e16;     --c-approved-border: #14532d;
+  --c-rejected-bg: #450a0a;     --c-rejected-border: #991b1b;
+
+  --sh-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --sh-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 1px 2px -1px rgba(0, 0, 0, 0.3);
+  --sh-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
+  --sh-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.6), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
+  --sh-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.7), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+  --sh-focus: 0 0 0 3px rgba(129, 140, 248, 0.4);
+  --sh-card-hover: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+}
+
+/* ── Honor system preference if user hasn't toggled ───────────────── */
+@media (prefers-color-scheme: dark) {
+  :root:not(.theme-light):not(.theme-dark) {
+    --c-bg: #0a0a0b;
+    --c-bg-soft: #18181b;
+    --c-bg-muted: #27272a;
+    --c-bg-raised: #18181b;
+    --c-bg-inverse: #fafafa;
+    --c-bg-glass: rgba(10, 10, 11, 0.85);
+    --c-bg-overlay: rgba(0, 0, 0, 0.65);
+    --c-border: #3f3f46;
+    --c-border-strong: #52525b;
+    --c-text: #fafafa;
+    --c-text-soft: #d4d4d4;
+    --c-text-muted: #a3a3a3;
+    --c-text-inverse: #0a0a0b;
+  }
+}
+
+/* ── Reduced Motion ────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

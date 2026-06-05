@@ -8,6 +8,27 @@ from src.domain.client import Client
 from src.domain.enums import ClientState, VisaType
 from src.infrastructure.database import cursor
 
+ALLOWED_UPDATE_COLUMNS = frozenset(
+    {
+        "name",
+        "state",
+        "reject_reason",
+        "username",
+        "password",
+        "appointment_id",
+        "appointment_url",
+        "visa_type",
+        "reschedule",
+        "preferred_locations",
+        "preferred_date_from",
+        "preferred_date_to",
+        "notification_email",
+        "telegram_chat_id",
+        "phone_number",
+        "agent_pid",
+    }
+)
+
 
 def row_to_client(row: dict[str, Any]) -> Client:
     return Client(
@@ -99,11 +120,17 @@ def save(client: Client) -> None:
 def update_field(client_id: str, **kwargs: Any) -> None:
     if not kwargs:
         return
+    invalid = set(kwargs) - ALLOWED_UPDATE_COLUMNS
+    if invalid:
+        raise ValueError(f"Invalid update columns: {sorted(invalid)}")
     sets = ", ".join(f"{k} = ?" for k in kwargs)
     vals = list(kwargs.values())
     with cursor() as cur:
+        # Column names are validated against ALLOWED_UPDATE_COLUMNS above; values
+        # are parameterized. The f-string only interpolates whitelisted column
+        # names, not user data.
         cur.execute(
-            f"UPDATE clients SET {sets}, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+            f"UPDATE clients SET {sets}, updated_at = CURRENT_TIMESTAMP WHERE id = ?",  # noqa: S608
             (*vals, client_id),
         )
 

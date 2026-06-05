@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Requests{% endblock %}
+{% block topbar_title %}Requests{% endblock %}
+
+{% block content %}
+<header class="l-page-header">
+  <div class="l-page-header__title">
+    <span class="l-page-header__eyebrow">Inbox</span>
+    <h1>Requests</h1>
+    <p class="l-page-header__sub">
+      Pending, approved, and rejected onboarding requests. Approve to start the monitor.
+    </p>
+  </div>
+  <div class="l-page-header__actions">
+    <a class="btn btn--primary btn--sm" href="{{ url_for('admin.clients') }}">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+      View all clients
+    </a>
+  </div>
+</header>
+
+<div class="tabs" role="tablist" aria-label="Request states" data-tabs>
+  <button class="tab" role="tab" aria-selected="true" data-tab="pending" data-target="#req-pending">
+    Pending
+    <span class="pill pill--pending" style="margin-left: 6px;" data-count="pending">{{ pending | length }}</span>
+  </button>
+  <button class="tab" role="tab" aria-selected="false" data-tab="approved" data-target="#req-approved">
+    Approved
+    <span class="pill pill--approved" style="margin-left: 6px;" data-count="approved">{{ approved | length }}</span>
+  </button>
+  <button class="tab" role="tab" aria-selected="false" data-tab="rejected" data-target="#req-rejected">
+    Rejected
+    <span class="pill pill--rejected" style="margin-left: 6px;" data-count="rejected">{{ rejected | length }}</span>
+  </button>
+</div>
+
+<section id="req-pending" data-tab-panel="pending" role="tabpanel">
+  {% if pending %}
+    <div class="inbox">
+      {% for item in pending %}{% include "partials/_request_card.html" %}{% endfor %}
+    </div>
+  {% else %}
+    {% include "partials/_requests_empty.html" %}
+  {% endif %}
+</section>
+
+<section id="req-approved" data-tab-panel="approved" role="tabpanel" hidden>
+  {% if approved %}
+    <div class="inbox">
+      {% for item in approved %}{% include "partials/_request_card.html" %}{% endfor %}
+    </div>
+  {% else %}
+    {% include "partials/_requests_empty.html" %}
+  {% endif %}
+</section>
+
+<section id="req-rejected" data-tab-panel="rejected" role="tabpanel" hidden>
+  {% if rejected %}
+    <div class="inbox">
+      {% for item in rejected %}{% include "partials/_request_card.html" %}{% endfor %}
+    </div>
+  {% else %}
+    {% include "partials/_requests_empty.html" %}
+  {% endif %}
+</section>
+
+<div data-modal-mount></div>
+{% endblock %}
+
+{% block extra_js %}
+<script type="module" src="{{ url_for('static', filename='js/views/requests.js') }}"></script>
+{% endblock %}

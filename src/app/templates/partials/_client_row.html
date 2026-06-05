@@ -1,0 +1,91 @@
+{# ─────────────────────────────────────────────────────────────────────
+   partials/_client_row.html — one row in the clients table
+   ───────────────────────────────────────────────────────────────────── #}
+<tr data-row-id="{{ client.id }}" data-state="{{ client.state.value }}" data-visa="{{ client.visa_type.value }}">
+  <td>
+    <input type="checkbox" class="checkbox table__checkbox"
+           value="{{ client.id }}" data-row-select aria-label="Select {{ client.name or 'client' }}" />
+  </td>
+  <td>
+    <div class="table__name">
+      <span class="avatar avatar--sm {{ 'avatar--canada' if client.visa_type.value == 'canada' else 'avatar--uk' }}" aria-hidden="true">
+        {{ (client.name or 'C')[:1] | upper }}
+      </span>
+      <div class="table__name-text">
+        <strong>{{ client.name or "Unnamed" }}</strong>
+        <small>{{ client.notification_email or client.username or "—" }}</small>
+      </div>
+    </div>
+  </td>
+  <td>
+    <span class="pill {{ 'pill--canada' if client.visa_type.value == 'canada' else 'pill--uk' }}">
+      {{ client.visa_type.value | capitalize }}
+    </span>
+  </td>
+  <td>
+    {% set tone_map = {
+      'approved': 'pill--success',
+      'pending':  'pill--pending',
+      'rejected': 'pill--rejected',
+      'stopped':  'pill--warning',
+      'issued':   'pill--neutral',
+    } %}
+    {% set icon_map = {
+      'approved': 'check',
+      'pending':  'clock',
+      'rejected': 'x',
+      'stopped':  'pause',
+      'issued':   'circle',
+    } %}
+    <span class="pill {{ tone_map[client.state.value] }}">
+      <span class="pill__dot {% if client.state.value == 'approved' %}pill__dot--pulse{% endif %}" aria-hidden="true"></span>
+      {{ client.state.value | capitalize }}
+    </span>
+  </td>
+  <td>
+    {% if client.appointment_id %}
+      <span class="u-text-mono" style="font-size: var(--text-xs);">{{ client.appointment_id }}</span>
+    {% else %}
+      <span class="u-text-muted">—</span>
+    {% endif %}
+  </td>
+  <td>
+    <span class="u-text-sm u-text-soft u-truncate" style="max-width: 200px; display: inline-block;">
+      {{ (state.current_action or '—') if state else '—' }}
+    </span>
+  </td>
+  <td>
+    <span class="u-text-xs u-text-muted" title="{{ client.updated_at.isoformat() if client.updated_at else '' }}">
+      {{ (client.updated_at.strftime('%b %d, %H:%M') if client.updated_at else '—') }}
+    </span>
+  </td>
+  <td>
+    <div class="table__actions">
+      <button class="btn btn--ghost btn--icon btn--sm" type="button"
+              hx-get="{{ url_for('admin.client_detail', client_id=client.id) }}"
+              hx-target="#client-drawer-body"
+              hx-swap="innerHTML"
+              data-drawer-trigger="client-drawer"
+              title="View details" aria-label="View details">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      </button>
+      {% if client.state.value == 'approved' and state and state.is_running %}
+      <button class="btn btn--ghost btn--icon btn--sm" type="button"
+              hx-post="{{ url_for('admin.stop', token=client.token) }}"
+              hx-swap="none"
+              hx-on::after-request="window.toast && window.toast('Client stopped', 'success', '{{ client.name or client.id[:8] }}')"
+              title="Stop" aria-label="Stop">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+      </button>
+      {% elif client.state.value == 'approved' %}
+      <button class="btn btn--ghost btn--icon btn--sm" type="button"
+              hx-post="{{ url_for('admin.restart_client', client_id=client.id) }}"
+              hx-swap="none"
+              hx-on::after-request="window.toast && window.toast('Client started', 'success', '{{ client.name or client.id[:8] }}')"
+              title="Start" aria-label="Start">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      </button>
+      {% endif %}
+    </div>
+  </td>
+</tr>

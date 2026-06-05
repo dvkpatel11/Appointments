@@ -5,6 +5,9 @@ import requests
 from flask import Blueprint, jsonify, request, url_for
 
 from src.config import settings
+from src.infrastructure.logging import setup_server_logger
+
+logger = setup_server_logger()
 
 bp = Blueprint("telegram", __name__)
 
@@ -67,8 +70,8 @@ def telegram_webhook():
                 json={"chat_id": chat_id, "text": f"Your Chat ID is: {chat_id}"},
                 timeout=10,
             )
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("Telegram send chat_id failed: %s", e)
     return jsonify({"ok": True})
 
 

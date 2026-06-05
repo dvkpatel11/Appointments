@@ -1,0 +1,12 @@
+{# ── Stat tile (KPI) — used in dash-metrics ──────────────────────── #}
+{% macro stat(label, value, delta=None, delta_dir=None) %}
+<div class="stat" data-stat="{{ label | lower | replace(' ', '-') }}">
+  <div class="stat__label">{{ label }}</div>
+  <div class="stat__value" data-stat-value>{{ value }}</div>
+  {% if delta %}
+  <div class="stat__delta stat__delta--{{ delta_dir or 'flat' }}">
+    {{ delta }}
+  </div>
+  {% endif %}
+</div>
+{% endmacro %}

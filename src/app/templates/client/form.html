@@ -683,6 +683,112 @@
         0%, 100% { opacity: 1; }
         50% { opacity: 0; }
       }
+
+      /* ── Wizard ──────────────────────────────────────────────────── */
+      .wizard-steps {
+        display: flex;
+        gap: 0;
+        margin: 0 0 24px;
+        padding: 0;
+        list-style: none;
+        border-radius: 10px;
+        overflow: hidden;
+        border: 1px solid var(--glass-border);
+      }
+      .wizard-step {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 18px;
+        background: var(--glass-bg);
+        color: var(--text-muted);
+        font-size: 0.78rem;
+        font-weight: 500;
+        border-right: 1px solid var(--glass-border);
+        transition: background 0.2s, color 0.2s;
+      }
+      .wizard-step:last-child { border-right: none; }
+      .wizard-step__num {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px; height: 24px;
+        border-radius: 50%;
+        background: var(--border);
+        color: var(--text);
+        font-size: 0.75rem;
+        font-weight: 700;
+        flex-shrink: 0;
+      }
+      .wizard-step.is-active {
+        background: var(--primary);
+        color: #fff;
+      }
+      .wizard-step.is-active .wizard-step__num {
+        background: rgba(255, 255, 255, 0.25);
+        color: #fff;
+      }
+      .wizard-step.is-done {
+        color: var(--green);
+      }
+      .wizard-step.is-done .wizard-step__num {
+        background: var(--green);
+        color: #fff;
+      }
+
+      .wizard-panel {
+        border: none;
+        padding: 0;
+        margin: 0;
+      }
+      .wizard-panel[hidden] { display: none; }
+      .wizard-panel__title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text);
+        margin-bottom: 4px;
+        padding: 0;
+      }
+      .wizard-panel__sub {
+        font-size: 0.82rem;
+        color: var(--text-muted);
+        margin-bottom: 20px;
+        padding: 0;
+        border: none;
+      }
+
+      .wizard-nav {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        justify-content: flex-end;
+        margin-top: 28px;
+        padding-top: 20px;
+        border-top: 1px solid var(--border);
+      }
+      .wizard-hint {
+        flex: 1;
+        font-size: 0.72rem;
+        color: var(--text-muted);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .form-group input.is-invalid,
+      .form-group input.is-invalid:focus {
+        border-color: var(--red);
+        box-shadow: 0 0 0 3px rgba(255, 0, 68, 0.15);
+      }
+      .wizard-error {
+        margin: 0 0 16px;
+        padding: 10px 14px;
+        background: rgba(255, 0, 68, 0.05);
+        border: 1px solid var(--red);
+        border-radius: 6px;
+        color: var(--red);
+        font-size: 0.78rem;
+      }
     </style>
   </head>
   <body>
@@ -698,27 +804,7 @@
         </p>
       </div>
 
-      <!-- Steps -->
-      <div class="steps">
-        <div class="step">
-          <div class="step-num">          01</div>
-          <div class="step-label"><strong>SUBMIT</strong>Your visa portal credentials &amp; appointment ID</div>
-        </div>
-        <div class="step">
-          <div class="step-num">02</div>
-          <div class="step-label"><strong>SCAN</strong>System monitors all locations continuously</div>
-        </div>
-        <div class="step">
-          <div class="step-num">03</div>
-          <div class="step-label"><strong>MONITOR</strong>Watch live logs on this page</div>
-        </div>
-        <div class="step">
-          <div class="step-num">04</div>
-          <div class="step-label"><strong>NOTIFY</strong>Instant alerts via email, Telegram, or SMS</div>
-        </div>
-      </div>
-
-      <!-- ── SUBMISSION FORM ──────────────────────────────────────── -->
+      <!-- ── 2-STEP WIZARD ──────────────────────────────────────── -->
       <div id="formSection">
         {% if error %}
         <div
@@ -740,96 +826,122 @@
           <form id="missionForm" autocomplete="off" novalidate>
             <input type="hidden" name="token" id="tokenField" value="{{ token }}" />
 
-            <p class="form-section-label">Personal Details</p>
-            <div class="form-grid">
-              <div class="form-group full">
-                <label>Your Name</label>
-                <input type="text" name="name" placeholder="Jane Smith" required />
-              </div>
-              <div class="form-group full">
-                <label>Telegram Chat ID (optional)</label>
-                <input type="text" name="telegram_chat_id" placeholder="123456789" />
-                <p class="hint">For Telegram notifications — or link via popup after approval</p>
-              </div>
-            </div>
+            <ol class="wizard-steps" aria-label="Form progress">
+              <li class="wizard-step is-active" data-step="1" aria-current="step">
+                <span class="wizard-step__num">1</span>
+                <span class="wizard-step__label">Details</span>
+              </li>
+              <li class="wizard-step" data-step="2" aria-current="false">
+                <span class="wizard-step__num">2</span>
+                <span class="wizard-step__label">Appointment + Credentials</span>
+              </li>
+            </ol>
 
-            <p class="form-section-label">Visa Portal Credentials</p>
-            <div class="form-grid">
-              <div class="form-group">
-                <label>Portal Login (Email)</label>
-                <input type="text" name="username" placeholder="your@login.com" required />
-                <p class="hint">ais.usvisa-info.com login</p>
-              </div>
-              <div class="form-group">
-                <label>Portal Password</label>
-                <input type="password" name="password" required />
-              </div>
-            </div>
+            <!-- ── Step 1: Details ────────────────────────────── -->
+            <fieldset class="wizard-panel" data-panel="1">
+              <legend class="wizard-panel__title">Your details</legend>
+              <p class="wizard-panel__sub">Tell us who to contact when we find a slot.</p>
 
-            <p class="form-section-label">Appointment Details</p>
-            <div class="form-grid">
-              <div class="form-group full">
-                <label>Appointment ID</label>
-                <input
-                  type="text"
-                  name="appointment_id"
-                  id="appointmentId"
-                  required
-                  autocomplete="off"
-                  spellcheck="false"
-                  placeholder="e.g. 12345678"
-                />
-                <p class="hint">From your appointment URL: <code>/schedule/<strong>12345678</strong>/appointment</code></p>
-              </div>
-            </div>
-
-            <!-- Preferred Locations -->
-            <p class="locations-header">Monitor Locations</p>
-            <div class="locations-grid">
-              <label><input type="checkbox" name="location" value="Toronto" checked /> Toronto</label>
-              <label><input type="checkbox" name="location" value="Vancouver" checked /> Vancouver</label>
-              <label><input type="checkbox" name="location" value="Calgary" checked /> Calgary</label>
-              <label><input type="checkbox" name="location" value="Ottawa" checked /> Ottawa</label>
-              <label><input type="checkbox" name="location" value="Halifax" checked /> Halifax</label>
-              <label><input type="checkbox" name="location" value="Montreal" checked /> Montreal</label>
-            </div>
-
-            <!-- Preferred Date Window -->
-            <div class="date-window-box">
-              <p class="date-window-header">Preferred Reschedule Window</p>
-              <p class="date-window-desc">Only reschedule if an earlier date falls within this range (minimum 30 days).</p>
-              <div class="date-window-grid">
-                <div class="form-group">
-                  <label>From</label>
-                  <input type="date" name="preferred_date_from" id="prefDateFrom" />
+              <div class="form-grid">
+                <div class="form-group full">
+                  <label for="f-name">Your Name</label>
+                  <input id="f-name" type="text" name="name" placeholder="Jane Smith" required />
                 </div>
-                <div class="form-group">
-                  <label>To</label>
-                  <input type="date" name="preferred_date_to" id="prefDateTo" />
+                <div class="form-group full">
+                  <label for="f-tg">Telegram Chat ID <span style="color: var(--dimtext); font-weight: 400;">(optional)</span></label>
+                  <input id="f-tg" type="text" name="telegram_chat_id" placeholder="123456789" />
+                  <p class="hint">For Telegram alerts — or link via popup after approval.</p>
                 </div>
               </div>
-              <p id="dateWindowFeedback" class="date-window-feedback"></p>
-            </div>
 
-            <!-- Reschedule -->
-            <div class="reschedule-box">
-              <p class="reschedule-header">Auto-Reschedule</p>
-              <div class="checkbox-row">
-                <input type="checkbox" name="reschedule" id="reschedule" />
-                <label class="checkbox-desc" for="reschedule">
-                  Enable <strong>automatic rescheduling</strong> — if an earlier date is found, the system will book it
-                  immediately without further confirmation. Only enable this if you are comfortable with any available
-                  location.
-                </label>
+              <div class="wizard-nav">
+                <span class="wizard-hint">Step 1 of 2</span>
+                <button type="button" class="btn-submit" data-wizard-next>Continue →</button>
               </div>
-            </div>
+            </fieldset>
 
-            <div class="submit-row">
-              <button type="submit" class="btn-submit" id="submitBtn">Submit</button>
-            </div>
+            <!-- ── Step 2: Appointment + Credentials ────────────── -->
+            <fieldset class="wizard-panel" data-panel="2" hidden>
+              <legend class="wizard-panel__title">Appointment + Credentials</legend>
+              <p class="wizard-panel__sub">Your visa portal login and the appointment you want monitored.</p>
+
+              <p class="form-section-label">Visa Portal Credentials</p>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="f-username">Portal Login (Email)</label>
+                  <input id="f-username" type="text" name="username" placeholder="your@login.com" required />
+                  <p class="hint">ais.usvisa-info.com login</p>
+                </div>
+                <div class="form-group">
+                  <label for="f-password">Portal Password</label>
+                  <input id="f-password" type="password" name="password" required />
+                </div>
+              </div>
+
+              <p class="form-section-label">Appointment Details</p>
+              <div class="form-grid">
+                <div class="form-group full">
+                  <label for="f-aptid">Appointment ID</label>
+                  <input
+                    id="f-aptid"
+                    type="text"
+                    name="appointment_id"
+                    id="appointmentId"
+                    required
+                    autocomplete="off"
+                    spellcheck="false"
+                    placeholder="e.g. 12345678"
+                  />
+                  <p class="hint">From your appointment URL: <code>/schedule/<strong>12345678</strong>/appointment</code></p>
+                </div>
+              </div>
+
+              <p class="locations-header">Monitor Locations</p>
+              <div class="locations-grid">
+                <label><input type="checkbox" name="location" value="Toronto" checked /> Toronto</label>
+                <label><input type="checkbox" name="location" value="Vancouver" checked /> Vancouver</label>
+                <label><input type="checkbox" name="location" value="Calgary" checked /> Calgary</label>
+                <label><input type="checkbox" name="location" value="Ottawa" checked /> Ottawa</label>
+                <label><input type="checkbox" name="location" value="Halifax" checked /> Halifax</label>
+                <label><input type="checkbox" name="location" value="Montreal" checked /> Montreal</label>
+              </div>
+
+              <div class="date-window-box">
+                <p class="date-window-header">Preferred Reschedule Window</p>
+                <p class="date-window-desc">Only reschedule if an earlier date falls within this range (minimum 30 days).</p>
+                <div class="date-window-grid">
+                  <div class="form-group">
+                    <label>From</label>
+                    <input type="date" name="preferred_date_from" id="prefDateFrom" />
+                  </div>
+                  <div class="form-group">
+                    <label>To</label>
+                    <input type="date" name="preferred_date_to" id="prefDateTo" />
+                  </div>
+                </div>
+                <p id="dateWindowFeedback" class="date-window-feedback"></p>
+              </div>
+
+              <div class="reschedule-box">
+                <p class="reschedule-header">Auto-Reschedule</p>
+                <div class="checkbox-row">
+                  <input type="checkbox" name="reschedule" id="reschedule" />
+                  <label class="checkbox-desc" for="reschedule">
+                    Enable <strong>automatic rescheduling</strong> — if an earlier date is found, the system will book it
+                    immediately without further confirmation. Only enable this if you are comfortable with any available
+                    location.
+                  </label>
+                </div>
+              </div>
+
+              <div class="wizard-nav">
+                <button type="button" class="btn-popup" data-wizard-prev>← Back</button>
+                <button type="submit" class="btn-submit" id="submitBtn">Submit</button>
+              </div>
+            </fieldset>
+
+            <div id="urlValidationError"></div>
           </form>
-
-          <div id="urlValidationError"></div>
         </div>
       </div>
 
@@ -1013,6 +1125,7 @@
     </div>
     <!-- /wrapper -->
 
+    <script type="module" src="/static/js/views/client_form.js"></script>
     <script>
       // ── Token from Flask template ──────────────────────────────────────────
       const PAGE_TOKEN = document.getElementById("tokenField").value.trim();

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import atexit
 import json
+import logging
 import signal
 import threading
 
@@ -12,7 +13,7 @@ try:
 except ImportError:
     sentry_sdk = None  # type: ignore[assignment]
 
-from src.app.routes import admin, auth, client, telegram
+from src.app.routes import admin, auth, client, events, snapshot, telegram
 from src.config import settings
 from src.infrastructure import logging as server_logging
 from src.infrastructure.database import init_db
@@ -55,10 +56,26 @@ def create_app() -> Flask:
     app.register_blueprint(admin.bp)
     app.register_blueprint(client.bp)
     app.register_blueprint(telegram.bp)
+    app.register_blueprint(events.bp)
+    app.register_blueprint(snapshot.bp)
+
+    @app.context_processor
+    def _inject_ui_config():
+        from flask import session
+
+        return {
+            "current_user_is_admin": bool(session.get("authenticated")),
+            "app_config": {
+                "streamUrl": "/events/stream",
+                "snapshotUrl": "/snapshot/",
+                "logsStreamUrl": "/admin/logs/stream",
+            },
+        }
 
     @app.route("/")
     def index():
         from flask import redirect
+
         return redirect("/login")
 
     @app.route("/health")
@@ -134,6 +151,7 @@ def create_app() -> Flask:
         client_id = request.args.get("client_id", "server")
         log_text = AutomationService.read_logs(client_id, 5000)
         from flask import Response
+
         return Response(
             log_text,
             mimetype="text/plain",
@@ -143,6 +161,7 @@ def create_app() -> Flask:
     @app.route("/test_email", methods=["POST"])
     def legacy_test_email():
         from src.notifications.email import send as send_email
+
         recipient = request.form.get("email") or (request.get_json(silent=True) or {}).get("email", "")
         if not recipient:
             return jsonify({"status": "error", "error": "No email address provided"}), 400
@@ -152,6 +171,7 @@ def create_app() -> Flask:
     @app.route("/test_telegram", methods=["POST"])
     def legacy_test_telegram():
         from src.notifications.telegram import send as send_telegram
+
         chat_id = request.form.get("chat_id") or (request.get_json(silent=True) or {}).get("chat_id", "")
         if not chat_id:
             return jsonify({"status": "error", "error": "No chat_id provided"}), 400
@@ -161,6 +181,7 @@ def create_app() -> Flask:
     @app.route("/test_sms", methods=["POST"])
     def legacy_test_sms():
         from src.notifications.sms import send as send_sms
+
         phone = request.form.get("phone") or (request.get_json(silent=True) or {}).get("phone", "")
         if not phone:
             return jsonify({"status": "error", "error": "No phone number provided"}), 400
@@ -187,16 +208,21 @@ def create_app() -> Flask:
                 results[uid] = {"status": "skipped", "reason": "missing credentials"}
                 continue
             appointment_id = (data.get("appointment_id") or "").strip()
-            appointment_url = (data.get("appointment_url") or "").strip() or "https://ais.usvisa-info.com/en-ca/niv/schedule/{}/appointment"
+            appointment_url = (
+                data.get("appointment_url") or ""
+            ).strip() or "https://ais.usvisa-info.com/en-ca/niv/schedule/{}/appointment"
             token = client_repo.create_token()
-            ClientService.submit_request(token, {
-                "name": uid,
-                "username": username,
-                "password": password,
-                "appointment_id": appointment_id,
-                "appointment_url": appointment_url,
-                "reschedule": data.get("reschedule", False),
-            })
+            ClientService.submit_request(
+                token,
+                {
+                    "name": uid,
+                    "username": username,
+                    "password": password,
+                    "appointment_id": appointment_id,
+                    "appointment_url": appointment_url,
+                    "reschedule": data.get("reschedule", False),
+                },
+            )
             ClientService.approve(token)
             result = AutomationService.start(token)
             started = result.get("started")
@@ -210,11 +236,13 @@ def create_app() -> Flask:
             threading.Event().wait(60)
             try:
                 orchestrator.check_and_recover()
-            except Exception:
-                pass
+            except Exception as e:
+                logging.getLogger("usvisa").warning("Recovery loop error: %s", e)
 
     _recovery_thread = threading.Thread(target=_recovery_loop, daemon=True)
     _recovery_thread.start()
+
+    events.start_poller_once()
 
     # ── Shutdown hooks ────────────────────────────────────────────────────
 

@@ -13,7 +13,7 @@ def login():
             session["authenticated"] = True
             return redirect(url_for("admin.index"))
         error = "ACCESS_DENIED // INVALID_CREDENTIALS"
-    return render_template("login.html", error=error)
+    return render_template("auth/login.html", error=error)
 
 
 @bp.route("/logout")
