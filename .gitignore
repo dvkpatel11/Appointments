@@ -87,7 +87,8 @@ dmypy.json
 *.mo
 *.pot
 
-docs/
+# Sphinx build artifacts only — design docs in docs/ are tracked
+docs/_build/
 
 # Flask
 instance/
