@@ -38,4 +38,4 @@ waitress==3.0.0
 Werkzeug==3.0.4
 yarl==1.24.2
 pydantic-settings>=2.7.1
-cryptography==46.0.4
+cryptography==48.0.0
