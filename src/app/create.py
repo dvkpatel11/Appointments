@@ -130,13 +130,6 @@ def create_app() -> Flask:
             return resp
         return admin.settings_get()
 
-    @app.route("/save_settings", methods=["POST"])
-    def legacy_save_settings():
-        resp = _login_required()
-        if resp:
-            return resp
-        return admin.save_settings()
-
     @app.route("/generate_client_link")
     def legacy_generate_client_link():
         resp = _login_required()

@@ -3,7 +3,7 @@
 
    Provides:
    - Collapsible sidebar rail (72px collapsed / 280px expanded, persisted via JS)
-   - Topbar with: rail toggle, search ⌘K, notifications, theme toggle, user menu
+   - Topbar with: rail toggle, search ⌘K, theme toggle, notifications, user menu
    - Skip-to-content link
    - Theme bootstrap (anti-FOUC inline script)
    - SSE bootstrap (single connection per page)
@@ -106,17 +106,6 @@
         </div>
 
         <div class="rail__spacer"></div>
-
-        <div class="rail__footer">
-          <button class="rail__theme-toggle" type="button"
-                  data-action="toggle-theme"
-                  title="Toggle theme"
-                  aria-label="Toggle theme">
-            <svg data-theme-icon="sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
-            <svg data-theme-icon="moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-            <span class="rail__item-label" data-theme-label>Light mode</span>
-          </button>
-        </div>
       </nav>
 
       {# ── Topbar ───────────────────────────────────────────────────── #}
@@ -144,6 +133,14 @@
           <div class="topbar__actions">
             <span class="topbar__dot topbar__dot--ok" data-status-dot
                   title="System healthy" aria-label="System status: ok"></span>
+
+            <button class="topbar__action" type="button"
+                    data-action="toggle-theme"
+                    title="Toggle theme"
+                    aria-label="Toggle theme">
+              <svg data-theme-icon="sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+              <svg data-theme-icon="moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            </button>
 
             <div class="popover-anchor" data-popover="notifications">
               <button class="topbar__action" type="button"
@@ -186,6 +183,7 @@
     <script type="module" src="{{ url_for('static', filename='js/store.js') }}"></script>
     <script type="module" src="{{ url_for('static', filename='js/rail.js') }}"></script>
     <script type="module" src="{{ url_for('static', filename='js/command.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/popover.js') }}"></script>
     {% block extra_js %}{% endblock %}
   </body>
 </html>

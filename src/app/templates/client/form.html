@@ -1341,12 +1341,13 @@
       document.getElementById("telegramCloseBtn").addEventListener("click", function() {
         document.getElementById("telegramPopup").classList.remove("show");
       });
-      document.getElementById("telegramSaveBtn").addEventListener("click", function() {
+        document.getElementById("telegramSaveBtn").addEventListener("click", function() {
         const chatId = document.getElementById("popupTelegramChatId").value.trim();
         window.clientTelegramChatId = chatId;
         if (chatId) {
           fetch("/client_link_telegram", {
             method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ user_id: PAGE_TOKEN, chat_id: chatId })
           });
         }

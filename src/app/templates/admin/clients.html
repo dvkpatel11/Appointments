@@ -123,8 +123,19 @@
   </div>
 </div>
 
-{# ── Detail drawer (populated by htmx) ────────────────────────────── #}
-<div data-drawer-mount></div>
+{# ── Detail drawer (populated by htmx into the body mount) ───────── #}
+<div class="drawer-overlay" data-drawer-overlay hidden></div>
+<aside class="drawer drawer--lg" id="client-drawer" role="dialog" aria-modal="true" aria-labelledby="cd-title" hidden>
+  <div class="drawer__header">
+    <h3 class="drawer__title u-truncate" id="cd-title" data-drawer-title>Client details</h3>
+    <button class="btn btn--ghost btn--icon btn--sm" type="button" data-drawer-close aria-label="Close">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="drawer__body" id="client-drawer-body">
+    <div class="skel skel--text" style="height: 200px"></div>
+  </div>
+</aside>
 
 {# ── Generate link modal ───────────────────────────────────────────── #}
 <div class="modal-overlay" data-modal="link-modal" hidden>

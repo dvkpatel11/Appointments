@@ -52,6 +52,7 @@
     if (ids.length === 0) return;
     if (action === "start" || action === "stop") {
       const endpoint = action === "start" ? "/admin/clients/bulk-start" : "/admin/clients/bulk-stop";
+      btn.disabled = true;
       try {
         const res = await fetch(endpoint, {
           method: "POST",
@@ -59,14 +60,27 @@
           credentials: "same-origin",
           body: JSON.stringify({ ids }),
         });
+        const data = await res.json().catch(() => ({}));
         if (res.ok) {
-          window.toast && window.toast(`Bulk ${action}`, "success", `${ids.length} client(s)`);
-          htmx.ajax("GET", tbody.getAttribute("hx-get"), tbody);
+          const results = data.results || {};
+          const ok = Object.values(results).filter((v) => v === (action === "start" ? "started" : "stopped")).length;
+          const bad = ids.length - ok;
+          const tone = bad === 0 ? "success" : "info";
+          const verb = action === "start" ? "started" : "stopped";
+          const msg = bad === 0
+            ? `Bulk ${verb}: ${ok} client(s)`
+            : `Bulk ${verb}: ${ok} ok, ${bad} failed`;
+          window.toast && window.toast(`Bulk ${verb}`, tone, msg);
+          if (tbody && tbody.getAttribute("hx-get")) {
+            htmx.ajax("GET", tbody.getAttribute("hx-get"), tbody);
+          }
         } else {
-          window.toast && window.toast(`Bulk ${action} failed`, "error", `HTTP ${res.status}`);
+          window.toast && window.toast(`Bulk ${action} failed`, "error", data.message || `HTTP ${res.status}`);
         }
       } catch (err) {
         window.toast && window.toast(`Bulk ${action} failed`, "error", String(err));
+      } finally {
+        btn.disabled = false;
       }
     } else if (action === "export") {
       const rows = ids.map((id) => {
@@ -165,20 +179,43 @@
     if (e.key === "Escape") $$("[data-modal]").forEach((m) => { if (!m.hidden) closeModal(m.dataset.modal); });
   });
 
-  // 7. Drawer open/close (client-drawer).
+  // 7. Drawer open/close. The persistent <aside id="client-drawer"> lives
+  //    in clients.html. htmx swaps the body content into #client-drawer-body.
+  //    We just toggle the .hidden attribute on the persistent container.
+  const drawer = $("#client-drawer");
+  const overlay = $("[data-drawer-overlay]");
   function openDrawer() {
-    const mount = $("[data-drawer-mount]");
-    if (mount) {
-      mount.innerHTML = '<aside class="drawer" id="client-drawer" data-drawer-open><div class="drawer__body" id="client-drawer-body"></div></aside>';
-      requestAnimationFrame(() => mount.querySelector("[data-drawer-open]")?.classList.add("drawer--in"));
-    }
+    if (!drawer) return;
+    drawer.hidden = false;
+    if (overlay) overlay.hidden = false;
+    requestAnimationFrame(() => drawer.classList.add("drawer--in"));
+    document.body.style.overflow = "hidden";
+  }
+  function closeDrawer() {
+    if (!drawer) return;
+    drawer.classList.remove("drawer--in");
+    drawer.hidden = true;
+    if (overlay) overlay.hidden = true;
+    document.body.style.overflow = "";
   }
   document.addEventListener("click", (e) => {
     const trigger = e.target.closest("[data-drawer-trigger]");
     if (trigger) {
       e.preventDefault();
       openDrawer();
+      const title = trigger.getAttribute("data-drawer-title");
+      const titleEl = drawer && drawer.querySelector("[data-drawer-title]");
+      if (title && titleEl) titleEl.textContent = title;
+      return;
     }
+    if (e.target.closest("[data-drawer-close]")) {
+      closeDrawer();
+      return;
+    }
+    if (overlay && e.target === overlay) closeDrawer();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && drawer && !drawer.hidden) closeDrawer();
   });
 
   // 8. Live refetch on snapshot changes.
