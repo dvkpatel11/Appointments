@@ -8,9 +8,9 @@ Each test gets:
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import pytest
-from cryptography.fernet import Fernet
 
 
 @pytest.fixture
@@ -24,15 +24,17 @@ def temp_db_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 @pytest.fixture
 def fernet_key(monkeypatch: pytest.MonkeyPatch) -> str:
     """Generate a fresh Fernet key and expose it via ENCRYPTION_KEY."""
+    from cryptography.fernet import Fernet
+
     key = Fernet.generate_key().decode()
     monkeypatch.setenv("ENCRYPTION_KEY", key)
     return key
 
 
 @pytest.fixture
-def app_modules(temp_db_path: Path, fernet_key: str):
+def app_modules(temp_db_path: Path, fernet_key: str) -> dict[str, Any]:
     """Reload config + db modules so pydantic-settings sees the new env vars.
-    Returns a namespace with the most commonly used handles."""
+    Returns a dict with the most commonly used handles."""
     import importlib
 
     from src import config
