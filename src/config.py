@@ -8,6 +8,7 @@ from pydantic_settings import BaseSettings
 class AppSettings(BaseSettings):
     admin_password: str = ""
     secret_key: str = ""
+    encryption_key: str = ""
     debug: bool = False
 
     db_path: str = os.environ.get("DB_PATH", "data/visactrl.db")
