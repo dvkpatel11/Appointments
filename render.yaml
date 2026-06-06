@@ -31,9 +31,19 @@ services:
         sync: false
       - key: SENTRY_DSN
         sync: false
+      - key: SENTRY_ENVIRONMENT
+        value: "production"
+      - key: SENTRY_TRACES_SAMPLE_RATE
+        value: "0.1"
       - key: TWILIO_ACCOUNT_SID
         sync: false
       - key: TWILIO_AUTH_TOKEN
         sync: false
       - key: TWILIO_FROM_NUMBER
         sync: false
+      - key: APP_ENV
+        value: "production"
+      - key: RATELIMIT_ENABLED
+        value: "true"
+      - key: SHUTDOWN_GRACE_SECONDS
+        value: "25"

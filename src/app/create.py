@@ -166,6 +166,13 @@ def create_app() -> Flask:
         Use this for Cloud Run livenessProbe / k8s livenessProbe."""
         return jsonify({"status": "ok"})
 
+    @app.route("/favicon.ico")
+    def favicon():
+        """Suppress 404s. The real favicon is an inline data: URI in
+        base.html and login.html; this endpoint is hit only by clients
+        that ignore <link rel='icon'>, and we just return 204."""
+        return "", 204
+
     def _login_required():
         if not session.get("authenticated"):
             return redirect("/login")

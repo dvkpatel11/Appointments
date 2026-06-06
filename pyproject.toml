@@ -22,7 +22,6 @@ line-ending = "lf"
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 addopts = "-v --tb=short"
-# Make src.config ignore .env during tests. Without this, the developer's
-# local .env (which contains a real Fernet key, SMTP creds, etc.) leaks into
-# tests via pydantic-settings re-reads on module reload.
-env = ["VISACTRL_DISABLE_DOTENV=1"]
+# VISACTRL_DISABLE_DOTENV=1 is set in tests/conftest.py via
+# os.environ.setdefault. We avoid the [tool.pytest.ini_options] env key
+# because that requires the pytest-env plugin, which we don't depend on.

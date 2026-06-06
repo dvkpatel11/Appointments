@@ -20,6 +20,14 @@
     <meta name="theme-color" content="#0a0a0b" media="(prefers-color-scheme: dark)" />
     <title>{% block title %}Dashboard{% endblock %} · VisaCtrl</title>
 
+    {# Inline SVG favicon — a stylised passport seal. Avoids a 404 on
+       /favicon.ico and saves a round trip. #}
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%231e3a8a'/><text x='32' y='44' font-family='serif' font-size='38' font-weight='700' text-anchor='middle' fill='%23fbbf24'>V</text></svg>"
+    />
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

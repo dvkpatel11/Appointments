@@ -9,7 +9,7 @@ own `multiprocessing.Process` so a bad run cannot block the web UI.
 ```bash
 make install       # creates .venv, pip install -r requirements.txt, playwright install chromium
 make run           # dev server via run.py on PORT (default 5000)
-make test          # pytest tests/ -v  (no tests exist yet)
+make test          # pytest tests/ -v  (71 tests, all green)
 make lint          # ruff check src/         (note: only src/, CI runs `ruff check .`)
 make format        # ruff check --fix src/ && ruff format src/
 make docker-build  # docker build -t visa-ctrl:latest .
@@ -36,14 +36,18 @@ writes a `.env` from `.env.example` if missing, then exits).
 ```
 src/
 ├── app/                 # Flask app + blueprints + wsgi
-│   ├── create.py        #   create_app(): registers blueprints, starts recovery thread
+│   ├── create.py        #   create_app(): registers blueprints, starts recovery
+│   │                    #   thread, wires rate limiter, security headers,
+│   │                    #   Sentry init, /healthz probes, atexit/SIGTERM handlers
+│   ├── extensions.py    #   Flask-Limiter singleton (memory:// storage)
 │   ├── wsgi.py          #   app = create_app()  (production entry)
 │   └── routes/          #   auth, admin, client, telegram blueprints
 ├── config.py            # pydantic-settings AppSettings (env_file = ".env")
 ├── domain/              # Client dataclass, enums (ClientState, VisaType), errors
 ├── infrastructure/
 │   ├── database.py      #   sqlite3 (WAL, busy_timeout=5s). Tables: settings, clients,
-│   │                    #   automation_state, pending_links. Schema in init_db().
+│   │                    #   automation_state, pending_links, email_confirmations.
+│   │                    #   Schema in init_db().
 │   ├── logging.py       #   server.log (rotating) + per-client <id>.log
 │   └── repositories/    #   client_repo, state_repo, settings_repo (in-memory cache)
 ├── notifications/       # email (SMTP), telegram, sms (Twilio) — each exposes send()
@@ -89,9 +93,9 @@ or `src.scraper.uk.scraper.UKVisaScraper` based on `client.visa_type` (see
   - `/start <token>` — links the chat ID to a client token. Token must already
     exist in `pending_links` (created by `POST /generate_telegram_link`).
   - `/myid` and `/getid` — reply with the user's chat ID.
-- `pending_link_ttl_seconds = 1800` (30 min). Stale links are NOT auto-cleaned
-  in the current code — the constant is defined but the cleanup loop is not
-  wired up (see CHANGELOG "Removed" section).
+- `pending_link_ttl_seconds = 1800` (30 min). Stale unlinked rows are
+  deleted by `orchestrator.cleanup_stale_pending_links()` which runs on
+  every 60s tick of the recovery loop in `create_app()`.
 
 ## Lint, format, test
 
@@ -99,8 +103,9 @@ or `src.scraper.uk.scraper.UKVisaScraper` based on `client.visa_type` (see
   (ignore S101), double quotes, LF endings.
 - **Makefile runs `ruff check src/` (narrow). CI runs `ruff check .` (whole repo).**
   A change in a non-`src/` file can pass `make lint` but fail CI.
-- Pytest is configured (`testpaths = ["tests"]`, `addopts = "-v --tb=short"`)
-  but **no test files exist**. CI's pytest step passes vacuously.
+- Pytest is configured (`testpaths = ["tests"]`, `addopts = "-v --tb=short"`).
+  71 tests across `tests/test_email_magic_link.py`, `tests/test_security_hardening.py`,
+  `tests/test_production_hardening.py`, and a few others.
 - CI test command is `pytest tests/ -v --cov=canada --cov=uk --cov-report=xml`
   — the `--cov=uk` is a leftover and will fail with "no such file" if coverage
   is ever enforced. CI currently does not enforce coverage.
@@ -117,6 +122,10 @@ or `src.scraper.uk.scraper.UKVisaScraper` based on `client.visa_type` (see
   `northamerica-northeast1`. The Cloud Run service is set to
   `--min-instances=0` so cold starts happen — Playwright relogs in on each
   fresh cycle, which is by design.
+- Static env vars shipped in `cloudbuild.yaml` and `render.yaml`:
+  `SMTP_HOST`, `SMTP_PORT`, `FLASK_DEBUG=false`, `APP_ENV=production`,
+  `SENTRY_ENVIRONMENT=production`, `SENTRY_TRACES_SAMPLE_RATE=0.1`,
+  `RATELIMIT_ENABLED=true`, `SHUTDOWN_GRACE_SECONDS=25`.
 - Render (`render.yaml`): Docker service on port 8080, secrets `sync: false`
   (you enter them in the Render dashboard).
 
@@ -128,10 +137,25 @@ or `src.scraper.uk.scraper.UKVisaScraper` based on `client.visa_type` (see
 - `create_app()` starts a daemon thread (`_recovery_loop`) that every 60s
   calls `orchestrator.check_and_recover()` to restart crashed scrapers with
   exponential backoff (`crash_backoff_base=30s`, `crash_backoff_max=600s`).
+  On the same tick it calls `cleanup_stale_pending_links()` to delete
+  unlinked `pending_links` older than `pending_link_ttl_seconds`.
 - `orchestrator.resume_approved_agents()` runs on app startup so automations
   survive a web-tier restart. State lives in SQLite, not in the process.
-- `/health` returns `{"status": "ok"}`. The Dockerfile's HEALTHCHECK polls
-  this every 30s with a 60s start-period.
+- `/health` returns `{"status": "ok"}`. `/healthz/ready` does a `SELECT 1`
+  (503 if the DB is unreachable). `/healthz/live` is a cheap process-up
+  probe. Use the latter for Cloud Run livenessProbe to avoid restart
+  loops on transient DB issues; use the former for readinessProbe. The
+  Dockerfile's HEALTHCHECK polls `/health` every 30s with a 60s start-period.
+- `stop(client_id, grace_seconds=None)` and `stop_all(grace_seconds=None)`
+  accept a per-call grace budget (default from `settings.shutdown_grace_seconds`,
+  default 25s). The budget is divided across running agents so the parent
+  process never outlives the platform's termination grace period.
+- Security headers (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`,
+  `Permissions-Policy`, `Strict-Transport-Security`) are set on every
+  response via an `after_request` hook in `create_app()`. Rate limiting is
+  wired via `Flask-Limiter` (`memory://` storage) on `/login`, `/client_submit`,
+  email magic link endpoints, and `/telegram_webhook`. Disable with
+  `RATELIMIT_ENABLED=false` for tests.
 - Per-client state is persisted on every log line via
   `state_repo.save(...)` — `action_log` is a JSON list in the
   `automation_state` table, capped at `max_action_log_entries=100`.
@@ -157,12 +181,15 @@ or `src.scraper.uk.scraper.UKVisaScraper` based on `client.visa_type` (see
 - **Two venv paths exist** because the project was refactored without
   deleting the old setup: `make install` uses `.venv/`, `run.sh` and
   `scripts/setup.sh` use `env/`. Pick one and stick with it.
-- **No CSRF protection, no rate limiting, no MFA on `/login`.** See
-  `SECURITY.md`. Admin auth is a single shared password compared in
-  `src/app/routes/auth.py:login()`.
-- **Client passwords are stored in plaintext** in the `clients` table
-  (`client_repo.save`). The DB file is gitignored and lives on ephemeral
-  storage in production, but this is a real exposure if the DB is exfiltrated.
+- **No CSRF protection, no MFA on `/login`.** See `SECURITY.md`. Admin auth
+  is a single shared password compared in `src/app/routes/auth.py:login()`.
+  Rate limiting IS now in place on `/login` (5/min) and other write endpoints.
+- **Client passwords are encrypted at rest** with Fernet
+  (`ENCRYPTION_KEY`). The DB is still gitignored and ephemeral in prod.
+  Boot fails fast with a clear error if `ENCRYPTION_KEY` is missing.
+- **Email notifications require a magic link click.** `notification_email`
+  is only persisted after the user clicks the link sent to that address.
+  The link is single-use, 24h TTL. Tokens live in `email_confirmations`.
 - **No `opencode.json` or `.opencode/`** in this repo — OpenCode picks up
   only this `AGENTS.md`.
 - **No pre-commit hooks.** Run `make format` and `make lint` manually

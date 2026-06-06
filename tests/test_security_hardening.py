@@ -235,3 +235,12 @@ def test_health_aliases(client):
     """/health and /healthz both still return 200 for backwards compat."""
     assert client.get("/health").status_code == 200
     assert client.get("/healthz").status_code == 200
+
+
+def test_favicon_returns_204(client):
+    """/favicon.ico is hit by some browsers/proxies that ignore
+    <link rel='icon'>. Returning 204 keeps the logs clean and avoids
+    looking like an error in Sentry."""
+    r = client.get("/favicon.ico")
+    assert r.status_code == 204
+    assert r.data == b""
