@@ -10,9 +10,14 @@ from flask import Flask, jsonify, redirect, request, session
 
 try:
     import sentry_sdk
-except ImportError:
+    from sentry_sdk.integrations.flask import FlaskIntegration
+    from sentry_sdk.integrations.logging import LoggingIntegration
+except ImportError:  # pragma: no cover - sentry-sdk is a hard dep
     sentry_sdk = None  # type: ignore[assignment]
+    FlaskIntegration = None  # type: ignore[assignment]
+    LoggingIntegration = None  # type: ignore[assignment]
 
+from src import __version__
 from src.app.extensions import limiter
 from src.app.routes import admin, auth, client, events, snapshot, telegram
 from src.config import settings
@@ -47,7 +52,24 @@ def create_app() -> Flask:
 
     if sentry_sdk and settings.sentry_dsn:
         try:
-            sentry_sdk.init(dsn=settings.sentry_dsn)
+            init_kwargs: dict = {
+                "dsn": settings.sentry_dsn,
+                "environment": settings.sentry_environment,
+                "release": f"visactrl@{__version__}",
+                "integrations": [
+                    FlaskIntegration(),
+                    LoggingIntegration(level=logging.WARNING, event_level=logging.ERROR),
+                ],
+                "traces_sample_rate": settings.sentry_traces_sample_rate,
+            }
+            # Newer sentry-sdk versions (>= 2.24) support PII scrubbing options.
+            # We pin to installed version, so guard the kwargs to stay compatible
+            # with both the old 2.22 (in requirements-lock.txt) and the new 2.60.
+            sdk_version = tuple(int(x) for x in sentry_sdk.VERSION.split(".")[:2])
+            if sdk_version >= (2, 24):
+                init_kwargs["send_default_pii"] = False
+                init_kwargs["request_bodies"] = "never"
+            sentry_sdk.init(**init_kwargs)
         except Exception as exc:
             app.logger.warning("Sentry init failed: %s", exc)
 
@@ -293,6 +315,10 @@ def create_app() -> Flask:
                 orchestrator.check_and_recover()
             except Exception as e:
                 logging.getLogger("usvisa").warning("Recovery loop error: %s", e)
+            try:
+                orchestrator.cleanup_stale_pending_links()
+            except Exception as e:
+                logging.getLogger("usvisa").warning("Pending link cleanup error: %s", e)
 
     _recovery_thread = threading.Thread(target=_recovery_loop, daemon=True)
     _recovery_thread.start()

@@ -118,17 +118,21 @@ def start(client: Client) -> bool:
         return False
 
 
-def stop(client_id: str) -> bool:
+def stop(client_id: str, grace_seconds: int | None = None) -> bool:
     proc = _alive_processes.get(client_id)
     if not proc or not proc.is_alive():
         _alive_processes.pop(client_id, None)
         return False
+    grace = grace_seconds if grace_seconds is not None else settings.shutdown_grace_seconds
+    # Split the grace period: half for SIGTERM to allow a clean exit,
+    # the rest for SIGKILL if it ignores the signal.
+    sigterm_budget = max(1, grace // 2)
     try:
         proc.terminate()
-        proc.join(timeout=5)
+        proc.join(timeout=sigterm_budget)
         if proc.is_alive():
             proc.kill()
-            proc.join(timeout=3)
+            proc.join(timeout=max(1, grace - sigterm_budget))
     except Exception as e:
         logger.warning("Error stopping process for %s: %s", client_id[:12], e)
     _alive_processes.pop(client_id, None)
@@ -137,9 +141,20 @@ def stop(client_id: str) -> bool:
     return True
 
 
-def stop_all() -> None:
+def stop_all(grace_seconds: int | None = None) -> None:
+    """Stop every running agent. Used by SIGTERM and atexit handlers.
+
+    `grace_seconds` is the total budget across all agents. We give each agent
+    a slice of that budget, proportional to its share, so the parent process
+    doesn't outlive Cloud Run's terminationGracePeriod.
+    """
+    n = len(_alive_processes)
+    if n == 0:
+        return
+    per_agent = (grace_seconds or settings.shutdown_grace_seconds) // n
+    per_agent = max(2, per_agent)  # at least 2s each
     for client_id in list(_alive_processes.keys()):
-        stop(client_id)
+        stop(client_id, grace_seconds=per_agent)
 
 
 def is_alive(client_id: str) -> bool:
@@ -191,3 +206,23 @@ def resume_approved_agents() -> None:
         if client_id not in _alive_processes or not _alive_processes[client_id].is_alive():
             logger.info(f"Resuming agent {client_id[:12]}...")
             start(client)
+
+
+def cleanup_stale_pending_links() -> int:
+    """Delete pending_links rows older than `pending_link_ttl_seconds`.
+
+    Called by the recovery loop. Returns the number of rows deleted so the
+    loop can log activity.
+    """
+    from src.infrastructure.database import cursor
+
+    ttl = settings.pending_link_ttl_seconds
+    with cursor() as cur:
+        cur.execute(
+            "DELETE FROM pending_links WHERE linked_at IS NULL AND created_at < datetime('now', ?)",
+            (f"-{ttl} seconds",),
+        )
+        deleted = cur.rowcount
+    if deleted:
+        logger.info(f"Cleaned up {deleted} stale pending_link row(s)")
+    return deleted

@@ -45,11 +45,21 @@ class AppSettings(BaseSettings):
     twilio_from_number: str | None = None
 
     sentry_dsn: str = ""
+    sentry_environment: str = "production"
+    sentry_traces_sample_rate: float = 0.1
+
+    # App environment tag (used in Sentry + log lines). Override via APP_ENV.
+    app_env: str = "production"
 
     # Rate limiting. Disable in tests via RATELIMIT_ENABLED=false env var.
     # Field name is ratelimit_enabled (no underscore) so pydantic-settings picks
     # up the conventional RATELIMIT_ENABLED env var.
     ratelimit_enabled: bool = True
+
+    # Graceful shutdown budget (seconds) for multiprocessing agents when the
+    # parent receives SIGTERM. Cloud Run sends SIGTERM and waits this long
+    # before SIGKILL. 25s matches the default Cloud Run terminationGracePeriod.
+    shutdown_grace_seconds: int = 25
 
     model_config = {"env_file": _ENV_FILE, "env_file_encoding": "utf-8", "extra": "ignore"}
 
