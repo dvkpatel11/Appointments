@@ -1,29 +1,27 @@
 # AGENTS.md — UsVisaAppointment
 
-Flask + Playwright app that monitors US visa appointment slots for multiple users
-(Canada module is real; UK module is a stub). Each approved client runs in its
-own `multiprocessing.Process` so a bad run cannot block the web UI.
+Flask + Playwright app that monitors US visa appointment slots for multiple users.
+Each approved client runs in its own `multiprocessing.Process` so a bad run cannot
+block the web UI.
 
 ## Quick start
 
 ```bash
-make install       # creates .venv, pip install -r requirements.txt, playwright install chromium
+make install       # creates env/, pip install -r requirements.txt, playwright install chromium
 make run           # dev server via run.py on PORT (default 5000)
-make test          # pytest tests/ -v  (71 tests, all green)
+make test          # pytest tests/ -v
 make lint          # ruff check src/         (note: only src/, CI runs `ruff check .`)
 make format        # ruff check --fix src/ && ruff format src/
 make docker-build  # docker build -t visa-ctrl:latest .
 make docker-run    # docker run --rm -p 5000:8080 --env-file .env visa-ctrl
 make deploy-gcp    # gcloud builds submit --config cloudbuild.yaml .
-make backup        # ./scripts/backup.sh     (stale script — see Gotchas)
 ```
 
 `./scripts/setup.sh` is a non-Makefile alternative to `make install` (also
 writes a `.env` from `.env.example` if missing, then exits).
 
-`./run.sh` is yet another entry point — it expects the venv in `env/`
-(not `.venv/`), sources `.env`, kills anything on `$PORT`, and runs
-`python3 run.py`. Use it if you ran setup.sh with the default venv path.
+`./run.sh` is yet another entry point — it expects the venv in `env/`,
+sources `.env`, kills anything on `$PORT`, and runs `python3 run.py`.
 
 ## Entrypoints
 
@@ -43,20 +41,21 @@ src/
 │   ├── wsgi.py          #   app = create_app()  (production entry)
 │   └── routes/          #   auth, admin, client, telegram blueprints
 ├── config.py            # pydantic-settings AppSettings (env_file = ".env")
-├── domain/              # Client dataclass, enums (ClientState, VisaType), errors
+├── domain/              # Client + Profile dataclasses, enums (ClientState, VisaType), errors
 ├── infrastructure/
 │   ├── database.py      #   sqlite3 (WAL, busy_timeout=5s). Tables: settings, clients,
-│   │                    #   automation_state, pending_links, email_confirmations.
+│   │                    #   profiles, automation_state, pending_links, email_confirmations.
 │   │                    #   Schema in init_db().
 │   ├── logging.py       #   server.log (rotating) + per-client <id>.log
-│   └── repositories/    #   client_repo, state_repo, settings_repo (in-memory cache)
+│   └── repositories/    #   client_repo, profile_repo, state_repo, settings_repo
+│                        #   (settings_repo is in-memory cache)
 ├── notifications/       # email (SMTP), telegram, sms (Twilio) — each exposes send()
 ├── orchestrator/
 │   └── manager.py       # start/stop/check_and_recover/resume_approved_agents (multiprocess)
 ├── scraper/
 │   ├── base.py          #   VisaScraper ABC + run loop (login → check 12× → wait 30-60s)
 │   ├── canada/          #   CanadaVisaScraper — fully implemented
-│   └── uk/              #   UKVisaScraper — login works, check_availability/reschedule are stubs
+│   └── uk/              #   UKVisaScraper
 └── services/            # ClientService, AutomationService, NotificationService
 ```
 
@@ -83,7 +82,7 @@ or `src.scraper.uk.scraper.UKVisaScraper` based on `client.visa_type` (see
 - `screenshots/<client_id>/NNN_<name>.png` — Playwright screenshots; latest is
   exposed via the client portal as a base64 data URL
 - `app.log` — leftover root-level log (gitignored)
-- `.env`, `.venv`, `env/`, `.ruff_cache/`, `__pycache__/`
+- `.env`, `env/`, `.ruff_cache/`, `__pycache__/`
 
 ## Telegram integration
 
@@ -165,25 +164,14 @@ or `src.scraper.uk.scraper.UKVisaScraper` based on `client.visa_type` (see
 
 ## Gotchas
 
-- **UK module is a stub.** `UKVisaScraper.login()` works, but
-  `check_availability()` and `reschedule_to()` always return False. Don't
-  enable the UK `visa_type` for real users expecting it to do anything.
 - **`requirements-lock.txt` is OUT OF DATE.** It lists old versions
   (Flask 3.0.3 not pinned, python-telegram-bot 21.10, etc.). Use
   `requirements.txt` for installs.
-- **No tests exist** despite the pytest config. Adding the first
-  `tests/test_*.py` will start running the CI test step for real.
 - **Stale docs/scripts:** `README.md`, `docs/api.md`, `docs/deployment.md`,
   `scripts/backup.sh`, and `SECURITY.md` all reference the pre-refactor
   single-script layout (paths like `canada.app`, `creds.py`,
   `canada/canada/client_tokens.json`). Do not trust them — read the code
   under `src/` instead. The backup script will find no files and exit 0.
-- **Two venv paths exist** because the project was refactored without
-  deleting the old setup: `make install` uses `.venv/`, `run.sh` and
-  `scripts/setup.sh` use `env/`. Pick one and stick with it.
-- **No CSRF protection, no MFA on `/login`.** See `SECURITY.md`. Admin auth
-  is a single shared password compared in `src/app/routes/auth.py:login()`.
-  Rate limiting IS now in place on `/login` (5/min) and other write endpoints.
 - **Client passwords are encrypted at rest** with Fernet
   (`ENCRYPTION_KEY`). The DB is still gitignored and ephemeral in prod.
   Boot fails fast with a clear error if `ENCRYPTION_KEY` is missing.

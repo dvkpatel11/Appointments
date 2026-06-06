@@ -1,5 +1,5 @@
 PYTHON  ?= python3
-VENV    ?= .venv
+VENV    ?= env
 PORT    ?= 5000
 IMAGE   ?= visa-ctrl
 
@@ -48,8 +48,8 @@ deploy-gcp:
 
 .PHONY: clean
 clean:
-	rm -rf $(VENV) __pycache__ .ruff_cache .pytest_cache .coverage
+	rm -rf __pycache__ .ruff_cache .pytest_cache .coverage
 	rm -rf src/__pycache__ src/*/__pycache__ src/*/*/__pycache__
-	find . -path ./.venv -prune -o -name "*.pyc" -print -delete
-	find . -path ./.venv -prune -o -name "*.pyo" -print -delete
+	find . -path ./env -prune -o -name "*.pyc" -print -delete
+	find . -path ./env -prune -o -name "*.pyo" -print -delete
 	@echo "Cleaned."

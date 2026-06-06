@@ -26,6 +26,7 @@ ALLOWED_UPDATE_COLUMNS = frozenset(
         "notification_email",
         "telegram_chat_id",
         "phone_number",
+        "profile_id",
         "agent_pid",
     }
 )
@@ -57,6 +58,7 @@ def row_to_client(row: dict[str, Any]) -> Client:
         notification_email=row["notification_email"],
         telegram_chat_id=row["telegram_chat_id"],
         phone_number=row["phone_number"],
+        profile_id=row.get("profile_id"),
         agent_pid=row["agent_pid"],
         created_at=row.get("created_at"),
         updated_at=row.get("updated_at"),
@@ -100,8 +102,8 @@ def save(client: Client) -> None:
                 password_ciphertext, appointment_id, appointment_url,
                 visa_type, reschedule, preferred_locations,
                 preferred_date_from, preferred_date_to, notification_email,
-                telegram_chat_id, phone_number, agent_pid, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                telegram_chat_id, phone_number, profile_id, agent_pid, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                        CURRENT_TIMESTAMP)""",
             (
                 client.id,
@@ -121,6 +123,7 @@ def save(client: Client) -> None:
                 client.notification_email,
                 client.telegram_chat_id,
                 client.phone_number,
+                client.profile_id,
                 client.agent_pid,
             ),
         )

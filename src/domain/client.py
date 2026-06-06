@@ -25,6 +25,7 @@ class Client:
     notification_email: str | None = None
     telegram_chat_id: str | None = None
     phone_number: str | None = None
+    profile_id: str | None = None
     agent_pid: int | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None

@@ -85,6 +85,20 @@ def init_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 linked_at TIMESTAMP
             );
+
+            CREATE TABLE IF NOT EXISTS profiles (
+                id TEXT PRIMARY KEY,
+                token TEXT UNIQUE NOT NULL,
+                name TEXT,
+                username TEXT,
+                password_ciphertext TEXT,
+                notification_email TEXT,
+                notification_email_verified INTEGER NOT NULL DEFAULT 0,
+                telegram_chat_id TEXT,
+                phone_number TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
         """)
 
         # Idempotent migration: add password_ciphertext if missing.
@@ -93,6 +107,20 @@ def init_db():
             cur.execute("ALTER TABLE clients ADD COLUMN password_ciphertext TEXT")
         except sqlite3.OperationalError:
             pass
+
+        # Idempotent migration: link clients to a profile (nullable so legacy
+        # standalone clients are unaffected). `ON DELETE SET NULL` means
+        # deleting a profile detaches its apps rather than cascading them.
+        try:
+            cur.execute(
+                "ALTER TABLE clients ADD COLUMN profile_id TEXT "
+                "REFERENCES profiles(id) ON DELETE SET NULL"
+            )
+        except sqlite3.OperationalError:
+            pass
+        cur.execute(
+            "CREATE INDEX IF NOT EXISTS idx_clients_profile_id ON clients(profile_id)"
+        )
 
         # Email magic-link confirmations. Tokens are random secrets; the row
         # proves the holder clicked the link in the email sent to `email`.
@@ -109,4 +137,15 @@ def init_db():
                 FOREIGN KEY (user_id) REFERENCES clients(id) ON DELETE CASCADE
             )"""
         )
+        # Idempotent migration: profile-scoped magic links. `user_id` stays
+        # required for client-scoped links; `profile_id` is the parallel
+        # column for profile-scoped links (mutually exclusive in practice).
+        try:
+            cur.execute(
+                "ALTER TABLE email_confirmations ADD COLUMN profile_id TEXT "
+                "REFERENCES profiles(id) ON DELETE CASCADE"
+            )
+        except sqlite3.OperationalError:
+            pass
         cur.execute("CREATE INDEX IF NOT EXISTS idx_email_confirmations_user_id ON email_confirmations(user_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_email_confirmations_profile_id ON email_confirmations(profile_id)")
