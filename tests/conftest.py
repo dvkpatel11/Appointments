@@ -26,6 +26,9 @@ import pytest
 # fixture, because the AppSettings class is created when src.config is first
 # imported.
 os.environ.setdefault("VISACTRL_DISABLE_DOTENV", "1")
+# Disable rate limiting in tests so the per-IP buckets from one test don't
+# bleed into the next (tests run fast and would otherwise hit 5/min).
+os.environ.setdefault("RATELIMIT_ENABLED", "false")
 
 
 @pytest.fixture

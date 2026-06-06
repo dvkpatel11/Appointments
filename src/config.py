@@ -46,6 +46,11 @@ class AppSettings(BaseSettings):
 
     sentry_dsn: str = ""
 
+    # Rate limiting. Disable in tests via RATELIMIT_ENABLED=false env var.
+    # Field name is ratelimit_enabled (no underscore) so pydantic-settings picks
+    # up the conventional RATELIMIT_ENABLED env var.
+    ratelimit_enabled: bool = True
+
     model_config = {"env_file": _ENV_FILE, "env_file_encoding": "utf-8", "extra": "ignore"}
 
 

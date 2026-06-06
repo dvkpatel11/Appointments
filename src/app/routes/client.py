@@ -8,6 +8,7 @@ from email.utils import parseaddr
 
 from flask import Blueprint, jsonify, redirect, render_template, request, url_for
 
+from src.app.extensions import limiter
 from src.infrastructure.database import cursor
 from src.infrastructure.repositories import client_repo
 from src.notifications import email as email_notif
@@ -33,6 +34,7 @@ def client_view(token):
 
 
 @bp.route("/client_submit", methods=["POST"])
+@limiter.limit("10 per minute")
 def client_submit():
     try:
         token = request.form.get("token", "").strip()
@@ -208,6 +210,7 @@ def client_update_notif():
 
 
 @bp.route("/client_request_email_magic_link", methods=["POST"])
+@limiter.limit("5 per minute")
 def client_request_email_magic_link():
     """Re-trigger a magic link from the monitor panel's Email tile.
 
@@ -274,6 +277,7 @@ def _send_magic_link_internal(client_id: str, email: str) -> tuple[bool, str]:
 
 
 @bp.route("/send_email_magic_link", methods=["POST"])
+@limiter.limit("5 per minute")
 def send_email_magic_link():
     data = request.get_json() or {}
     user_id = data.get("user_id", "").strip()

@@ -39,3 +39,4 @@ Werkzeug==3.0.4
 yarl==1.24.2
 pydantic-settings>=2.7.1
 cryptography==48.0.0
+Flask-Limiter>=3.5.0

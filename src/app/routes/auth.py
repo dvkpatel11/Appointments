@@ -1,11 +1,13 @@
 from flask import Blueprint, redirect, render_template, request, session, url_for
 
+from src.app.extensions import limiter
 from src.config import settings
 
 bp = Blueprint("auth", __name__)
 
 
 @bp.route("/login", methods=["GET", "POST"])
+@limiter.limit("5 per minute", methods=["POST"])
 def login():
     error = None
     if request.method == "POST":

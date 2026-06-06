@@ -13,11 +13,12 @@ try:
 except ImportError:
     sentry_sdk = None  # type: ignore[assignment]
 
+from src.app.extensions import limiter
 from src.app.routes import admin, auth, client, events, snapshot, telegram
 from src.config import settings
 from src.infrastructure import logging as server_logging
 from src.infrastructure.crypto import ensure_encryption_key
-from src.infrastructure.database import init_db
+from src.infrastructure.database import cursor, init_db
 from src.infrastructure.repositories import client_repo, settings_repo
 from src.orchestrator import manager as orchestrator
 from src.services.automation_service import AutomationService
@@ -62,6 +63,42 @@ def create_app() -> Flask:
     app.register_blueprint(events.bp)
     app.register_blueprint(snapshot.bp)
 
+    # Disable rate limiting when running tests (RATELIMIT_ENABLED=false is set
+    # in tests/conftest.py) so the per-IP buckets from one test don't bleed
+    # into the next.
+    app.config["RATELIMIT_ENABLED"] = settings.ratelimit_enabled
+    limiter.init_app(app)
+
+    # ── Security headers (after_request runs for every response) ──────────
+    @app.after_request
+    def _set_security_headers(response):
+        # Block content-type sniffing (XSS hardening).
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        # Prevent clickjacking — we don't use iframes.
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        # Don't leak referrer to third parties.
+        response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        # Disable powerful browser features we don't use.
+        response.headers.setdefault(
+            "Permissions-Policy",
+            "geolocation=(), microphone=(), camera=(), payment=()",
+        )
+        # Force HTTPS for 1 year (only effective over HTTPS, harmless over HTTP).
+        response.headers.setdefault(
+            "Strict-Transport-Security",
+            "max-age=31536000; includeSubDomains",
+        )
+        return response
+
+    @app.errorhandler(429)
+    def _rate_limited(e):
+        return jsonify(
+            {
+                "status": "error",
+                "message": "Too many requests. Please slow down and try again in a minute.",
+            }
+        ), 429
+
     @app.context_processor
     def _inject_ui_config():
         from flask import session
@@ -82,7 +119,29 @@ def create_app() -> Flask:
         return redirect("/login")
 
     @app.route("/health")
+    @app.route("/healthz")
     def health():
+        return jsonify({"status": "ok"})
+
+    @app.route("/healthz/ready")
+    def healthz_ready():
+        """Readiness probe — checks DB is reachable. Returns 503 if not.
+        Use this for Cloud Run readinessProbe / k8s readinessProbe."""
+        try:
+            with cursor() as cur:
+                cur.execute("SELECT 1")
+                cur.fetchone()
+        except Exception as exc:
+            return (
+                jsonify({"status": "error", "component": "database", "message": str(exc)}),
+                503,
+            )
+        return jsonify({"status": "ok"})
+
+    @app.route("/healthz/live")
+    def healthz_live():
+        """Liveness probe — process is up and serving. Cheap, no DB call.
+        Use this for Cloud Run livenessProbe / k8s livenessProbe."""
         return jsonify({"status": "ok"})
 
     def _login_required():

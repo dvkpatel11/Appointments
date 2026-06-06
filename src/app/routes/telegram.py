@@ -4,6 +4,7 @@ import uuid
 import requests
 from flask import Blueprint, jsonify, request, url_for
 
+from src.app.extensions import limiter
 from src.config import settings
 from src.infrastructure.logging import setup_server_logger
 
@@ -27,6 +28,7 @@ def set_webhook():
 
 
 @bp.route("/telegram_webhook", methods=["POST"])
+@limiter.limit("120 per minute")
 def telegram_webhook():
     bot_token = settings.telegram_bot_token
     if not bot_token:
