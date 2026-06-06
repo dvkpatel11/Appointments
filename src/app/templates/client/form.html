@@ -612,6 +612,28 @@
         color: var(--text-secondary);
       }
 
+      .notif-state {
+        font-size: 0.62rem;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        padding: 2px 6px;
+        border-radius: 4px;
+        text-transform: uppercase;
+      }
+      .notif-state.verified {
+        background: rgba(40, 167, 69, 0.15);
+        color: var(--green);
+      }
+      .notif-state.pending {
+        background: rgba(255, 152, 0, 0.15);
+        color: var(--orange);
+      }
+      .notif-state.set {
+        background: var(--glass-border);
+        color: var(--text-secondary);
+      }
+      .notif-card[data-state="empty"] .notif-state { display: none !important; }
+
       .log-section-label {
         font-size: 0.72rem;
         font-weight: 600;
@@ -835,6 +857,10 @@
                 <span class="wizard-step__num">2</span>
                 <span class="wizard-step__label">Appointment + Credentials</span>
               </li>
+              <li class="wizard-step" data-step="3" aria-current="false">
+                <span class="wizard-step__num">3</span>
+                <span class="wizard-step__label">Notifications</span>
+              </li>
             </ol>
 
             <!-- ── Step 1: Details ────────────────────────────── -->
@@ -847,15 +873,10 @@
                   <label for="f-name">Your Name</label>
                   <input id="f-name" type="text" name="name" placeholder="Jane Smith" required />
                 </div>
-                <div class="form-group full">
-                  <label for="f-tg">Telegram Chat ID <span style="color: var(--dimtext); font-weight: 400;">(optional)</span></label>
-                  <input id="f-tg" type="text" name="telegram_chat_id" placeholder="123456789" />
-                  <p class="hint">For Telegram alerts — or link via popup after approval.</p>
-                </div>
               </div>
 
               <div class="wizard-nav">
-                <span class="wizard-hint">Step 1 of 2</span>
+                <span class="wizard-hint">Step 1 of 3</span>
                 <button type="button" class="btn-submit" data-wizard-next>Continue →</button>
               </div>
             </fieldset>
@@ -935,6 +956,46 @@
               </div>
 
               <div class="wizard-nav">
+                <span class="wizard-hint">Step 2 of 3</span>
+                <button type="button" class="btn-popup" data-wizard-prev>← Back</button>
+                <button type="button" class="btn-submit" data-wizard-next>Continue →</button>
+              </div>
+            </fieldset>
+
+            <!-- ── Step 3: Notifications ─────────────────────────── -->
+            <fieldset class="wizard-panel" data-panel="3" hidden>
+              <legend class="wizard-panel__title">Notifications</legend>
+              <p class="wizard-panel__sub">How should we reach you when a slot is found? All fields are optional.</p>
+
+              <p class="form-section-label">Email Alerts</p>
+              <div class="form-grid">
+                <div class="form-group full">
+                  <label for="f-notif-email">Email address <span style="color: var(--dimtext); font-weight: 400;">(optional)</span></label>
+                  <input id="f-notif-email" type="email" name="notification_email" placeholder="you@example.com" />
+                  <p class="hint">We'll send a verification link. The email is only saved to your account after you click it.</p>
+                </div>
+              </div>
+
+              <p class="form-section-label">SMS Alerts</p>
+              <div class="form-grid">
+                <div class="form-group full">
+                  <label for="f-phone">Phone number <span style="color: var(--dimtext); font-weight: 400;">(optional)</span></label>
+                  <input id="f-phone" type="tel" name="phone_number" placeholder="+14155552671" />
+                  <p class="hint">Include country code. Twilio must be configured by the admin for SMS to work.</p>
+                </div>
+              </div>
+
+              <p class="form-section-label">Telegram Alerts</p>
+              <div class="form-grid">
+                <div class="form-group full">
+                  <label for="f-tg">Telegram Chat ID <span style="color: var(--dimtext); font-weight: 400;">(optional)</span></label>
+                  <input id="f-tg" type="text" name="telegram_chat_id" placeholder="123456789" />
+                  <p class="hint">Or link Telegram after approval via the Telegram tile in the monitor panel.</p>
+                </div>
+              </div>
+
+              <div class="wizard-nav">
+                <span class="wizard-hint">Step 3 of 3</span>
                 <button type="button" class="btn-popup" data-wizard-prev>← Back</button>
                 <button type="submit" class="btn-submit" id="submitBtn">Submit</button>
               </div>
@@ -1039,9 +1100,10 @@
         <div class="notif-section">
           <p class="notif-section-label">Notifications</p>
           <div class="notif-grid">
-            <div class="notif-card" id="emailNotifCard">
+            <div class="notif-card" id="emailNotifCard" data-state="empty">
               <span class="notif-icon">✉</span>
               <span class="notif-label">EMAIL</span>
+              <span class="notif-state" id="emailNotifState" style="display:none"></span>
             </div>
             <div class="notif-card" id="telegramNotifCard">
               <span class="notif-icon">✈</span>
@@ -1062,9 +1124,13 @@
               <label>EMAIL ADDRESS</label>
               <input type="email" id="popupEmail" placeholder="your@email.com" />
             </div>
+            <p style="font-size: 0.6rem; color: var(--dimtext); margin: 6px 0 12px; line-height: 1.5;">
+              Saving sends a verification link to this address. Your email is only
+              stored on the account after you click the link.
+            </p>
             <div class="popup-actions">
               <button class="btn-popup" id="emailTestBtn">✉ TEST</button>
-              <button class="btn-popup primary" id="emailSaveBtn">SAVE</button>
+              <button class="btn-popup primary" id="emailSaveBtn">SEND LINK</button>
               <button class="btn-popup" id="emailCloseBtn">CLOSE</button>
             </div>
           </div>
@@ -1246,7 +1312,27 @@
       }
 
       window.clientNotificationEmail = null;
+      window.clientNotificationEmailVerified = false;
       window.clientTelegramChatId = null;
+
+      function renderEmailNotifState() {
+        const card = document.getElementById("emailNotifCard");
+        const badge = document.getElementById("emailNotifState");
+        if (!window.clientNotificationEmail) {
+          card.dataset.state = "empty";
+          badge.style.display = "none";
+          return;
+        }
+        card.dataset.state = "set";
+        badge.style.display = "";
+        if (window.clientNotificationEmailVerified) {
+          badge.className = "notif-state verified";
+          badge.textContent = "VERIFIED";
+        } else {
+          badge.className = "notif-state pending";
+          badge.textContent = "PENDING";
+        }
+      }
 
       // Popup handling
       document.getElementById("emailNotifCard").addEventListener("click", function() {
@@ -1258,15 +1344,39 @@
       });
       document.getElementById("emailSaveBtn").addEventListener("click", function() {
         const email = document.getElementById("popupEmail").value.trim();
-        window.clientNotificationEmail = email;
-        if (email) {
-          fetch("/client_update_notif", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ user_id: PAGE_TOKEN, notification_email: email })
-          });
+        if (!email) {
+          document.getElementById("emailPopup").classList.remove("show");
+          return;
         }
-        document.getElementById("emailPopup").classList.remove("show");
+        const btn = this;
+        btn.disabled = true;
+        const orig = btn.textContent;
+        btn.textContent = "SENDING...";
+        fetch("/client_request_email_magic_link", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: PAGE_TOKEN, email: email })
+        })
+          .then(r => r.json())
+          .then(d => {
+            if (d.status === "ok") {
+              // Email is now in flight to verify — show pending state.
+              window.clientNotificationEmail = email;
+              window.clientNotificationEmailVerified = false;
+              renderEmailNotifState();
+              btn.textContent = "SENT!";
+            } else {
+              btn.textContent = "FAILED";
+            }
+          })
+          .catch(() => { btn.textContent = "FAILED"; })
+          .finally(() => {
+            setTimeout(() => {
+              btn.disabled = false;
+              btn.textContent = orig;
+              document.getElementById("emailPopup").classList.remove("show");
+            }, 1500);
+          });
       });
       document.getElementById("emailTestBtn").addEventListener("click", function() {
         const email = document.getElementById("popupEmail").value.trim();
@@ -1432,8 +1542,10 @@
       function handleStateUpdate(d) {
         // Pre-fill notification fields from server
         if (d.notification_email) window.clientNotificationEmail = d.notification_email;
+        window.clientNotificationEmailVerified = !!d.notification_email_verified;
         if (d.telegram_chat_id) window.clientTelegramChatId = d.telegram_chat_id;
         if (d.phone_number) window.clientPhoneNumber = d.phone_number;
+        if (typeof renderEmailNotifState === "function") renderEmailNotifState();
 
         if (d.status === "pending_approval" || d.status === "issued") {
           return;
@@ -1551,6 +1663,17 @@
       // Client returning to their link after having already submitted
       (function checkExistingSession() {
         if (!PAGE_TOKEN) return;
+        // Show a confirmation banner if we just came back from the magic link.
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("email_confirmed") === "1") {
+          const banner = document.createElement("div");
+          banner.style.cssText = "position:fixed;top:16px;left:50%;transform:translateX(-50%);background:var(--green);color:#fff;padding:10px 20px;border-radius:8px;font-size:0.85rem;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.15);";
+          banner.textContent = "Email verified — you'll get alerts at this address.";
+          document.body.appendChild(banner);
+          setTimeout(() => banner.remove(), 5000);
+          // Clean the URL so a refresh doesn't re-show the banner.
+          window.history.replaceState({}, "", window.location.pathname);
+        }
         fetch(`/client_status/${encodeURIComponent(PAGE_TOKEN)}`)
           .then((r) => r.json())
           .then((d) => {

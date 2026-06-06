@@ -93,3 +93,20 @@ def init_db():
             cur.execute("ALTER TABLE clients ADD COLUMN password_ciphertext TEXT")
         except sqlite3.OperationalError:
             pass
+
+        # Email magic-link confirmations. Tokens are random secrets; the row
+        # proves the holder clicked the link in the email sent to `email`.
+        # `confirmed_at IS NULL` means the link has not been clicked (or has
+        # expired — caller checks `expires_at`).
+        cur.execute(
+            """CREATE TABLE IF NOT EXISTS email_confirmations (
+                token TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                email TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                expires_at TIMESTAMP NOT NULL,
+                confirmed_at TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES clients(id) ON DELETE CASCADE
+            )"""
+        )
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_email_confirmations_user_id ON email_confirmations(user_id)")

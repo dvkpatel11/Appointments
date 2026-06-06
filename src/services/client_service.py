@@ -51,7 +51,10 @@ class ClientService:
         client.preferred_locations = form_data.get("preferred_locations")
         client.preferred_date_from = form_data.get("preferred_date_from", "").strip() or None
         client.preferred_date_to = form_data.get("preferred_date_to", "").strip() or None
-        client.notification_email = form_data.get("username", "").strip()
+        # NOTE: notification_email is intentionally NOT set here. It is only
+        # written to the client row after the user clicks the magic link
+        # sent by /send_email_magic_link. Use the wizard's Step 3 to enter
+        # an email, or use the monitor panel's Email tile post-approval.
         client.telegram_chat_id = form_data.get("telegram_chat_id", "").strip() or None
         client.updated_at = datetime.utcnow()
 

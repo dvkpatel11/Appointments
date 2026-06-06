@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VisaCtrl — Email Verification</title>
+    <link rel="stylesheet" href="/static/css/glass.css" />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        font-family: var(--font);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 16px;
+      }
+      .card {
+        width: min(440px, 100%);
+        background: var(--glass-bg);
+        backdrop-filter: var(--glass-blur);
+        -webkit-backdrop-filter: var(--glass-blur);
+        border: 1px solid var(--glass-border);
+        border-radius: var(--glass-radius);
+        padding: var(--space-2xl);
+        box-shadow: var(--shadow-glass);
+        text-align: center;
+      }
+      .icon {
+        font-size: 2.4rem;
+        margin-bottom: 14px;
+      }
+      .title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+      .title.ok { color: var(--success); }
+      .title.err { color: var(--error); }
+      .body {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        line-height: 1.7;
+        margin-bottom: 18px;
+      }
+      a.btn {
+        display: inline-block;
+        background: var(--accent);
+        color: #fff;
+        text-decoration: none;
+        padding: 9px 22px;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        font-weight: 500;
+      }
+      a.btn:hover { background: var(--accent-hover); }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      {% if ok %}
+        <div class="icon">&#10003;</div>
+        <h1 class="title ok">Email Verified</h1>
+        <p class="body">
+          Your email is now confirmed. You will receive alerts at this address
+          when a visa appointment slot becomes available.
+        </p>
+        <a class="btn" href="/client">Go to your monitor</a>
+      {% else %}
+        <div class="icon">&#9888;</div>
+        <h1 class="title err">Verification Failed</h1>
+        <p class="body">{{ reason or "We couldn't verify this link." }}</p>
+        <a class="btn" href="/client">Back to your monitor</a>
+      {% endif %}
+    </div>
+  </body>
+</html>
