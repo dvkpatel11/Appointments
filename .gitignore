@@ -1,5 +1,5 @@
 # ── PII / secrets ───────────────────────────────────────────────
-# .env
+.env
 .env.local
 .env.*.local
 !.env.example
@@ -17,6 +17,11 @@ canada/app.log
 uk/screenshots/
 uk/app.log
 /app.log
+
+# New runtime paths
+data/
+logs/
+screenshots/
 
 # ── Python ──────────────────────────────────────────────────────
 __pycache__/
@@ -82,7 +87,8 @@ dmypy.json
 *.mo
 *.pot
 
-docs/
+# Sphinx build artifacts only — design docs in docs/ are tracked
+docs/_build/
 
 # Flask
 instance/
@@ -101,3 +107,5 @@ Thumbs.db
 # Docs
 docs/_build/
 */AGENTS.md
+
+FreeDash-lite-master/

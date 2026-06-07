@@ -1,0 +1,39 @@
+{# ── Stat tile (KPI) — FreeDash-style horizontal card.
+   Pass:
+     label       — short uppercase label (e.g. "Total clients")
+     value       — the big number to display
+     icon        — feather icon name (e.g. "users", "activity", "inbox", "alert-triangle")
+     tone        — color variant: primary | success | warning | danger
+     delta       — optional small text, e.g. "+3 this week"
+     delta_dir   — up | down | neutral  (colors the delta)
+     href        — optional link target; renders the whole tile as a link
+─ #}
+{% macro stat(label, value, icon="activity", tone="primary", delta=None, delta_dir=None, href=None) %}
+{% if href %}
+<a class="stat stat--{{ tone }} stat--linked" data-stat="{{ label | lower | replace(' ', '-') }}" href="{{ href }}">
+{% else %}
+<div class="stat stat--{{ tone }}" data-stat="{{ label | lower | replace(' ', '-') }}">
+{% endif %}
+  <div class="stat__body">
+    <div class="stat__value-row">
+      <div class="stat__value" data-stat-value>{{ value }}</div>
+      {% if delta %}
+      <span class="stat__delta stat__delta--{{ delta_dir or 'neutral' }}">
+        {% if delta_dir == 'up' %}<i data-feather="trending-up" aria-hidden="true"></i>
+        {% elif delta_dir == 'down' %}<i data-feather="trending-down" aria-hidden="true"></i>
+        {% endif %}
+        {{ delta }}
+      </span>
+      {% endif %}
+    </div>
+    <div class="stat__label">{{ label }}</div>
+  </div>
+  <div class="stat__icon" aria-hidden="true">
+    <i data-feather="{{ icon }}"></i>
+  </div>
+{% if href %}
+</a>
+{% else %}
+</div>
+{% endif %}
+{% endmacro %}

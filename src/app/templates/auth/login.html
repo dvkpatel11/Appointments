@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en" data-app="visactrl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#6366f1" />
+    <title>Sign in · VisaCtrl</title>
+
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%231e3a8a'/><text x='32' y='44' font-family='serif' font-size='38' font-weight='700' text-anchor='middle' fill='%23fbbf24'>V</text></svg>"
+    />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    />
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}" />
+
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem("visactrl:theme");
+          var sys = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+          var theme = stored || sys;
+          document.documentElement.classList.add("theme-" + theme);
+        } catch (e) {
+          document.documentElement.classList.add("theme-light");
+        }
+      })();
+    </script>
+  </head>
+  <body class="auth-body">
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <main id="main" class="auth-main">
+      <div class="auth-card" role="dialog" aria-labelledby="auth-title">
+        <div class="auth-brand">
+          <div class="auth-brand-mark" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <div>
+            <h1 id="auth-title" class="auth-title">VisaCtrl</h1>
+            <p class="auth-tagline">Appointment monitoring for serious operators</p>
+          </div>
+        </div>
+
+        {% if error %}
+        <div class="auth-error" role="alert">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+          <span>Invalid credentials — try again</span>
+        </div>
+        {% endif %}
+
+        <form class="auth-form" method="POST" autocomplete="on" novalidate>
+          <div class="field">
+            <label class="field__label" for="password">Admin password</label>
+            <div class="input-group">
+              <span class="input-group__icon" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              </span>
+              <input class="input input--lg" id="password" type="password" name="password"
+                     placeholder="Enter your password" autofocus required spellcheck="false" />
+            </div>
+            <p class="field__hint">Authorized access only — every attempt is logged.</p>
+          </div>
+
+          <button class="btn btn--primary btn--lg auth-submit" type="submit">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+            <span>Sign in</span>
+          </button>
+        </form>
+
+        <div class="auth-foot">
+          <span class="topbar__dot topbar__dot--ok" aria-hidden="true"></span>
+          <span>System status: <strong>Operational</strong></span>
+        </div>
+      </div>
+
+      <aside class="auth-aside" aria-hidden="true">
+        <div class="auth-aside__gradient"></div>
+        <div class="auth-aside__noise"></div>
+        <div class="auth-aside__content">
+          <p class="auth-aside__eyebrow">Trusted by operators worldwide</p>
+          <h2 class="auth-aside__quote">"VisaCtrl paid for itself the first time it caught a 4-months-earlier slot."</h2>
+          <p class="auth-aside__cite">— Pragya P., Toronto</p>
+        </div>
+      </aside>
+    </main>
+
+    <script type="module" src="{{ url_for('static', filename='js/theme.js') }}"></script>
+  </body>
+</html>

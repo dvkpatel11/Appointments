@@ -1,0 +1,22 @@
+{# ─────────────────────────────────────────────────────────────────────
+   partials/_log_lines.html — server log tail (htmx target)
+   ───────────────────────────────────────────────────────────────────── #}
+{% for line in lines %}
+  {% set tone = 'info' %}
+  {% if 'ERROR' in line.upper() or 'EXCEPTION' in line.upper() %}
+    {% set tone = 'error' %}
+  {% elif 'WARN' in line.upper() %}
+    {% set tone = 'warning' %}
+  {% elif 'SUCCESS' in line.upper() or 'STARTED' in line.upper() or 'FOUND' in line.upper() %}
+    {% set tone = 'success' %}
+  {% endif %}
+  <div class="log-line log-line--{{ tone }}" data-log-level="{{ tone }}">
+    <span class="log-line__ts">{{ line[:19] }}</span>
+    <span class="log-line__lvl">{{ tone | upper }}</span>
+    <span class="log-line__msg">{{ line[20:] if line|length > 20 else line }}</span>
+  </div>
+{% else %}
+<div style="padding: var(--s-6); text-align: center; color: rgba(250, 250, 250, 0.4); font-size: var(--text-xs);">
+  No log lines yet — start a monitor to see activity.
+</div>
+{% endfor %}

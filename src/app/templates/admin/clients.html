@@ -1,0 +1,162 @@
+{# ─────────────────────────────────────────────────────────────────────
+   admin/clients.html — Active client monitors list with toolbar
+   ───────────────────────────────────────────────────────────────────── #}
+{% extends "base_admin.html" %}
+{% block title %}Clients{% endblock %}
+{% block topbar_title %}Clients{% endblock %}
+
+{% block content %}
+<header class="l-page-header">
+  <div class="l-page-header__title">
+    <span class="l-page-header__eyebrow">Workspace</span>
+    <h1>Clients</h1>
+    <p class="l-page-header__sub">
+      Active monitors, in flight and parked. Click any row to inspect, restart, or stop.
+    </p>
+  </div>
+  <div class="l-page-header__actions">
+    <button class="btn btn--secondary btn--sm" type="button"
+            hx-get="{{ url_for('admin.refresh_clients') }}"
+            hx-target="#clients-tbody"
+            hx-swap="innerHTML"
+            aria-label="Refresh">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15A9 9 0 1 1 19 6.5L23 10"/></svg>
+      Refresh
+    </button>
+    <a class="btn btn--primary btn--sm" href="{{ url_for('admin.generate_client_link') }}"
+       hx-get="{{ url_for('admin.generate_client_link') }}"
+       hx-target="#link-modal-body"
+       hx-swap="innerHTML"
+       hx-trigger="click"
+       data-modal-trigger="link-modal">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      New client link
+    </a>
+  </div>
+</header>
+
+{# ── Bulk action bar (revealed by JS when ≥1 row selected) ────────── #}
+<div class="bulk-bar" data-bulk-bar hidden>
+  <span class="bulk-bar__count"><strong data-bulk-count>0</strong> selected</span>
+  <span class="bulk-bar__divider"></span>
+  <button class="btn btn--ghost btn--sm" type="button" data-bulk-action="start">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+    Start
+  </button>
+  <button class="btn btn--ghost btn--sm" type="button" data-bulk-action="stop">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+    Stop
+  </button>
+  <button class="btn btn--ghost btn--sm" type="button" data-bulk-action="export">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    Export
+  </button>
+  <button class="btn btn--ghost btn--sm" type="button" data-bulk-action="clear">Clear</button>
+</div>
+
+{# ── Toolbar (search, filters, density) ────────────────────────────── #}
+<div class="toolbar" role="search">
+  <div class="toolbar__search">
+    <span class="toolbar__search-icon" aria-hidden="true">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    </span>
+    <input class="input input--sm" type="search" placeholder="Search by name, email, or token…"
+           data-table-search
+           aria-label="Search clients" />
+  </div>
+
+  <div class="toolbar__filters" role="group" aria-label="Filters">
+    <select class="select" data-filter="state" aria-label="Filter by state">
+      <option value="">All states</option>
+      <option value="approved">Approved</option>
+      <option value="pending">Pending</option>
+      <option value="rejected">Rejected</option>
+      <option value="stopped">Stopped</option>
+      <option value="issued">Issued</option>
+    </select>
+    <select class="select" data-filter="visa_type" aria-label="Filter by visa type">
+      <option value="">All visa types</option>
+      <option value="canada">Canada</option>
+      <option value="uk">UK</option>
+    </select>
+  </div>
+
+  <div class="topbar__spacer"></div>
+
+  <div class="toolbar__density" role="group" aria-label="Row density">
+    <button type="button" data-density="compact"   title="Compact" aria-label="Compact rows">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><line x1="3" y1="6"  x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <button type="button" data-density="comfortable" title="Comfortable" aria-label="Comfortable rows" aria-pressed="true">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><line x1="3" y1="5"  x2="21" y2="5"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="19" x2="21" y2="19"/></svg>
+    </button>
+  </div>
+</div>
+
+{# ── Data table ───────────────────────────────────────────────────── #}
+<div class="card" style="padding: 0; overflow: hidden;">
+  <div style="overflow-x: auto;">
+    <table class="table table--density-comfortable" data-clients-table>
+      <thead>
+        <tr>
+          <th style="width: 40px;">
+            <input type="checkbox" class="checkbox" data-select-all aria-label="Select all clients" />
+          </th>
+          <th>Client</th>
+          <th>Visa</th>
+          <th>State</th>
+          <th>Appointment</th>
+          <th>Last action</th>
+          <th>Updated</th>
+          <th style="text-align: right; width: 120px;">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="clients-tbody"
+             hx-get="{{ url_for('admin.clients_table') }}"
+             hx-trigger="load delay:100ms"
+             hx-swap="innerHTML">
+        <tr><td colspan="8" style="padding: var(--s-4)"><div class="skel skel--block" style="height: 48px"></div></td></tr>
+        <tr><td colspan="8" style="padding: var(--s-2)"><div class="skel skel--block" style="height: 48px"></div></td></tr>
+        <tr><td colspan="8" style="padding: var(--s-2)"><div class="skel skel--block" style="height: 48px"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{# ── Detail drawer (populated by htmx into the body mount) ───────── #}
+<div class="drawer-overlay" data-drawer-overlay hidden></div>
+<aside class="drawer drawer--lg" id="client-drawer" role="dialog" aria-modal="true" aria-labelledby="cd-title" hidden>
+  <div class="drawer__header">
+    <h3 class="drawer__title u-truncate" id="cd-title" data-drawer-title>Client details</h3>
+    <button class="btn btn--ghost btn--icon btn--sm" type="button" data-drawer-close aria-label="Close">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="drawer__body" id="client-drawer-body">
+    <div class="skel skel--text" style="height: 200px"></div>
+  </div>
+</aside>
+
+{# ── Generate link modal ───────────────────────────────────────────── #}
+<div class="modal-overlay" data-modal="link-modal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="link-modal-title">
+    <div class="modal__header">
+      <div>
+        <h3 class="modal__title" id="link-modal-title">Generate client link</h3>
+        <p class="modal__sub">Share this link with the client so they can submit their request.</p>
+      </div>
+      <button class="btn btn--ghost btn--icon btn--sm" type="button" data-modal-close aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal__body" id="link-modal-body"></div>
+    <div class="modal__footer">
+      <button class="btn btn--secondary" type="button" data-modal-close>Close</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script type="module" src="{{ url_for('static', filename='js/views/clients.js') }}"></script>
+{% endblock %}

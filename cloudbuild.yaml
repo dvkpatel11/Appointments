@@ -22,6 +22,7 @@
 # 3. Create secrets in Secret Manager:
 #      echo -n "your-secret-key"     | gcloud secrets create visa-ctrl-secret-key     --data-file=-
 #      echo -n "your-admin-password" | gcloud secrets create visa-ctrl-admin-password  --data-file=-
+#      echo -n "your-encryption-key" | gcloud secrets create visa-ctrl-encryption-key  --data-file=-
 #      echo -n "you@gmail.com"       | gcloud secrets create visa-ctrl-smtp-user       --data-file=-
 #      echo -n "your-app-password"   | gcloud secrets create visa-ctrl-smtp-password   --data-file=-
 #      echo -n "your-resend-key"     | gcloud secrets create visa-ctrl-resend-key      --data-file=-
@@ -89,9 +90,10 @@ steps:
       - "--concurrency=5"
       # ── Inject secrets from Secret Manager ──
       - >-
-        --set-secrets=SECRET_KEY=visa-ctrl-secret-key:latest,ADMIN_PASSWORD=visa-ctrl-admin-password:latest,SMTP_USER=visa-ctrl-smtp-user:latest,SMTP_PASSWORD=visa-ctrl-smtp-password:latest,RESEND_API_KEY=visa-ctrl-resend-key:latest,TELEGRAM_BOT_TOKEN=visa-ctrl-telegram-token:latest,TELEGRAM_CHAT_ID=visa-ctrl-telegram-chat:latest,SENTRY_DSN=visa-ctrl-sentry-dsn:latest,TWILIO_ACCOUNT_SID=visa-ctrl-twilio-sid:latest,TWILIO_AUTH_TOKEN=visa-ctrl-twilio-token:latest,TWILIO_FROM_NUMBER=visa-ctrl-twilio-from:latest
+        --set-secrets=SECRET_KEY=visa-ctrl-secret-key:latest,ADMIN_PASSWORD=visa-ctrl-admin-password:latest,ENCRYPTION_KEY=visa-ctrl-encryption-key:latest,SMTP_USER=visa-ctrl-smtp-user:latest,SMTP_PASSWORD=visa-ctrl-smtp-password:latest,RESEND_API_KEY=visa-ctrl-resend-key:latest,TELEGRAM_BOT_TOKEN=visa-ctrl-telegram-token:latest,TELEGRAM_CHAT_ID=visa-ctrl-telegram-chat:latest,SENTRY_DSN=visa-ctrl-sentry-dsn:latest,TWILIO_ACCOUNT_SID=visa-ctrl-twilio-sid:latest,TWILIO_AUTH_TOKEN=visa-ctrl-twilio-token:latest,TWILIO_FROM_NUMBER=visa-ctrl-twilio-from:latest
       # ── Static env vars ──
-      - "--set-env-vars=SMTP_HOST=smtp.gmail.com,SMTP_PORT=587,FLASK_DEBUG=false"
+      - >-
+        --set-env-vars=SMTP_HOST=smtp.gmail.com,SMTP_PORT=587,FLASK_DEBUG=false,APP_ENV=production,SENTRY_ENVIRONMENT=production,SENTRY_TRACES_SAMPLE_RATE=0.1,RATELIMIT_ENABLED=true,SHUTDOWN_GRACE_SECONDS=25
 
 # Images to store in the registry after the build
 images:

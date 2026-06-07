@@ -1,0 +1,86 @@
+{% extends "base_admin.html" %}
+{% block title %}Logs{% endblock %}
+{% block topbar_title %}Logs{% endblock %}
+
+{% block content %}
+<header class="l-page-header">
+  <div class="l-page-header__title">
+    <span class="l-page-header__eyebrow">Diagnostics</span>
+    <h1>Logs</h1>
+    <p class="l-page-header__sub">
+      Server and per-client logs, color-coded by level. Auto-refreshes every 3s when live.
+    </p>
+  </div>
+  <div class="l-page-header__actions">
+    <button class="btn btn--secondary btn--sm" type="button" data-log-action="pause" aria-pressed="false">
+      <svg data-icon="pause" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+      <svg data-icon="play" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      <span data-label>Pause</span>
+    </button>
+    <button class="btn btn--secondary btn--sm" type="button" data-log-action="clear">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg>
+      Clear
+    </button>
+    <button class="btn btn--ghost btn--sm" type="button" data-log-action="download">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Download
+    </button>
+  </div>
+</header>
+
+<div class="toolbar" role="search">
+  <div class="toolbar__search" style="max-width: 360px;">
+    <span class="toolbar__search-icon" aria-hidden="true">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    </span>
+    <input class="input input--sm" type="search" placeholder="Filter logs…"
+           data-log-search aria-label="Filter logs" />
+  </div>
+
+  <div class="toolbar__filters" role="group" aria-label="Log level filters">
+    <label class="field field--row u-text-sm" style="gap: 6px;">
+      <input type="checkbox" class="checkbox" data-log-level="error" checked />
+      <span style="color: var(--c-error);">Error</span>
+    </label>
+    <label class="field field--row u-text-sm" style="gap: 6px;">
+      <input type="checkbox" class="checkbox" data-log-level="warning" checked />
+      <span style="color: var(--c-warning);">Warning</span>
+    </label>
+    <label class="field field--row u-text-sm" style="gap: 6px;">
+      <input type="checkbox" class="checkbox" data-log-level="info" checked />
+      <span>Info</span>
+    </label>
+    <label class="field field--row u-text-sm" style="gap: 6px;">
+      <input type="checkbox" class="checkbox" data-log-level="success" checked />
+      <span style="color: var(--c-success);">Success</span>
+    </label>
+  </div>
+
+  <div class="topbar__spacer"></div>
+
+  <select class="select" data-log-source style="min-width: 200px;">
+    <option value="">All sources</option>
+    <option value="server">Server</option>
+    {% for client in clients %}
+    <option value="{{ client.id }}">{{ client.name or client.id[:8] }}</option>
+    {% endfor %}
+  </select>
+</div>
+
+<div class="card" style="padding: 0; overflow: hidden;">
+  <div class="log-viewer" data-log-viewer
+       hx-get="{{ url_for('admin.logs_stream') }}"
+       hx-trigger="load delay:200ms"
+       hx-swap="innerHTML"
+       hx-on::htmx:before-send="window.__logPaused ? event.preventDefault() : null"
+       style="max-height: calc(100vh - 280px); min-height: 400px;">
+    <div class="skel skel--text" style="background: rgba(255,255,255,0.1);"></div>
+    <div class="skel skel--text" style="background: rgba(255,255,255,0.1); width: 80%; margin-top: 4px;"></div>
+    <div class="skel skel--text" style="background: rgba(255,255,255,0.1); width: 60%; margin-top: 4px;"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script type="module" src="{{ url_for('static', filename='js/views/logs.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,84 @@
+{% extends "base_admin.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<header class="l-page-header">
+  <div class="l-page-header__title">
+    <span class="u-text-2xs">Overview</span>
+    <h1>Dashboard</h1>
+    <p class="l-page-header__sub">
+      Live status of every active monitor.
+      <span data-sse-status aria-live="polite"></span>
+    </p>
+  </div>
+  <div class="l-page-header__actions">
+    <button class="btn btn--secondary btn--sm" type="button"
+            hx-get="{{ url_for('admin.refresh_dashboard') }}"
+            hx-target="#dash-metrics"
+            hx-swap="outerHTML"
+            aria-label="Refresh metrics">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15A9 9 0 1 1 19 6.5L23 10"/></svg>
+      Refresh
+    </button>
+    <a class="btn btn--primary btn--sm" href="{{ url_for('admin.generate_client_link') }}"
+       hx-get="{{ url_for('admin.generate_client_link') }}"
+       hx-target="#generate-link-modal"
+       hx-swap="innerHTML"
+       hx-trigger="click"
+       hx-on::after-request="document.getElementById('generate-link-modal').parentElement.hidden = false">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      New client link
+    </a>
+  </div>
+</header>
+
+{# ── KPI tiles ─────────────────────────────────────────────────── #}
+<div class="dash-metrics" id="dash-metrics"
+     hx-get="{{ url_for('admin.dashboard_metrics') }}"
+     hx-trigger="load delay:100ms"
+     hx-swap="innerHTML"
+     data-dash-metrics>
+  <div class="stat stat--primary"><div class="stat__body"><div class="stat__value-row"><div class="skel skel--text" style="width:50px;height:28px"></div></div><div class="stat__label">Total clients</div></div><div class="stat__icon" aria-hidden="true"></div></div>
+  <div class="stat stat--success"><div class="stat__body"><div class="stat__value-row"><div class="skel skel--text" style="width:50px;height:28px"></div></div><div class="stat__label">Running</div></div><div class="stat__icon" aria-hidden="true"></div></div>
+  <div class="stat stat--warning"><div class="stat__body"><div class="stat__value-row"><div class="skel skel--text" style="width:50px;height:28px"></div></div><div class="stat__label">Pending</div></div><div class="stat__icon" aria-hidden="true"></div></div>
+  <div class="stat stat--danger"><div class="stat__body"><div class="stat__value-row"><div class="skel skel--text" style="width:50px;height:28px"></div></div><div class="stat__label">Errors (24h)</div></div><div class="stat__icon" aria-hidden="true"></div></div>
+</div>
+
+{# ── Active monitors ──────────────────────────────────────────── #}
+<div class="dash-grid">
+  <section class="dash-section" aria-labelledby="monitors-h">
+    <div class="dash-section__head">
+      <h2 class="dash-section__title" id="monitors-h">Active monitors</h2>
+      <a class="dash-section__link" href="{{ url_for('admin.clients') }}">View all →</a>
+    </div>
+    <div class="monitors" data-dash-monitors
+         hx-get="{{ url_for('admin.dashboard_monitors') }}"
+         hx-trigger="load delay:150ms"
+         hx-swap="innerHTML"
+         aria-live="polite">
+      <div class="monitor skel" style="height:120px"></div>
+      <div class="monitor skel" style="height:120px"></div>
+    </div>
+  </section>
+</div>
+
+{# Mount point for "New client link" modal (htmx-populated). #}
+<div id="generate-link-modal-wrap" hidden>
+  <div class="modal-overlay" role="presentation" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="gl-title">
+      <div class="modal__header">
+        <h3 class="card__title" id="gl-title">Client link</h3>
+      </div>
+      <div class="modal__body" id="generate-link-modal"></div>
+      <div class="modal__footer">
+        <button class="btn btn--secondary" type="button"
+                onclick="this.closest('.modal-overlay').parentElement.hidden = true">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script type="module" src="{{ url_for('static', filename='js/views/dashboard.js') }}"></script>
+{% endblock %}

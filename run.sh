@@ -39,4 +39,4 @@ fi
 # ── 5. Run ─────────────────────────────────────────────────────────────────
 echo "[+] Starting VisaCtrl on http://localhost:${port}"
 FLASK_DEBUG="${FLASK_DEBUG:-true}" \
-python3 -m flask --app canada.app run --port "$port" --host 0.0.0.0
+python3 run.py
