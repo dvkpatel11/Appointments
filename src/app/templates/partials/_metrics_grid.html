@@ -1,7 +1,7 @@
 {% from "partials/_metric_tile.html" import stat %}
 <div class="dash-metrics" id="dash-metrics">
-  {{ stat("Total clients", metrics.total) }}
-  {{ stat("Running", metrics.running) }}
-  {{ stat("Pending requests", metrics.pending) }}
-  {{ stat("Errors (24h)", metrics.errors_24h) }}
+  {{ stat("Total clients",   metrics.total,      icon="users",          tone="primary", href=url_for("admin.clients")) }}
+  {{ stat("Running",         metrics.running,    icon="activity",       tone="success") }}
+  {{ stat("Pending requests", metrics.pending,    icon="inbox",          tone="warning", href=url_for("admin.requests")) }}
+  {{ stat("Errors (24h)",    metrics.errors_24h, icon="alert-triangle",  tone="danger") }}
 </div>

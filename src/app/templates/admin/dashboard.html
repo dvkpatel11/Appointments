@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "base_admin.html" %}
 {% block title %}Dashboard{% endblock %}
 
 {% block content %}
@@ -38,10 +38,10 @@
      hx-trigger="load delay:100ms"
      hx-swap="innerHTML"
      data-dash-metrics>
-  <div class="stat"><div class="stat__label">Total clients</div><div class="skel skel--text" style="width:60px;height:32px"></div></div>
-  <div class="stat"><div class="stat__label">Running</div><div class="skel skel--text" style="width:60px;height:32px"></div></div>
-  <div class="stat"><div class="stat__label">Pending</div><div class="skel skel--text" style="width:60px;height:32px"></div></div>
-  <div class="stat"><div class="stat__label">Errors (24h)</div><div class="skel skel--text" style="width:60px;height:32px"></div></div>
+  <div class="stat stat--primary"><div class="stat__body"><div class="stat__value-row"><div class="skel skel--text" style="width:50px;height:28px"></div></div><div class="stat__label">Total clients</div></div><div class="stat__icon" aria-hidden="true"></div></div>
+  <div class="stat stat--success"><div class="stat__body"><div class="stat__value-row"><div class="skel skel--text" style="width:50px;height:28px"></div></div><div class="stat__label">Running</div></div><div class="stat__icon" aria-hidden="true"></div></div>
+  <div class="stat stat--warning"><div class="stat__body"><div class="stat__value-row"><div class="skel skel--text" style="width:50px;height:28px"></div></div><div class="stat__label">Pending</div></div><div class="stat__icon" aria-hidden="true"></div></div>
+  <div class="stat stat--danger"><div class="stat__body"><div class="stat__value-row"><div class="skel skel--text" style="width:50px;height:28px"></div></div><div class="stat__label">Errors (24h)</div></div><div class="stat__icon" aria-hidden="true"></div></div>
 </div>
 
 {# ── Active monitors ──────────────────────────────────────────── #}
